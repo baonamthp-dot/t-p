@@ -4,6 +4,9 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioManager
+import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
@@ -13,21 +16,48 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlin.math.PI
+import kotlin.math.sin
 
-data class Track(val uri: Uri, val title: String, var favorite: Boolean = false)
+data class Track(
+    val uri: Uri?,
+    val title: String,
+    var favorite: Boolean = false,
+    val melody: List<Pair<Double, Int>>? = null
+)
 
 class MainActivity : AppCompatActivity() {
     private val tracks = mutableListOf<Track>()
     private var currentIndex = -1
     private var player: MediaPlayer? = null
+    private var audioTrack: AudioTrack? = null
+    @Volatile private var stopBuiltin = false
     private lateinit var list: LinearLayout
     private lateinit var nowPlaying: TextView
     private lateinit var playButton: Button
     private lateinit var search: EditText
 
+    private val builtInTracks = listOf(
+        Track(null, "🌙 Ru ngủ - Đêm yên bình", melody(261.63, 293.66, 329.63, 392.00, 329.63, 293.66, 261.63)),
+        Track(null, "🌙 Ru ngủ - Mây mềm", melody(220.00, 261.63, 293.66, 349.23, 293.66, 261.63, 220.00)),
+        Track(null, "🌙 Ru ngủ - Ánh trăng", melody(196.00, 246.94, 293.66, 246.94, 220.00, 196.00, 174.61)),
+        Track(null, "🌙 Ru ngủ - Giấc mơ", melody(174.61, 220.00, 261.63, 293.66, 261.63, 220.00, 174.61)),
+        Track(null, "🌙 Ru ngủ - Sao đêm", melody(196.00, 220.00, 246.94, 293.66, 246.94, 220.00, 196.00)),
+        Track(null, "☁️ Chill - Cà phê chiều", melody(261.63, 329.63, 392.00, 493.88, 392.00, 329.63, 293.66)),
+        Track(null, "☁️ Chill - Hoàng hôn", melody(293.66, 349.23, 440.00, 523.25, 440.00, 349.23, 293.66)),
+        Track(null, "☁️ Chill - Mưa nhẹ", melody(220.00, 277.18, 329.63, 369.99, 329.63, 277.18, 220.00)),
+        Track(null, "☁️ Chill - Gió biển", melody(246.94, 329.63, 392.00, 440.00, 392.00, 329.63, 246.94)),
+        Track(null, "☁️ Chill - Thư giãn", melody(196.00, 246.94, 329.63, 392.00, 329.63, 246.94, 196.00))
+    )
+
+    private fun melody(vararg notes: Double): List<Pair<Double, Int>> =
+        notes.map { it to 650 }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        tracks.addAll(builtInTracks.map { it.copy() })
         buildUi()
+        renderList("")
         requestAudioPermission()
     }
 
@@ -108,7 +138,7 @@ class MainActivity : AppCompatActivity() {
         val visible=tracks.filter{it.title.lowercase().contains(q)}
         if(visible.isEmpty()){
             list.addView(TextView(this).apply{
-                text="Chưa có bài hát. Hãy bấm “Thêm nhạc từ máy”."
+                text="Không tìm thấy bài hát."
                 setTextColor(0xFFAAAAAA.toInt()); setPadding(8,30,8,30)
             }); return
         }
@@ -130,17 +160,76 @@ class MainActivity : AppCompatActivity() {
 
     private fun playTrack(track:Track){
         currentIndex=tracks.indexOf(track)
+        stopBuiltin = true
         player?.release()
-        player=MediaPlayer().apply{
-            setDataSource(this@MainActivity,track.uri)
-            setOnCompletionListener{next()}
-            prepare(); start()
+        player=null
+        audioTrack?.stop()
+        audioTrack?.release()
+        audioTrack=null
+
+        if (track.melody != null) {
+            playBuiltin(track)
+        } else if (track.uri != null) {
+            player=MediaPlayer().apply{
+                setDataSource(this@MainActivity,track.uri)
+                setOnCompletionListener{next()}
+                prepare(); start()
+            }
+            nowPlaying.text="Đang phát: ${track.title}"
+            playButton.text="⏸"
         }
-        nowPlaying.text="Đang phát: ${track.title}"
-        playButton.text="⏸"
+    }
+
+    private fun playBuiltin(track: Track) {
+        stopBuiltin = false
+        nowPlaying.text = "Đang phát: ${track.title}"
+        playButton.text = "⏸"
+        Thread {
+            val sampleRate = 22050
+            val minBuffer = AudioTrack.getMinBufferSize(
+                sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            val at = AudioTrack(
+                AudioManager.STREAM_MUSIC, sampleRate,
+                AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                minBuffer.coerceAtLeast(4096), AudioTrack.MODE_STREAM
+            )
+            audioTrack = at
+            at.play()
+            try {
+                repeat(3) {
+                    for ((frequency, duration) in track.melody) {
+                        if (stopBuiltin) return@Thread
+                        val count = sampleRate * duration / 1000
+                        val samples = ShortArray(count)
+                        for (i in 0 until count) {
+                            val t = i.toDouble() / sampleRate
+                            val fade = minOf(1.0, i / (sampleRate * 0.04).coerceAtLeast(1.0),
+                                (count - i) / (sampleRate * 0.04).coerceAtLeast(1.0))
+                            samples[i] = (sin(2.0 * PI * frequency * t) * 0.20 * fade * Short.MAX_VALUE).toInt().toShort()
+                        }
+                        at.write(samples, 0, samples.size)
+                    }
+                }
+            } finally {
+                at.stop()
+                at.release()
+                runOnUiThread {
+                    if (!stopBuiltin && currentIndex >= 0) next()
+                }
+            }
+        }.start()
     }
 
     private fun togglePlay(){
+        if (audioTrack != null) {
+            if (audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                audioTrack?.pause(); playButton.text="▶"
+            } else {
+                audioTrack?.play(); playButton.text="⏸"
+            }
+            return
+        }
         val p=player ?: return
         if(p.isPlaying){p.pause();playButton.text="▶"} else {p.start();playButton.text="⏸"}
     }
@@ -155,5 +244,12 @@ class MainActivity : AppCompatActivity() {
         playTrack(tracks[if(currentIndex<0 || currentIndex>=tracks.lastIndex)0 else currentIndex+1])
     }
 
-    override fun onDestroy(){player?.release();player=null;super.onDestroy()}
+    override fun onDestroy(){
+        stopBuiltin=true
+        player?.release()
+        audioTrack?.release()
+        player=null
+        audioTrack=null
+        super.onDestroy()
+    }
 }
