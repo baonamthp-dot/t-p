@@ -198,7 +198,7 @@ class MainActivity : AppCompatActivity() {
             at.play()
             try {
                 repeat(3) {
-                    for ((frequency, duration) in track.melody) {
+                    for ((frequency, duration) in (track.melody ?: emptyList())) {
                         if (stopBuiltin) return@Thread
                         val count = sampleRate * duration / 1000
                         val samples = ShortArray(count)
