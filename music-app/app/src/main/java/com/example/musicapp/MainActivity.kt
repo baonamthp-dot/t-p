@@ -38,16 +38,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var search: EditText
 
     private val builtInTracks = listOf(
-        Track(null, "🌙 Ru ngủ - Đêm yên bình", melody(261.63, 293.66, 329.63, 392.00, 329.63, 293.66, 261.63)),
-        Track(null, "🌙 Ru ngủ - Mây mềm", melody(220.00, 261.63, 293.66, 349.23, 293.66, 261.63, 220.00)),
-        Track(null, "🌙 Ru ngủ - Ánh trăng", melody(196.00, 246.94, 293.66, 246.94, 220.00, 196.00, 174.61)),
-        Track(null, "🌙 Ru ngủ - Giấc mơ", melody(174.61, 220.00, 261.63, 293.66, 261.63, 220.00, 174.61)),
-        Track(null, "🌙 Ru ngủ - Sao đêm", melody(196.00, 220.00, 246.94, 293.66, 246.94, 220.00, 196.00)),
-        Track(null, "☁️ Chill - Cà phê chiều", melody(261.63, 329.63, 392.00, 493.88, 392.00, 329.63, 293.66)),
-        Track(null, "☁️ Chill - Hoàng hôn", melody(293.66, 349.23, 440.00, 523.25, 440.00, 349.23, 293.66)),
-        Track(null, "☁️ Chill - Mưa nhẹ", melody(220.00, 277.18, 329.63, 369.99, 329.63, 277.18, 220.00)),
-        Track(null, "☁️ Chill - Gió biển", melody(246.94, 329.63, 392.00, 440.00, 392.00, 329.63, 246.94)),
-        Track(null, "☁️ Chill - Thư giãn", melody(196.00, 246.94, 329.63, 392.00, 329.63, 246.94, 196.00))
+        Track(null, "🌙 Ru ngủ - Đêm yên bình", false, melody(261.63, 293.66, 329.63, 392.00, 329.63, 293.66, 261.63)),
+        Track(null, "🌙 Ru ngủ - Mây mềm", false, melody(220.00, 261.63, 293.66, 349.23, 293.66, 261.63, 220.00)),
+        Track(null, "🌙 Ru ngủ - Ánh trăng", false, melody(196.00, 246.94, 293.66, 246.94, 220.00, 196.00, 174.61)),
+        Track(null, "🌙 Ru ngủ - Giấc mơ", false, melody(174.61, 220.00, 261.63, 293.66, 261.63, 220.00, 174.61)),
+        Track(null, "🌙 Ru ngủ - Sao đêm", false, melody(196.00, 220.00, 246.94, 293.66, 246.94, 220.00, 196.00)),
+        Track(null, "☁️ Chill - Cà phê chiều", false, melody(261.63, 329.63, 392.00, 493.88, 392.00, 329.63, 293.66)),
+        Track(null, "☁️ Chill - Hoàng hôn", false, melody(293.66, 349.23, 440.00, 523.25, 440.00, 349.23, 293.66)),
+        Track(null, "☁️ Chill - Mưa nhẹ", false, melody(220.00, 277.18, 329.63, 369.99, 329.63, 277.18, 220.00)),
+        Track(null, "☁️ Chill - Gió biển", false, melody(246.94, 329.63, 392.00, 440.00, 392.00, 329.63, 246.94)),
+        Track(null, "☁️ Chill - Thư giãn", false, melody(196.00, 246.94, 329.63, 392.00, 329.63, 246.94, 196.00))
     )
 
     private fun melody(vararg notes: Double): List<Pair<Double, Int>> =
