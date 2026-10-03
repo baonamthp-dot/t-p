@@ -34,6 +34,8 @@ class MainActivity:AppCompatActivity(){
  @Volatile private var destroyed=false
  private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var search:EditText;private var favoritesOnly=false
  private var isOwner=false
+ private var aiUnlocked=false
+ private val aiCode="67673636"
  private var tts:TextToSpeech?=null
  private val ownerCode="Bảo Nam đẹp trai nhất trên thế giới"
  private val builtIn=listOf(
@@ -82,7 +84,7 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Nhạc ngủ","☾"){search.setText("Ru ngủ")},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("YouTube","▶"){tracks.firstOrNull{it.youtubeUrl!=null}?.let{playTrack(it)}},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Bản đồ","🗺️"){openMap()},LinearLayout.LayoutParams(dp(92),dp(62)).apply{leftMargin=dp(7)})
-  actions.addView(action("AI","🤖"){showAiTutor()},LinearLayout.LayoutParams(dp(82),dp(62)).apply{leftMargin=dp(7)})
+  actions.addView(action("AI","🤖"){showAiAssistantGate()},LinearLayout.LayoutParams(dp(82),dp(62)).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -142,6 +144,19 @@ class MainActivity:AppCompatActivity(){
    .setPositiveButton("OK",null).show()
  }
  private fun speakAi(text:String){val engine=tts?:return;engine.language=Locale("vi","VN");engine.speak(text,TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")}
+ private fun showAiAssistantGate(){
+  if(aiUnlocked){showAiTutor();return}
+  val input=EditText(this).apply{hint="Nhập mã trợ lý";setSingleLine();inputType=android.text.InputType.TYPE_CLASS_NUMBER;setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)}
+  AlertDialog.Builder(this)
+   .setTitle("🔐 Mở trợ lý AI")
+   .setMessage("Nhập mã để sử dụng trợ lý AI.")
+   .setView(input)
+   .setNegativeButton("Hủy",null)
+   .setPositiveButton("Xác nhận"){_,_->
+    if(input.text.toString()==aiCode){aiUnlocked=true;Toast.makeText(this,"✅ Đã mở trợ lý AI!",Toast.LENGTH_SHORT).show();showAiTutor()}
+    else Toast.makeText(this,"❌ Sai mã trợ lý!",Toast.LENGTH_SHORT).show()
+   }.show()
+ }
  private fun showAiTutor(){
   val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(4),dp(2),dp(4),dp(2))}
   val chat=TextView(this).apply{text="🤖 AI offline: Xin chào! Mình có thể giúp giải thích Toán, Văn, Anh, Khoa học và lập trình. Không cần API key.\n\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
