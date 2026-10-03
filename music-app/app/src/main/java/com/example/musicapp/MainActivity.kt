@@ -66,7 +66,10 @@ class MainActivity:AppCompatActivity(){
   val prev=button("⏮");prev.textSize=19f;controls.addView(prev,LinearLayout.LayoutParams(dp(62),dp(52)))
   playButton=button("▶");playButton.textSize=24f;playButton.background=rounded(Color.rgb(70,105,180),28);playButton.setOnClickListener{togglePlay()};controls.addView(playButton,LinearLayout.LayoutParams(dp(86),dp(58)).apply{leftMargin=dp(10);rightMargin=dp(10)})
   val nextBtn=button("⏭");nextBtn.textSize=19f;controls.addView(nextBtn,LinearLayout.LayoutParams(dp(62),dp(52)))
-  prev.setOnClickListener{previous()};nextBtn.setOnClickListener{next()};root.addView(controls)
+  var lastNav=0L
+  prev.setOnClickListener{val now=android.os.SystemClock.uptimeMillis();if(now-lastNav>180){lastNav=now;previous()}}
+  nextBtn.setOnClickListener{val now=android.os.SystemClock.uptimeMillis();if(now-lastNav>180){lastNav=now;next()}}
+  root.addView(controls)
   root.addView(TextView(this).apply{text="  BÀI HÁT";textSize=12f;setTextColor(Color.rgb(120,135,165));setTypeface(typeface,1);setPadding(0,dp(12),0,dp(6))})
   list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?){}})
@@ -128,7 +131,22 @@ class MainActivity:AppCompatActivity(){
    }
   }.start()
  }
- private fun togglePlay(){synchronized(audioLock){audioTrack?.let{a->try{if(a.playState==AudioTrack.PLAYSTATE_PLAYING){a.pause();playButton.text="▶"}else{a.play();playButton.text="⏸"}}catch(_:Exception){};return}};player?.let{p->try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}catch(_:Exception){}}}
+ private fun togglePlay(){
+  synchronized(audioLock){
+   audioTrack?.let{a->
+    try{
+     if(a.playState==AudioTrack.PLAYSTATE_PLAYING){builtinPaused=true;a.pause();playButton.text="▶"}
+     else{builtinPaused=false;a.play();playButton.text="⏸"}
+    }catch(_:Exception){playButton.text="▶"}
+    return
+   }
+  }
+  val p=player
+  if(p!=null){
+   try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}
+   catch(_:Exception){player=null;playButton.text="▶";nowPlaying.text="Không thể tiếp tục bài hát"}
+  }
+ }
  private fun previous(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
  private fun next(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1])}
  override fun onDestroy(){destroyed=true;stopCurrentPlayback();super.onDestroy()}
