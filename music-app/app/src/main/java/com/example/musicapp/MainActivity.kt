@@ -48,7 +48,7 @@ class MainActivity:AppCompatActivity(){
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});buildUi();renderList("");requestAudioPermission()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});buildUi();renderList("");requestAudioPermission();showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundColor(Color.rgb(5,8,20))}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -74,7 +74,8 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Nhạc ngủ","☾"){search.setText("Ru ngủ")},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("YouTube","▶"){tracks.firstOrNull{it.youtubeUrl!=null}?.let{playTrack(it)}},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  root.addView(actions)
+  actions.addView(action("Bản đồ","🗺️"){openMap()},LinearLayout.LayoutParams(dp(92),dp(62)).apply{leftMargin=dp(7)})
+  root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
   card.addView(TextView(this).apply{text="🌙  Nhạc ngủ";textSize=15f;setTextColor(Color.WHITE)})
@@ -99,6 +100,21 @@ class MainActivity:AppCompatActivity(){
   root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?) {}})
   setContentView(root)
+ }
+ private fun showWelcomeIfNeeded(){
+  val prefs=getSharedPreferences("music_app",MODE_PRIVATE)
+  if(prefs.getBoolean("welcome_seen",false))return
+  AlertDialog.Builder(this)
+   .setTitle("🌙 Chào mừng bạn đến với Music")
+   .setMessage("Đây là ứng dụng nghe nhạc chill, ngủ ngon và thư giãn.\\n\\n• Chạm vào bài hát để phát\\n• ♡ để thêm vào yêu thích\\n• ♫ Thêm nhạc để chọn nhạc từ thiết bị\\n• ▶ YouTube để mở video\\n• 🗺️ Bản đồ để mở bản đồ và tìm địa điểm\\n\\nChúc bạn nghe nhạc thật vui! ✨")
+   .setPositiveButton("Bắt đầu"){_,_->prefs.edit().putBoolean("welcome_seen",true).apply()}
+   .setCancelable(false)
+   .show()
+ }
+ private fun openMap(){
+  val uri=Uri.parse("geo:0,0?q=bản đồ")
+  try{startActivity(Intent(Intent.ACTION_VIEW,uri))}
+  catch(_:Exception){try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps")))}catch(_:Exception){nowPlaying.text="Không mở được Bản đồ"}}
  }
  private fun requestAudioPermission(){val p=if(android.os.Build.VERSION.SDK_INT>=33)Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE;if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED)ActivityCompat.requestPermissions(this,arrayOf(p),10)}
  private fun chooseAudio(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addCategory(Intent.CATEGORY_OPENABLE)},100)}
