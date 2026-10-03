@@ -16,6 +16,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Gravity
 import android.widget.*
+import android.speech.tts.TextToSpeech
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -33,6 +34,7 @@ class MainActivity:AppCompatActivity(){
  @Volatile private var destroyed=false
  private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var search:EditText;private var favoritesOnly=false
  private var isOwner=false
+ private var tts:TextToSpeech?=null
  private val ownerCode="Bảo Nam đẹp trai nhất trên thế giới"
  private val builtIn=listOf(
   Track(null,"🌙 Ru ngủ - Đêm yên bình",melody=melody(261.63,293.66,329.63,392.0,329.63,293.66,261.63)),
@@ -51,7 +53,7 @@ class MainActivity:AppCompatActivity(){
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});buildUi();renderList("");requestAudioPermission();showWelcomeIfNeeded()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){tts?.language=Locale("vi","VN");tts?.setSpeechRate(0.95f)}};buildUi();renderList("");requestAudioPermission();showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundColor(Color.rgb(5,8,20))}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -138,34 +140,35 @@ class MainActivity:AppCompatActivity(){
    .setMessage("Bạn đã xác nhận là chủ app.\n\nTên chủ app: Bảo Nam\nTrạng thái: Đã xác nhận")
    .setPositiveButton("OK",null).show()
  }
+ private fun speakAi(text:String){val engine=tts?:return;engine.language=Locale("vi","VN");engine.speak(text,TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")}
  private fun showAiTutor(){
   val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(4),dp(2),dp(4),dp(2))}
-  val chat=TextView(this).apply{text="🤖 AI offline: Xin chào! Mình có thể giúp giải thích Toán, Văn, Anh, Khoa học và lập trình. Không cần API key.\\n\\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
-  val scroll=ScrollView(this).apply{addView(chat)}
-  panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+  val chat=TextView(this).apply{text="🤖 AI offline: Xin chào! Mình có thể giúp giải thích Toán, Văn, Anh, Khoa học và lập trình. Không cần API key.\n\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
+  val scroll=ScrollView(this).apply{addView(chat)};panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
   val input=EditText(this).apply{hint="Nhập câu hỏi...";setSingleLine(false);maxLines=3;setTextColor(Color.WHITE);setHintTextColor(Color.GRAY);background=rounded(Color.rgb(16,27,52),16);setPadding(dp(12),dp(8),dp(12),dp(8))}
   val send=button("Gửi").apply{background=rounded(Color.rgb(36,118,225),18)}
-  val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-  row.addView(input,LinearLayout.LayoutParams(0,dp(54),1f));row.addView(send,LinearLayout.LayoutParams(dp(70),dp(54)).apply{leftMargin=dp(7)})
+  val speak=button("🔊 Nói").apply{background=rounded(Color.rgb(24,75,110),18)}
+  val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL};row.addView(input,LinearLayout.LayoutParams(0,dp(54),1f));row.addView(send,LinearLayout.LayoutParams(dp(70),dp(54)).apply{leftMargin=dp(7)});row.addView(speak,LinearLayout.LayoutParams(dp(75),dp(54)).apply{leftMargin=dp(7)})
   panel.addView(row,LinearLayout.LayoutParams(-1,dp(60)).apply{topMargin=dp(7)})
   val dialog=AlertDialog.Builder(this).setTitle("🤖 AI Giảng Dạy Offline").setView(panel).setNegativeButton("Đóng",null).create()
-  fun append(role:String,text:String){chat.append((if(role=="user")"\\n👤 Bạn: " else "\\n🤖 AI: ")+text+"\\n");scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}}
-  fun ask(){val q=input.text.toString().trim();if(q.isEmpty())return;input.setText("");append("user",q);send.isEnabled=false;send.text="…";Thread{val answer=offlineTutor(q);runOnUiThread{send.isEnabled=true;send.text="Gửi";append("assistant",answer)}}}
-  send.setOnClickListener{ask()};input.setOnEditorActionListener{_,_,_->ask();true};dialog.show()
+  var lastAnswer="Xin chào! Bạn hãy nhập câu hỏi."
+  fun append(role:String,text:String){chat.append((if(role=="user")"\n👤 Bạn: " else "\n🤖 AI: ")+text+"\n");scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}}
+  fun ask(){val q=input.text.toString().trim();if(q.isEmpty())return;input.setText("");append("user",q);send.isEnabled=false;send.text="…";Thread{val answer=offlineTutor(q);runOnUiThread{lastAnswer=answer;send.isEnabled=true;send.text="Gửi";append("assistant",answer);speakAi(answer)}}}
+  send.setOnClickListener{ask()};speak.setOnClickListener{if(lastAnswer.isNotBlank())speakAi(lastAnswer)};input.setOnEditorActionListener{_,_,_->ask();true};dialog.setOnDismissListener{tts?.stop()};dialog.show()
  }
  private fun offlineTutor(q:String):String{
-  val s=q.lowercase(Locale.getDefault())
+  val s=q.lowercase(Locale.getDefault()).trim()
   return when{
-   s.contains("2+2")||s.contains("2 + 2")->"2 + 2 = 4. Vì cộng 2 đơn vị với 2 đơn vị ta được 4."
-   s.contains("đạo hàm")||s.contains("dao ham")->"Đạo hàm mô tả tốc độ thay đổi của hàm số. Ví dụ: nếu f(x)=x² thì f'(x)=2x."
-   s.contains("phân số")||s.contains("phan so")->"Muốn cộng hai phân số, quy đồng mẫu số rồi cộng các tử số. Sau đó rút gọn kết quả nếu có thể."
-   s.contains("diện tích")||s.contains("dien tich")->"Diện tích hình chữ nhật = chiều dài × chiều rộng. Diện tích tam giác = đáy × chiều cao ÷ 2."
-   s.contains("văn")||s.contains("ngữ văn")||s.contains("ngu van")->"Mình có thể giúp phân tích nhân vật, chủ đề, biện pháp tu từ, người kể chuyện và lập dàn ý. Hãy gửi câu hỏi hoặc đoạn văn cụ thể."
-   s.contains("anh")||s.contains("tiếng anh")||s.contains("tieng anh")->"Mình có thể giải thích từ vựng, ngữ pháp, thì và cách làm bài tiếng Anh. Hãy gửi câu cụ thể."
+   s.contains("2+2")||s.contains("2 + 2")->"2 cộng 2 bằng 4."
+   s.contains("đạo hàm")||s.contains("dao ham")->"Đạo hàm mô tả tốc độ thay đổi của hàm số. Ví dụ, nếu f của x bằng x bình phương thì đạo hàm là 2x."
+   s.contains("phân số")||s.contains("phan so")->"Muốn cộng hai phân số, hãy quy đồng mẫu số, cộng các tử số rồi rút gọn kết quả."
+   s.contains("diện tích")||s.contains("dien tich")->"Diện tích hình chữ nhật bằng chiều dài nhân chiều rộng. Diện tích tam giác bằng đáy nhân chiều cao rồi chia 2."
+   s.contains("ngữ văn")||s.contains("ngu van")||s.contains("biện pháp tu từ")||s.contains("bien phap tu tu")->"Mình có thể giúp phân tích nhân vật, chủ đề, biện pháp tu từ, người kể chuyện và lập dàn ý. Hãy gửi đề bài cụ thể."
+   s.contains("tiếng anh")||s.contains("tieng anh")||s.contains("english")->"Mình có thể giải thích từ vựng, ngữ pháp, các thì và cách làm bài tiếng Anh. Hãy gửi câu cụ thể."
    s.contains("python")||s.contains("lập trình")||s.contains("lap trinh")->"Mình có thể giải thích Python và lập trình từng bước. Hãy gửi đoạn code hoặc mô tả bài toán."
-   s.contains("hóa")||s.contains("hoa hoc")||s.contains("sinh")||s.contains("vật lý")||s.contains("vat ly")->"Mình có thể giải thích kiến thức Khoa học và hướng dẫn bài tập từng bước. Hãy gửi đề bài cụ thể."
-   s.contains("xin chào")||s.contains("hello")||s=="chào"||s=="hi"->"Xin chào! 👋 Bạn muốn học môn nào?"
-   else->"Mình đang chạy offline nên chưa có kiến thức như ChatGPT đầy đủ. Nhưng mình có thể giúp bạn theo từng bước với bài Toán, Văn, Anh, Khoa học hoặc lập trình. Gửi đề bài cụ thể nhé!"
+   s.contains("hóa học")||s.contains("hoa hoc")||s.contains("sinh học")||s.contains("sinh hoc")||s.contains("vật lý")||s.contains("vat ly")->"Mình có thể giải thích kiến thức Khoa học và hướng dẫn bài tập từng bước. Hãy gửi đề bài cụ thể."
+   s.contains("xin chào")||s.contains("xin chao")||s=="hello"||s=="hi"||s=="chào"||s=="chao"->"Xin chào! Bạn muốn học môn nào hôm nay?"
+   else->"Mình đang chạy offline nên chưa có kiến thức như ChatGPT đầy đủ. Hãy gửi một câu hỏi cụ thể về Toán, Văn, Anh, Khoa học hoặc lập trình; mình sẽ hướng dẫn trong phạm vi kiến thức tích hợp."
   }
  }
  private fun openMap(){
@@ -237,5 +240,5 @@ class MainActivity:AppCompatActivity(){
  }
  private fun previous(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
  private fun next(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1])}
- override fun onDestroy(){destroyed=true;stopCurrentPlayback();super.onDestroy()}
+ override fun onDestroy(){destroyed=true;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
 }
