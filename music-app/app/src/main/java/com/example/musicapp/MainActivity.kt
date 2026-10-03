@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private var player: MediaPlayer? = null
     private var audioTrack: AudioTrack? = null
     @Volatile private var stopBuiltin = false
+    private var lastPlayClickMs = 0L
     private lateinit var list: LinearLayout
     private lateinit var nowPlaying: TextView
     private lateinit var playButton: Button
@@ -161,6 +162,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playTrack(track:Track){
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastPlayClickMs < 350L) return
+        lastPlayClickMs = now
         currentIndex=tracks.indexOf(track)
         stopBuiltin = true
         player?.release()
