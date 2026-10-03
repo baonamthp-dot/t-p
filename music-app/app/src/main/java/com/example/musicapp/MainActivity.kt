@@ -352,8 +352,8 @@ class MainActivity : AppCompatActivity() {
         synchronized(audioLock) {
             val oldAudio = audioTrack
             audioTrack = null
+            // The playback thread owns and releases AudioTrack.
             try { oldAudio?.stop() } catch (_: Exception) {}
-            try { oldAudio?.release() } catch (_: Exception) {}
         }
         playButton.text = "▶"
     }
