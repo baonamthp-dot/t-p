@@ -6,6 +6,9 @@ import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaPlayer;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
@@ -19,6 +22,9 @@ public class MainActivity extends Activity {
     SharedPreferences prefs;
     LinearLayout body, miniPlayer;
     MediaPlayer player;
+    AudioTrack tonePlayer;
+    Thread toneThread;
+    volatile boolean stopTone;
     Song current;
     boolean playing = false;
     int page = 0;
@@ -35,8 +41,22 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         prefs=getSharedPreferences("moon_music",MODE_PRIVATE);
         load();
+        addBuiltInSongs();
         build();
         showHome();
+    }
+
+    void addBuiltInSongs(){
+        if(!songs.isEmpty()){ for(Song s:songs) if(s.uri.startsWith("builtin://")) return; }
+        String[][] data={
+            {"Vầng Trăng Tròn","Moon Chill","0"},{"Đêm Bình Yên","Moon Chill","1"},{"Ánh Sao Đêm","Moon Chill","2"},
+            {"Mưa Tháng Sáu","H2K Demo","3"},{"Chill Cùng Gió","Various Demo","4"},{"Biển Đêm","Ocean Demo","5"},
+            {"Mưa Rơi Nhẹ","Sleep Demo","6"},{"Tiếng Sóng Êm","Sleep Demo","7"},{"Rừng Đêm","Nature Demo","8"},
+            {"Giai Điệu Bình Yên","Piano Demo","9"},{"Hoàng Hôn","Piano Demo","10"},{"Ngày Mới","Piano Demo","11"},
+            {"Nhạc Trẻ Chill","Demo Artist","12"},{"Bolero Đêm","Demo Artist","13"},{"Lofi Ánh Trăng","Demo Artist","14"},
+            {"Mộng Mơ","Demo Artist","15"},{"Bình Minh","Demo Artist","16"},{"Thư Giãn","Demo Artist","17"}
+        };
+        for(String[] d:data)songs.add(new Song(d[0],d[1],"builtin://"+d[2]));
     }
 
     GradientDrawable bg(int color,float r){
@@ -160,18 +180,58 @@ public class MainActivity extends Activity {
     void showSimple(String title){body.removeAllViews();header(title,"Moon Music");TextView t=tv("✨ Tính năng đang được xây dựng",18,MUTED);t.setGravity(Gravity.CENTER);body.addView(t,new LinearLayout.LayoutParams(-1,300));}
 
     void playSong(Song s){
-        stop();current=s;
-        try{player=new MediaPlayer();player.setDataSource(this,Uri.parse(s.uri));player.setOnCompletionListener(mp->{playing=false;updateMini();});player.prepare();player.start();playing=true;updateMini();toast("Đang phát: "+s.title);}
-        catch(Exception e){toast("Không phát được bài này");}
+        stop(); current=s;
+        if(s.uri.startsWith("builtin://")){
+            int pattern=0; try{pattern=Integer.parseInt(s.uri.substring(10));}catch(Exception ignored){}
+            playBuiltIn(pattern); return;
+        }
+        try{
+            player=new MediaPlayer();
+            player.setDataSource(this,Uri.parse(s.uri));
+            player.setOnCompletionListener(mp->{playing=false;updateMini();});
+            player.prepare(); player.start(); playing=true; updateMini();
+            toast("Đang phát: "+s.title);
+        }catch(Exception e){toast("Không phát được bài này");}
     }
-    void stop(){if(player!=null){try{player.stop();}catch(Exception ignored){}player.release();player=null;}playing=false;}
+
+    void playBuiltIn(final int pattern){
+        final int sampleRate=22050, seconds=28, total=22050*28;
+        int min=AudioTrack.getMinBufferSize(sampleRate,AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT);
+        tonePlayer=new AudioTrack(AudioManager.STREAM_MUSIC,sampleRate,AudioFormat.CHANNEL_OUT_MONO,
+                AudioFormat.ENCODING_PCM_16BIT,min*2,AudioTrack.MODE_STREAM);
+        tonePlayer.play(); playing=true; updateMini(); toast("Đang phát: "+current.title);
+        stopTone=false;
+        toneThread=new Thread(()->{
+            short[] buf=new short[1024];
+            double[][] scales={{261.63,293.66,329.63,392,440,392,329.63,293.66},{220,261.63,293.66,329.63,392,329.63,293.66,261.63},{329.63,392,440,493.88,523.25,493.88,440,392}};
+            double[] scale=scales[pattern%3]; int pos=0;
+            while(pos<total && !stopTone){
+                int n=Math.min(buf.length,total-pos);
+                for(int i=0;i<n;i++){
+                    double t=(pos+i)/(double)sampleRate; int note=(int)(t*2)%scale.length; double f=scale[note];
+                    double v=Math.sin(2*Math.PI*f*t)*.18+Math.sin(2*Math.PI*(f/2)*t)*.08+Math.sin(2*Math.PI*(f*.5)*t)*.035;
+                    double fade=Math.min(1,Math.min(t/.8,(seconds-t)/.8)); buf[i]=(short)(32767*v*fade);
+                }
+                tonePlayer.write(buf,0,n); pos+=n;
+            }
+            if(!stopTone){playing=false;runOnUiThread(()->updateMini());}
+            try{tonePlayer.stop();}catch(Exception ignored){}
+        }); toneThread.start();
+    }
+
+    void stop(){
+        stopTone=true;
+        if(tonePlayer!=null){try{tonePlayer.stop();}catch(Exception ignored){}try{tonePlayer.release();}catch(Exception ignored){}tonePlayer=null;}
+        if(player!=null){try{player.stop();}catch(Exception ignored){}player.release();player=null;}
+        playing=false;
+    }
     void pickAudio(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("audio/*");i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);startActivityForResult(i,100);}
     @Override protected void onActivityResult(int rc,int result,Intent data){super.onActivityResult(rc,result,data);if(rc!=100||result!=RESULT_OK||data==null)return;ClipData c=data.getClipData();if(c!=null)for(int i=0;i<c.getItemCount();i++)addUri(c.getItemAt(i).getUri());else if(data.getData()!=null)addUri(data.getData());save();showHome();}
     void addUri(Uri u){try{getContentResolver().takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Exception ignored){}for(Song s:songs)if(u.toString().equals(s.uri))return;songs.add(new Song(name(u),"Thiết bị",u.toString()));}
     String name(Uri u){Cursor c=getContentResolver().query(u,null,null,null,null);if(c!=null)try{int n=c.getColumnIndex(OpenableColumns.DISPLAY_NAME);if(n>=0&&c.moveToFirst())return c.getString(n);}finally{c.close();}return "Bài hát mới";}
     String key(Song s){return "uri:"+s.uri;}
     void load(){int n=prefs.getInt("n",0);for(int i=0;i<n;i++){String u=prefs.getString("u"+i,null);if(u!=null)songs.add(new Song(prefs.getString("t"+i,"Bài hát"),"Thiết bị",u));}favorites.addAll(prefs.getStringSet("fav",new HashSet<String>()));}
-    void save(){SharedPreferences.Editor e=prefs.edit();e.putInt("n",songs.size());for(int i=0;i<songs.size();i++){e.putString("u"+i,songs.get(i).uri);e.putString("t"+i,songs.get(i).title);}e.putStringSet("fav",favorites);e.apply();}
+    void save(){SharedPreferences.Editor e=prefs.edit();int local=0;for(Song s:songs)if(!s.uri.startsWith("builtin://"))local++;e.putInt("n",local);int i=0;for(Song s:songs)if(!s.uri.startsWith("builtin://")){e.putString("u"+i,s.uri);e.putString("t"+i,s.title);i++;}e.putStringSet("fav",favorites);e.apply();}
     void toast(String s){Toast.makeText(this,s,Toast.LENGTH_SHORT).show();}
     @Override protected void onDestroy(){stop();super.onDestroy();}
 }
