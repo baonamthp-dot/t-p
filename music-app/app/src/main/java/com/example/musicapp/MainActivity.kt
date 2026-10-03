@@ -54,7 +54,7 @@ class MainActivity:AppCompatActivity(){
   root.addView(search,LinearLayout.LayoutParams(-1,dp(50)).apply{bottomMargin=dp(10)})
   val actions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
   val add=button("＋  Thêm nhạc");add.setOnClickListener{chooseAudio()};actions.addView(add,LinearLayout.LayoutParams(0,dp(48),1f))
-  val fav=button("♡  Yêu thích");fav.setOnClickListener{favoritesOnly=!favoritesOnly;text=if(favoritesOnly)"♥  Yêu thích" else "♡  Yêu thích";renderList(search.text.toString())};actions.addView(fav,LinearLayout.LayoutParams(0,dp(48),1f).apply{leftMargin=dp(8)});root.addView(actions)
+  val fav=button("♡  Yêu thích");fav.setOnClickListener{favoritesOnly=!favoritesOnly;fav.text=if(favoritesOnly)"♥  Yêu thích" else "♡  Yêu thích";renderList(search.text.toString())};actions.addView(fav,LinearLayout.LayoutParams(0,dp(48),1f).apply{leftMargin=dp(8)});root.addView(actions)
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(18),dp(12),dp(18),dp(12));background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(29,43,70),Color.rgb(47,30,62))).apply{cornerRadius=dp(24).toFloat()}}
   card.addView(TextView(this).apply{text="♫";textSize=38f;gravity=Gravity.CENTER;setTextColor(Color.WHITE)})
   nowPlaying=TextView(this).apply{text="Chưa phát bài nào";textSize=18f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);maxLines=2};card.addView(nowPlaying)
@@ -63,8 +63,8 @@ class MainActivity:AppCompatActivity(){
   val controls=LinearLayout(this).apply{gravity=Gravity.CENTER}
   val prev=button("⏮");prev.textSize=19f;controls.addView(prev,LinearLayout.LayoutParams(dp(62),dp(52)))
   playButton=button("▶");playButton.textSize=24f;playButton.background=rounded(Color.rgb(70,105,180),28);playButton.setOnClickListener{togglePlay()};controls.addView(playButton,LinearLayout.LayoutParams(dp(86),dp(58)).apply{leftMargin=dp(10);rightMargin=dp(10)})
-  val next=button("⏭");next.textSize=19f;controls.addView(next,LinearLayout.LayoutParams(dp(62),dp(52)))
-  prev.setOnClickListener{previous()};next.setOnClickListener{next()};root.addView(controls)
+  val nextBtn=button("⏭");nextBtn.textSize=19f;controls.addView(nextBtn,LinearLayout.LayoutParams(dp(62),dp(52)))
+  prev.setOnClickListener{previous()};nextBtn.setOnClickListener{next()};root.addView(controls)
   root.addView(TextView(this).apply{text="  BÀI HÁT";textSize=12f;setTextColor(Color.rgb(120,135,165));setTypeface(typeface,1);setPadding(0,dp(12),0,dp(6))})
   list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?){}})
