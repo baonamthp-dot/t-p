@@ -146,7 +146,24 @@ class MainActivity : AppCompatActivity() {
             }); return
         }
         visible.forEach{track->
-            val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
+            val row=LinearLayout(this).apply{
+                orientation=LinearLayout.HORIZONTAL
+                gravity=Gravity.CENTER_VERTICAL
+                setPadding(4,4,4,4)
+            }
+
+            if (track.title.startsWith("🌙")) {
+                row.addView(ImageView(this).apply {
+                    setImageResource(com.example.musicapp.R.drawable.moon_cover)
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    layoutParams = LinearLayout.LayoutParams(58,58).apply {
+                        setMargins(0,0,14,0)
+                    }
+                    contentDescription = "Ảnh bìa vầng trăng tròn"
+                    setOnClickListener{playTrack(track)}
+                })
+            }
+
             val name=TextView(this).apply{
                 text=track.title; textSize=16f; setTextColor(0xFFFFFFFF.toInt())
                 layoutParams=LinearLayout.LayoutParams(0,64,1f); gravity=Gravity.CENTER_VERTICAL
