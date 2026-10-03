@@ -49,29 +49,53 @@ class MainActivity:AppCompatActivity(){
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
  override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});buildUi();renderList("");requestAudioPermission()}
  private fun buildUi(){
-  val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(18),dp(18),dp(10));setBackgroundColor(Color.rgb(8,10,16))}
-  root.addView(TextView(this).apply{text="Music";textSize=31f;setTypeface(typeface,1);setTextColor(Color.WHITE)})
-  root.addView(TextView(this).apply{text="Your music • Chill • Sleep";textSize=13f;setTextColor(Color.rgb(145,155,175));setPadding(0,0,0,dp(14))})
-  search=EditText(this).apply{hint="🔎  Tìm bài hát";setSingleLine();setTextColor(Color.WHITE);setHintTextColor(Color.rgb(125,135,155));setPadding(dp(15),0,dp(15),0);background=rounded(Color.rgb(25,29,40),18)}
-  root.addView(search,LinearLayout.LayoutParams(-1,dp(50)).apply{bottomMargin=dp(10)})
+  val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundColor(Color.rgb(5,8,20))}
+  val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
+  top.addView(TextView(this).apply{text="♫";textSize=28f;setTextColor(Color.rgb(90,190,255));gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(48),dp(48)))
+  val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(52),1f)}
+  titleBox.addView(TextView(this).apply{text="Music";textSize=28f;setTypeface(typeface,1);setTextColor(Color.WHITE)})
+  titleBox.addView(TextView(this).apply{text="Âm nhạc cho tâm hồn";textSize=12f;setTextColor(Color.rgb(145,170,205))})
+  top.addView(titleBox)
+  top.addView(TextView(this).apply{text="⌕";textSize=30f;setTextColor(Color.WHITE);gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(42),dp(48)))
+  top.addView(TextView(this).apply{text="⚙";textSize=23f;setTextColor(Color.rgb(180,195,220));gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(42),dp(48)))
+  root.addView(top)
+  search=EditText(this).apply{hint="🔎  Tìm bài hát";setSingleLine();textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.rgb(120,140,175));setPadding(dp(15),0,dp(15),0);background=GradientDrawable().apply{setColor(Color.rgb(13,22,46));cornerRadius=dp(22).toFloat();setStroke(dp(1),Color.rgb(35,65,110))}}
+  root.addView(search,LinearLayout.LayoutParams(-1,dp(48)).apply{topMargin=dp(6);bottomMargin=dp(10)})
+  val hero=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(16),dp(12),dp(16),dp(12));background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(7,35,75),Color.rgb(28,12,60),Color.rgb(8,18,42))).apply{cornerRadius=dp(25).toFloat();setStroke(dp(1),Color.rgb(47,102,175))}}
+  hero.addView(TextView(this).apply{text="✦  ·  ✧   ☾   ✧  ·  ✦";textSize=12f;setTextColor(Color.rgb(100,180,255));gravity=Gravity.CENTER})
+  hero.addView(TextView(this).apply{text="🌕";textSize=58f;gravity=Gravity.CENTER;setShadowLayer(dp(14).toFloat(),0f,0f,Color.rgb(80,160,255))})
+  hero.addView(TextView(this).apply{text="Những bản nhạc đưa bạn đến bình yên";textSize=18f;setTypeface(typeface,1);setTextColor(Color.WHITE);gravity=Gravity.CENTER})
+  hero.addView(TextView(this).apply{text="Chill • Ngủ ngon • Thư giãn";textSize=12f;setTextColor(Color.rgb(155,190,235));gravity=Gravity.CENTER;setPadding(0,dp(4),0,0)})
+  root.addView(hero,LinearLayout.LayoutParams(-1,dp(164)).apply{bottomMargin=dp(10)})
   val actions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
-  val add=button("＋  Thêm nhạc");add.setOnClickListener{chooseAudio()};actions.addView(add,LinearLayout.LayoutParams(0,dp(48),1f))
-  val fav=button("♡  Yêu thích");fav.setOnClickListener{favoritesOnly=!favoritesOnly;fav.text=if(favoritesOnly)"♥  Yêu thích" else "♡  Yêu thích";renderList(search.text.toString())};actions.addView(fav,LinearLayout.LayoutParams(0,dp(48),1f).apply{leftMargin=dp(8)});root.addView(actions)
-  val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(18),dp(12),dp(18),dp(12));background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(29,43,70),Color.rgb(47,30,62))).apply{cornerRadius=dp(24).toFloat()}}
-  card.addView(TextView(this).apply{text="♫";textSize=38f;gravity=Gravity.CENTER;setTextColor(Color.WHITE)})
-  nowPlaying=TextView(this).apply{text="Chưa phát bài nào";textSize=18f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);maxLines=2};card.addView(nowPlaying)
-  card.addView(TextView(this).apply{text="READY TO PLAY";textSize=10f;gravity=Gravity.CENTER;setTextColor(Color.rgb(150,190,255));setPadding(0,dp(5),0,0)})
-  root.addView(card,LinearLayout.LayoutParams(-1,dp(132)).apply{topMargin=dp(12);bottomMargin=dp(10)})
+  fun action(label:String,icon:String,click:()->Unit)=TextView(this).apply{text="$icon\n$label";textSize=12f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(13,27,57),20);setPadding(0,dp(6),0,dp(4));setOnClickListener{click()}}
+  val add=action("Thêm nhạc","♫"){chooseAudio()};actions.addView(add,LinearLayout.LayoutParams(0,dp(62),1f))
+  val fav=action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())};actions.addView(fav,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  val sleep=action("Nhạc ngủ","☾"){search.setText("Ru ngủ")};actions.addView(sleep,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  val yt=action("YouTube","▶"){val t=tracks.firstOrNull{it.youtubeUrl!=null};if(t!=null)playTrack(t)};actions.addView(yt,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  root.addView(actions)
+  root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(typeface,1);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
+  val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
+  card.addView(TextView(this).apply{text="🌙  Nhạc ngủ";textSize=15f;setTextColor(Color.WHITE)})
+  card.addView(TextView(this).apply{text="Thư giãn • Ngủ ngon • Sống chậm";textSize=11f;setTextColor(Color.rgb(130,155,195));setPadding(0,dp(3),0,0)})
+  root.addView(card,LinearLayout.LayoutParams(-1,dp(64)).apply{bottomMargin=dp(8)})
+  val nowCard=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(10),dp(8),dp(8),dp(8));background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(17,31,63),Color.rgb(31,18,58))).apply{cornerRadius=dp(20).toFloat();setStroke(dp(1),Color.rgb(45,83,145))}}
+  nowCard.addView(TextView(this).apply{text="🌕";textSize=34f;gravity=Gravity.CENTER;background=rounded(Color.rgb(23,37,67),17)},LinearLayout.LayoutParams(dp(58),dp(58)).apply{rightMargin=dp(10)})
+  val np=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(60),1f)}
+  nowPlaying=TextView(this).apply{text="Chưa phát bài nào";textSize=15f;setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END};np.addView(nowPlaying)
+  np.addView(TextView(this).apply{text="ĐANG CHỜ PHÁT";textSize=9f;setTextColor(Color.rgb(100,185,255));setPadding(0,dp(3),0,0)});nowCard.addView(np)
+  playButton=button("▶").apply{textSize=21f;background=rounded(Color.rgb(36,118,225),28);setOnClickListener{togglePlay()}};nowCard.addView(playButton,LinearLayout.LayoutParams(dp(54),dp(54)))
+  root.addView(nowCard,LinearLayout.LayoutParams(-1,dp(76)).apply{bottomMargin=dp(8)})
   val controls=LinearLayout(this).apply{gravity=Gravity.CENTER}
-  val prev=button("⏮");prev.textSize=19f;controls.addView(prev,LinearLayout.LayoutParams(dp(62),dp(52)))
-  playButton=button("▶");playButton.textSize=24f;playButton.background=rounded(Color.rgb(70,105,180),28);playButton.setOnClickListener{togglePlay()};controls.addView(playButton,LinearLayout.LayoutParams(dp(86),dp(58)).apply{leftMargin=dp(10);rightMargin=dp(10)})
-  val nextBtn=button("⏭");nextBtn.textSize=19f;controls.addView(nextBtn,LinearLayout.LayoutParams(dp(62),dp(52)))
+  val prev=button("⏮");prev.textSize=18f;controls.addView(prev,LinearLayout.LayoutParams(dp(58),dp(46)))
+  val nextBtn=button("⏭");nextBtn.textSize=18f;controls.addView(nextBtn,LinearLayout.LayoutParams(dp(58),dp(46)).apply{leftMargin=dp(8)})
   var lastNav=0L
   prev.setOnClickListener{val now=android.os.SystemClock.uptimeMillis();if(now-lastNav>180){lastNav=now;previous()}}
   nextBtn.setOnClickListener{val now=android.os.SystemClock.uptimeMillis();if(now-lastNav>180){lastNav=now;next()}}
   root.addView(controls)
-  root.addView(TextView(this).apply{text="  BÀI HÁT";textSize=12f;setTextColor(Color.rgb(120,135,165));setTypeface(typeface,1);setPadding(0,dp(12),0,dp(6))})
-  list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
+  root.addView(TextView(this).apply{text="BÀI HÁT";textSize=12f;setTypeface(typeface,1);setTextColor(Color.rgb(120,150,195));setPadding(dp(4),dp(6),0,dp(6))})
+  list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?){}})
   setContentView(root)
  }
@@ -81,13 +105,17 @@ class MainActivity:AppCompatActivity(){
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
  private fun renderList(qs:String){
   list.removeAllViews();val q=qs.trim().lowercase(Locale.getDefault());val visible=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.lowercase(Locale.getDefault()).contains(q)}
-  if(visible.isEmpty()){list.addView(TextView(this).apply{text="Chưa có bài phù hợp";textSize=15f;gravity=Gravity.CENTER;setTextColor(Color.GRAY);setPadding(0,dp(30),0,dp(30))});return}
+  if(visible.isEmpty()){list.addView(TextView(this).apply{text="🌙\n\nChưa có bài phù hợp";textSize=15f;gravity=Gravity.CENTER;setTextColor(Color.rgb(125,145,180));setPadding(0,dp(28),0,dp(28))});return}
   visible.forEach{tr->
-   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(9),dp(7),dp(7),dp(7));background=rounded(Color.rgb(18,22,31),18)}
-   val icon=TextView(this).apply{text=when{tr.title.startsWith("🌙")->"🌕";tr.title.startsWith("☁️")->"☁️";tr.youtubeUrl!=null->"▶️";else->"🎵"};textSize=24f;gravity=Gravity.CENTER;background=rounded(Color.rgb(30,36,50),15)}
-   row.addView(icon,LinearLayout.LayoutParams(dp(52),dp(52)).apply{rightMargin=dp(10)});icon.setOnClickListener{playTrack(tr)}
-   val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(66),1f)};box.addView(TextView(this).apply{text=tr.title;textSize=15f;setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END});box.addView(TextView(this).apply{text=when{tr.youtubeUrl!=null->"YouTube";tr.melody!=null->"Nhạc tích hợp";else->"Từ thiết bị"};textSize=11f;setTextColor(Color.rgb(125,140,165))});row.addView(box);box.setOnClickListener{playTrack(tr)}
-   val f=button(if(tr.favorite)"♥" else "♡");f.textSize=20f;f.setOnClickListener{tr.favorite=!tr.favorite;renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(48),dp(52)));list.addView(row,LinearLayout.LayoutParams(-1,dp(72)).apply{bottomMargin=dp(7)})
+   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(6),dp(7),dp(6));background=GradientDrawable(GradientDrawable.Orientation.LT_BR,intArrayOf(Color.rgb(11,22,43),Color.rgb(17,17,36))).apply{cornerRadius=dp(18).toFloat();setStroke(dp(1),Color.rgb(25,52,90))}}
+   val icon=TextView(this).apply{text=when{tr.title.startsWith("🌙")->"🌕";tr.title.startsWith("☁️")->"☁";tr.youtubeUrl!=null->"▶";else->"♫"};textSize=23f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(22,36,66),15)}
+   row.addView(icon,LinearLayout.LayoutParams(dp(50),dp(50)).apply{rightMargin=dp(9)});icon.setOnClickListener{playTrack(tr)}
+   val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
+   box.addView(TextView(this).apply{text=tr.title;textSize=14f;setTypeface(typeface,1);setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
+   box.addView(TextView(this).apply{text=when{tr.youtubeUrl!=null->"YouTube • Mở video";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
+   row.addView(box);box.setOnClickListener{playTrack(tr)}
+   val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
+   list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
   }
  }
  private fun stopCurrentPlayback(){
