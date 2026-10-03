@@ -72,7 +72,16 @@ class MainActivity:AppCompatActivity(){
   val add=action("Thêm nhạc","♫"){chooseAudio()};actions.addView(add,LinearLayout.LayoutParams(0,dp(62),1f))
   val fav=action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())};actions.addView(fav,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   val sleep=action("Nhạc ngủ","☾"){search.setText("Ru ngủ")};actions.addView(sleep,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  val yt=action("YouTube","▶"){val t=tracks.firstOrNull{it.youtubeUrl!=null};if(t!=null)playTrack(t)};actions.addView(yt,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  val yt=action("YouTube","▶") {
+    val youtubeTrack = tracks.firstOrNull { track -> track.youtubeUrl != null }
+    if (youtubeTrack != null) {
+      playTrack(youtubeTrack)
+    }
+  }
+  actions.addView(
+    yt,
+    LinearLayout.LayoutParams(0,dp(62),1f).apply { leftMargin=dp(7) }
+  )
   root.addView(actions)
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
