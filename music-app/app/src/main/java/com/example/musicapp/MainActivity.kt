@@ -23,7 +23,8 @@ data class Track(
     val uri: Uri?,
     val title: String,
     var favorite: Boolean = false,
-    val melody: List<Pair<Double, Int>>? = null
+    val melody: List<Pair<Double, Int>>? = null,
+    val youtubeUrl: String? = null
 )
 
 class MainActivity : AppCompatActivity() {
@@ -47,7 +48,8 @@ class MainActivity : AppCompatActivity() {
         Track(null, "☁️ Chill - Hoàng hôn", false, melody(293.66, 349.23, 440.00, 523.25, 440.00, 349.23, 293.66)),
         Track(null, "☁️ Chill - Mưa nhẹ", false, melody(220.00, 277.18, 329.63, 369.99, 329.63, 277.18, 220.00)),
         Track(null, "☁️ Chill - Gió biển", false, melody(246.94, 329.63, 392.00, 440.00, 392.00, 329.63, 246.94)),
-        Track(null, "☁️ Chill - Thư giãn", false, melody(196.00, 246.94, 329.63, 392.00, 329.63, 246.94, 196.00))
+        Track(null, "☁️ Chill - Thư giãn", false, melody(196.00, 246.94, 329.63, 392.00, 329.63, 246.94, 196.00)),
+        Track(null, "▶️ Bài YouTube mới", false, null, "https://youtu.be/liTfD88dbCo?si=eSPMiLH_CE1-a4Rp")
     )
 
     private fun melody(vararg notes: Double): List<Pair<Double, Int>> =
