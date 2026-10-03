@@ -21,6 +21,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -79,6 +86,7 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Nhạc ngủ","☾"){search.setText("Ru ngủ")},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("YouTube","▶"){tracks.firstOrNull{it.youtubeUrl!=null}?.let{playTrack(it)}},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Bản đồ","🗺️"){openMap()},LinearLayout.LayoutParams(dp(92),dp(62)).apply{leftMargin=dp(7)})
+  actions.addView(action("AI","🤖"){showAiTutor()},LinearLayout.LayoutParams(dp(82),dp(62)).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -136,6 +144,74 @@ class MainActivity:AppCompatActivity(){
    .setTitle("👑 Chủ app: Bảo Nam")
    .setMessage("Bạn đã xác nhận là chủ app.\n\nTên chủ app: Bảo Nam\nTrạng thái: Đã xác nhận")
    .setPositiveButton("OK",null).show()
+ }
+ private fun showAiTutor(){
+  val prefs=getSharedPreferences("music_ai",MODE_PRIVATE)
+  val savedKey=prefs.getString("api_key","").orEmpty()
+  val messages=mutableListOf<Pair<String,String>>()
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(4),dp(2),dp(4),dp(2))}
+  val chat=TextView(this).apply{text="🤖 AI: Xin chào! Mình là AI giảng dạy. Hãy hỏi mình về Toán, Văn, Anh, Khoa học, lập trình hoặc kiến thức khác.\n\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
+  val scroll=ScrollView(this).apply{addView(chat)}
+  panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+  val input=EditText(this).apply{hint="Nhập câu hỏi...";setSingleLine(false);maxLines=3;setTextColor(Color.WHITE);setHintTextColor(Color.GRAY);background=rounded(Color.rgb(16,27,52),16);setPadding(dp(12),dp(8),dp(12),dp(8))}
+  val send=button("Gửi").apply{background=rounded(Color.rgb(36,118,225),18)}
+  val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
+  row.addView(input,LinearLayout.LayoutParams(0,dp(54),1f));row.addView(send,LinearLayout.LayoutParams(dp(70),dp(54)).apply{leftMargin=dp(7)})
+  panel.addView(row,LinearLayout.LayoutParams(-1,dp(60)).apply{topMargin=dp(7)})
+  val settings=button("⚙ API key").apply{setOnClickListener{showAiKeyDialog()}}
+  panel.addView(settings,LinearLayout.LayoutParams(-1,dp(45)).apply{topMargin=dp(5)})
+  val dialog=AlertDialog.Builder(this).setTitle("🤖 AI Giảng Dạy").setView(panel).setNegativeButton("Đóng",null).create()
+  fun append(role:String,text:String){chat.append((if(role=="user")"\n👤 Bạn: " else "\n🤖 AI: ")+text+"\n");scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}}
+  fun ask(){
+   val q=input.text.toString().trim();if(q.isEmpty())return
+   val key=prefs.getString("api_key","").orEmpty()
+   if(key.isEmpty()){showAiKeyDialog();return}
+   input.setText("");append("user",q);messages.add("user" to q);send.isEnabled=false;send.text="…"
+   Thread{
+    val answer=callAi(key,messages)
+    runOnUiThread{send.isEnabled=true;send.text="Gửi";if(answer.first){messages.add("assistant" to answer.second);append("assistant",answer.second)}else append("assistant","❌ "+answer.second)}
+   }.start()
+  }
+  send.setOnClickListener{ask()};input.setOnEditorActionListener{_,_,_->ask();true}
+  dialog.setOnShowListener{if(savedKey.isEmpty())settings.performClick()}
+  dialog.show()
+ }
+ private fun showAiKeyDialog(){
+  val prefs=getSharedPreferences("music_ai",MODE_PRIVATE)
+  val input=EditText(this).apply{hint="Dán API key vào đây";setSingleLine();setText(prefs.getString("api_key","").orEmpty());setTextColor(Color.WHITE);setHintTextColor(Color.GRAY);inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD}
+  AlertDialog.Builder(this).setTitle("🔑 Kết nối AI").setMessage("Ứng dụng cần API key để gọi AI. Key chỉ lưu trên thiết bị và không được ghi vào GitHub. Không gửi key cho người khác.").setView(input).setNegativeButton("Hủy",null).setPositiveButton("Lưu"){_,_->prefs.edit().putString("api_key",input.text.toString().trim()).apply();Toast.makeText(this,"Đã lưu API key trên thiết bị.",Toast.LENGTH_SHORT).show()}.show()
+ }
+ private fun callAi(apiKey:String,history:List<Pair<String,String>>):Pair<Boolean,String>{
+  return try{
+   val url=URL("https://api.openai.com/v1/responses")
+   val conn=url.openConnection() as HttpURLConnection
+   conn.requestMethod="POST";conn.connectTimeout=20000;conn.readTimeout=60000;conn.doOutput=true
+   conn.setRequestProperty("Authorization","Bearer $apiKey");conn.setRequestProperty("Content-Type","application/json")
+   val input=JSONArray()
+   val system=JSONObject().put("role","system").put("content","Bạn là AI giảng dạy thân thiện bằng tiếng Việt. Hãy giải thích rõ ràng, từng bước, phù hợp học sinh; ưu tiên giúp người học hiểu cách làm thay vì chỉ đưa đáp án. Có thể trả lời nhiều môn học, kiến thức phổ thông, lập trình và câu hỏi đời sống. Khi thông tin có thể đã thay đổi, hãy nói rõ và dùng web search nếu công cụ được cung cấp. Không bịa nguồn hoặc dữ kiện.")
+   input.put(system)
+   history.takeLast(12).forEach{(role,text)->input.put(JSONObject().put("role",role).put("content",text))}
+   val body=JSONObject().put("model","gpt-6-luna").put("input",input).put("tools",JSONArray().put(JSONObject().put("type","web_search")))
+   OutputStreamWriter(conn.outputStream).use{it.write(body.toString());it.flush()}
+   val code=conn.responseCode
+   val stream=if(code in 200..299)conn.inputStream else conn.errorStream
+   val raw=BufferedReader(InputStreamReader(stream)).use{it.readText()}
+   if(code !in 200..299){return false to "API lỗi $code: "+try{JSONObject(raw).optJSONObject("error")?.optString("message").orEmpty().ifEmpty{raw.take(300)}}catch(_:Exception){raw.take(300)}}
+   val json=JSONObject(raw)
+   val direct=json.optString("output_text")
+   if(direct.isNotBlank())return true to direct
+   val out=json.optJSONArray("output")?:return false to "AI không trả về nội dung."
+   val sb=StringBuilder()
+   for(i in 0 until out.length()){
+    val item=out.optJSONObject(i)?:continue
+    val content=item.optJSONArray("content")?:continue
+    for(j in 0 until content.length()){
+     val part=content.optJSONObject(j)?:continue
+     if(part.optString("type")=="output_text")sb.append(part.optString("text"))
+    }
+   }
+   if(sb.isNotBlank())true to sb.toString() else false to "AI không trả về nội dung."
+  }catch(e:Exception){false to "Không kết nối được AI: "+(e.message?:"lỗi mạng")}
  }
  private fun openMap(){
   val uri=Uri.parse("geo:0,0?q=bản đồ")
