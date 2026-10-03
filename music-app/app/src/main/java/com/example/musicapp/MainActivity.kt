@@ -32,6 +32,8 @@ class MainActivity:AppCompatActivity(){
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
  private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var search:EditText;private var favoritesOnly=false
+ private var isOwner=false
+ private val ownerCode="Bảo Nam đẹp trai nhất trên thế giới"
  private val builtIn=listOf(
   Track(null,"🌙 Ru ngủ - Đêm yên bình",melody=melody(261.63,293.66,329.63,392.0,329.63,293.66,261.63)),
   Track(null,"🌙 Ru ngủ - Mây mềm",melody=melody(220.0,261.63,293.66,349.23,293.66,261.63,220.0)),
@@ -60,6 +62,7 @@ class MainActivity:AppCompatActivity(){
   top.addView(titleBox)
   top.addView(TextView(this).apply{text="⌕";textSize=30f;setTextColor(Color.WHITE);gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(42),dp(48)))
   top.addView(TextView(this).apply{text="⚙";textSize=23f;setTextColor(Color.rgb(180,195,220));gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(42),dp(48)))
+  top.addView(TextView(this).apply{text="👑";textSize=23f;setTextColor(Color.rgb(255,215,80));gravity=Gravity.CENTER;setOnClickListener{showOwnerLogin()}},LinearLayout.LayoutParams(dp(42),dp(48)))
   root.addView(top)
   search=EditText(this).apply{hint="🔎  Tìm bài hát";setSingleLine();textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.rgb(120,140,175));setPadding(dp(15),0,dp(15),0);background=GradientDrawable().apply{setColor(Color.rgb(13,22,46));cornerRadius=dp(22).toFloat();setStroke(dp(1),Color.rgb(35,65,110))}}
   root.addView(search,LinearLayout.LayoutParams(-1,dp(48)).apply{topMargin=dp(6);bottomMargin=dp(10)})
@@ -111,6 +114,28 @@ class MainActivity:AppCompatActivity(){
    .setPositiveButton("Bắt đầu"){_,_->prefs.edit().putBoolean("welcome_seen",true).apply()}
    .setCancelable(false)
    .show()
+ }
+ private fun showOwnerLogin(){
+  if(isOwner){Toast.makeText(this,"👑 Chủ app: Bảo Nam",Toast.LENGTH_SHORT).show();return}
+  val input=EditText(this).apply{hint="Nhập mã chủ app";setSingleLine();setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)}
+  AlertDialog.Builder(this)
+   .setTitle("👑 Xác nhận chủ app")
+   .setMessage("Nhập đúng mã để trở thành chủ app.")
+   .setView(input)
+   .setNegativeButton("Hủy",null)
+   .setPositiveButton("Xác nhận"){_,_->
+    if(input.text.toString()==ownerCode){
+     isOwner=true
+     Toast.makeText(this,"👑 Bảo Nam đã trở thành chủ app!",Toast.LENGTH_LONG).show()
+     showOwnerPanel()
+    }else Toast.makeText(this,"❌ Sai mã chủ app!",Toast.LENGTH_SHORT).show()
+   }.show()
+ }
+ private fun showOwnerPanel(){
+  AlertDialog.Builder(this)
+   .setTitle("👑 Chủ app: Bảo Nam")
+   .setMessage("Bạn đã xác nhận là chủ app.\n\nTên chủ app: Bảo Nam\nTrạng thái: Đã xác nhận")
+   .setPositiveButton("OK",null).show()
  }
  private fun openMap(){
   val uri=Uri.parse("geo:0,0?q=bản đồ")
