@@ -42,7 +42,8 @@ class MainActivity:AppCompatActivity(){
   Track(null,"☁️ Chill - Mưa nhẹ",melody=melody(220.0,277.18,329.63,369.99,329.63,277.18,220.0)),
   Track(null,"☁️ Chill - Gió biển",melody=melody(246.94,329.63,392.0,440.0,392.0,329.63,246.94)),
   Track(null,"☁️ Chill - Thư giãn",melody=melody(196.0,246.94,329.63,392.0,329.63,246.94,196.0)),
-  Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://youtu.be/liTfD88dbCo?si=eSPMiLH_CE1-a4Rp"))
+  Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://www.youtube.com/watch?v=liTfD88dbCo")
+ )
  private fun melody(vararg n:Double)=n.map{it to 650}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
@@ -69,29 +70,15 @@ class MainActivity:AppCompatActivity(){
   root.addView(hero,LinearLayout.LayoutParams(-1,dp(164)).apply{bottomMargin=dp(10)})
   val actions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
   fun action(label:String,icon:String,click:()->Unit)=TextView(this).apply{text="$icon\n$label";textSize=12f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(13,27,57),20);setPadding(0,dp(6),0,dp(4));setOnClickListener{click()}}
-  val add=action("Thêm nhạc","♫"){chooseAudio()};actions.addView(add,LinearLayout.LayoutParams(0,dp(62),1f))
-  val fav=action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())};actions.addView(fav,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  val sleep=action("Nhạc ngủ","☾"){search.setText("Ru ngủ")};actions.addView(sleep,LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  val yt=action("YouTube","▶") {
-    val youtubeTrack = tracks.firstOrNull { track -> track.youtubeUrl != null }
-    if (youtubeTrack != null) {
-      playTrack(youtubeTrack)
-    }
-  }
-  actions.addView(
-    yt,
-    LinearLayout.LayoutParams(0,dp(62),1f).apply { leftMargin=dp(7) }
-  )
+  actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
+  actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Nhạc ngủ","☾"){search.setText("Ru ngủ")},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("YouTube","▶"){tracks.firstOrNull{it.youtubeUrl!=null}?.let{playTrack(it)}},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   root.addView(actions)
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
   card.addView(TextView(this).apply{text="🌙  Nhạc ngủ";textSize=15f;setTextColor(Color.WHITE)})
-  val cardSubtitle=TextView(this)
-  cardSubtitle.text="Thư giãn - Ngủ ngon - Sống chậm"
-  cardSubtitle.textSize=11f
-  cardSubtitle.setTextColor(Color.rgb(130,155,195))
-  cardSubtitle.setPadding(0,dp(3),0,0)
-  card.addView(cardSubtitle)
+  card.addView(TextView(this).apply{text="Thư giãn - Ngủ ngon - Sống chậm";textSize=11f;setTextColor(Color.rgb(130,155,195));setPadding(0,dp(3),0,0)})
   root.addView(card,LinearLayout.LayoutParams(-1,dp(64)).apply{bottomMargin=dp(8)})
   val nowCard=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(10),dp(8),dp(8),dp(8));background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(17,31,63),Color.rgb(31,18,58))).apply{cornerRadius=dp(20).toFloat();setStroke(dp(1),Color.rgb(45,83,145))}}
   nowCard.addView(TextView(this).apply{text="🌕";textSize=34f;gravity=Gravity.CENTER;background=rounded(Color.rgb(23,37,67),17)},LinearLayout.LayoutParams(dp(58),dp(58)).apply{rightMargin=dp(10)})
@@ -110,7 +97,7 @@ class MainActivity:AppCompatActivity(){
   root.addView(TextView(this).apply{text="BÀI HÁT";textSize=12f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.rgb(120,150,195));setPadding(dp(4),dp(6),0,dp(6))})
   list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
   root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
-  search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?){}})
+  search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?) {}})
   setContentView(root)
  }
  private fun requestAudioPermission(){val p=if(android.os.Build.VERSION.SDK_INT>=33)Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE;if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED)ActivityCompat.requestPermissions(this,arrayOf(p),10)}
@@ -133,61 +120,47 @@ class MainActivity:AppCompatActivity(){
   }
  }
  private fun stopCurrentPlayback(){
-  generation.incrementAndGet(); stopBuiltin=true; builtinPaused=false
-  synchronized(audioLock){
-   val a=audioTrack; audioTrack=null
-   if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}
-  }
-  val p=player; player=null
-  if(p!=null){try{p.setOnPreparedListener(null)}catch(_:Exception){};try{p.setOnCompletionListener(null)}catch(_:Exception){};try{p.setOnErrorListener(null)}catch(_:Exception){};try{p.stop()}catch(_:Exception){};try{p.release()}catch(_:Exception){}}
+  generation.incrementAndGet();stopBuiltin=true;builtinPaused=false
+  synchronized(audioLock){val a=audioTrack;audioTrack=null;if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}}
+  val p=player;player=null;if(p!=null){try{p.setOnPreparedListener(null)}catch(_:Exception){};try{p.setOnCompletionListener(null)}catch(_:Exception){};try{p.setOnErrorListener(null)}catch(_:Exception){};try{p.stop()}catch(_:Exception){};try{p.release()}catch(_:Exception){}}
   if(!destroyed&&::playButton.isInitialized)playButton.text="▶"
  }
- private fun playTrack(t:Track){currentIndex=tracks.indexOf(t);stopCurrentPlayback();if(t.youtubeUrl!=null){try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(t.youtubeUrl)));nowPlaying.text="Đã mở: "+t.title}catch(_:Exception){nowPlaying.text="Không mở được YouTube"};return};if(t.melody!=null){playBuiltin(t);return};val u=t.uri?:return;try{val mp=MediaPlayer();mp.setDataSource(this,u);mp.setOnPreparedListener{if(player!==mp){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"};mp.setOnCompletionListener{if(player===mp)next()};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player=null;playButton.text="▶"}}
+ private fun openYoutube(url:String){
+  val parsed=Uri.parse(url)
+  try{
+   val appIntent=Intent(Intent.ACTION_VIEW,parsed).apply{setPackage("com.google.android.youtube")}
+   startActivity(appIntent)
+   nowPlaying.text="Đang mở YouTube: "+(parsed.getQueryParameter("v")?:"video")
+  }catch(_:Exception){
+   try{
+    startActivity(Intent(Intent.ACTION_VIEW,parsed))
+    nowPlaying.text="Đang mở video YouTube"
+   }catch(_:Exception){
+    nowPlaying.text="Không tìm thấy ứng dụng mở YouTube"
+   }
+  }
+ }
+ private fun playTrack(t:Track){
+  currentIndex=tracks.indexOf(t);stopCurrentPlayback()
+  if(t.youtubeUrl!=null){openYoutube(t.youtubeUrl);return}
+  if(t.melody!=null){playBuiltin(t);return}
+  val u=t.uri?:return
+  try{val mp=MediaPlayer();mp.setDataSource(this,u);mp.setOnPreparedListener{if(player!==mp){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"};mp.setOnCompletionListener{if(player===mp)next()};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player=null;playButton.text="▶"}
+ }
  private fun playBuiltin(t:Track){
-  val g=generation.get(); stopBuiltin=false; builtinPaused=false
-  nowPlaying.text="Đang phát: "+t.title; playButton.text="⏸"
+  val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
   Thread{
-   val sr=22050; val mb=AudioTrack.getMinBufferSize(sr,AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT)
+   val sr=22050;val mb=AudioTrack.getMinBufferSize(sr,AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT)
    if(g!=generation.get()||stopBuiltin)return@Thread
    val at=try{AudioTrack(AudioManager.STREAM_MUSIC,sr,AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT,mb.coerceAtLeast(4096),AudioTrack.MODE_STREAM)}catch(_:Exception){return@Thread}
    synchronized(audioLock){if(g!=generation.get()||stopBuiltin){try{at.release()}catch(_:Exception){};return@Thread};audioTrack=at}
    var completed=false
-   try{
-    at.play()
-    repeat(3){for((freq,dur)in t.melody?:emptyList()){
-     val count=sr*dur/1000; val s=ShortArray(count); var i=0
-     while(i<count){
-      if(stopBuiltin||g!=generation.get())return@Thread
-      while(builtinPaused&&!stopBuiltin&&g==generation.get()){try{Thread.sleep(50)}catch(_:Exception){}}
-      if(stopBuiltin||g!=generation.get())return@Thread
-      val x=i.toDouble()/sr; val fi=(i/(sr*.04)).coerceAtMost(1.0); val fo=((count-i)/(sr*.04)).coerceAtMost(1.0)
-      s[i]=(sin(2*PI*freq*x)*.18*minOf(fi,fo)*Short.MAX_VALUE).toInt().toShort(); i++
-     }
-     synchronized(audioLock){if(audioTrack!==at)return@Thread;try{at.write(s,0,s.size)}catch(_:Exception){return@Thread}}
-    }}
-    completed=true
-   }catch(_:Exception){}finally{
-    var owner=false; synchronized(audioLock){if(audioTrack===at){audioTrack=null;owner=true}}
-    if(owner){try{at.stop()}catch(_:Exception){};try{at.release()}catch(_:Exception){}}
-    runOnUiThread{if(g==generation.get()&&!stopBuiltin&&completed&&!destroyed){playButton.text="▶";next()}}
-   }
+   try{at.play();repeat(3){for((freq,dur)in t.melody?:emptyList()){val count=sr*dur/1000;val s=ShortArray(count);var i=0;while(i<count){if(stopBuiltin||g!=generation.get())return@Thread;while(builtinPaused&&!stopBuiltin&&g==generation.get()){try{Thread.sleep(50)}catch(_:Exception){}};if(stopBuiltin||g!=generation.get())return@Thread;val x=i.toDouble()/sr;val fi=(i/(sr*.04)).coerceAtMost(1.0);val fo=((count-i)/(sr*.04)).coerceAtMost(1.0);s[i]=(sin(2*PI*freq*x)*.18*minOf(fi,fo)*Short.MAX_VALUE).toInt().toShort();i++};synchronized(audioLock){if(audioTrack!==at)return@Thread;try{at.write(s,0,s.size)}catch(_:Exception){return@Thread}}}};completed=true}catch(_:Exception){}finally{var owner=false;synchronized(audioLock){if(audioTrack===at){audioTrack=null;owner=true}};if(owner){try{at.stop()}catch(_:Exception){};try{at.release()}catch(_:Exception){}};runOnUiThread{if(g==generation.get()&&!stopBuiltin&&completed&&!destroyed){playButton.text="▶";next()}}}
   }.start()
  }
  private fun togglePlay(){
-  synchronized(audioLock){
-   audioTrack?.let{a->
-    try{
-     if(a.playState==AudioTrack.PLAYSTATE_PLAYING){builtinPaused=true;a.pause();playButton.text="▶"}
-     else{builtinPaused=false;a.play();playButton.text="⏸"}
-    }catch(_:Exception){playButton.text="▶"}
-    return
-   }
-  }
-  val p=player
-  if(p!=null){
-   try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}
-   catch(_:Exception){player=null;playButton.text="▶";nowPlaying.text="Không thể tiếp tục bài hát"}
-  }
+  synchronized(audioLock){audioTrack?.let{a->try{if(a.playState==AudioTrack.PLAYSTATE_PLAYING){builtinPaused=true;a.pause();playButton.text="▶"}else{builtinPaused=false;a.play();playButton.text="⏸"}}catch(_:Exception){playButton.text="▶"};return}}
+  val p=player;if(p!=null){try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}catch(_:Exception){player=null;playButton.text="▶";nowPlaying.text="Không thể tiếp tục bài hát"}}
  }
  private fun previous(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
  private fun next(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1])}
