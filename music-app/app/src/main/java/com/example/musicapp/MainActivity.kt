@@ -30,6 +30,8 @@ class MainActivity:AppCompatActivity(){
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
  private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var search:EditText;private var favoritesOnly=false
+ private var sleepTimer: android.os.CountDownTimer?=null
+ private val prefs by lazy{getSharedPreferences("music_app",MODE_PRIVATE)}
  private var isOwner=false
  private var aiUnlocked=false
  private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
@@ -53,7 +55,7 @@ class MainActivity:AppCompatActivity(){
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){tts?.language=Locale("vi","VN");tts?.setSpeechRate(0.95f)}};buildUi();renderList("");showWelcomeIfNeeded()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){tts?.language=Locale("vi","VN");tts?.setSpeechRate(0.95f)}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background)}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -63,7 +65,7 @@ class MainActivity:AppCompatActivity(){
   titleBox.addView(TextView(this).apply{text="Âm nhạc cho tâm hồn";textSize=12f;setTextColor(Color.rgb(145,170,205))})
   top.addView(titleBox)
   top.addView(TextView(this).apply{text="⌕";textSize=30f;setTextColor(Color.WHITE);gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(42),dp(48)))
-  top.addView(TextView(this).apply{text="⚙";textSize=23f;setTextColor(Color.rgb(180,195,220));gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(42),dp(48)))
+  top.addView(TextView(this).apply{text="⚙";textSize=23f;setTextColor(Color.rgb(180,195,220));gravity=Gravity.CENTER;setOnClickListener{showSettings()}},LinearLayout.LayoutParams(dp(42),dp(48)))
   top.addView(TextView(this).apply{text="👑";textSize=23f;setTextColor(Color.rgb(255,215,80));gravity=Gravity.CENTER;setOnClickListener{showOwnerLogin()}},LinearLayout.LayoutParams(dp(42),dp(48)))
   root.addView(top)
   search=EditText(this).apply{hint="🔎  Tìm bài hát";setSingleLine();textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.rgb(120,140,175));setPadding(dp(15),0,dp(15),0);background=GradientDrawable().apply{setColor(Color.rgb(13,22,46));cornerRadius=dp(22).toFloat();setStroke(dp(1),Color.rgb(35,65,110))}}
@@ -107,6 +109,25 @@ class MainActivity:AppCompatActivity(){
   root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?) {}})
   setContentView(root)
+ }
+ private fun loadFavorites(){tracks.forEach{it.favorite=prefs.getBoolean("fav_"+it.title,false)}}
+ private fun saveFavorite(t:Track){prefs.edit().putBoolean("fav_"+t.title,t.favorite).apply()}
+ private fun showSleepTimer(){
+  val choices=arrayOf("15 phút","30 phút","60 phút","90 phút","Tắt hẹn giờ")
+  AlertDialog.Builder(this).setTitle("☾ Hẹn giờ ngủ").setItems(choices){_,which->
+   sleepTimer?.cancel()
+   if(which==4){Toast.makeText(this,"Đã tắt hẹn giờ ngủ",Toast.LENGTH_SHORT).show();return@setItems}
+   val mins=intArrayOf(15,30,60,90)[which]
+   sleepTimer=object:android.os.CountDownTimer(mins*60_000L,1000L){
+    override fun onTick(ms:Long){nowPlaying.text="☾ Tắt nhạc sau "+((ms+59999)/60000)+" phút"}
+    override fun onFinish(){stopCurrentPlayback();nowPlaying.text="☾ Đã tắt nhạc theo hẹn giờ";Toast.makeText(this@MainActivity,"☾ Đã tắt nhạc",Toast.LENGTH_SHORT).show()}
+   }.start()
+   Toast.makeText(this,"☾ Hẹn giờ "+mins+" phút",Toast.LENGTH_SHORT).show()
+  }.setNegativeButton("Hủy",null).show()
+ }
+ private fun showSettings(){
+  val info="Music App 1.0\n\n✓ Nhạc tích hợp\n✓ Nhạc từ thiết bị\n✓ Yêu thích được lưu trên máy\n✓ Hẹn giờ ngủ\n✓ YouTube mở bằng HTTPS an toàn\n✓ AI offline, không cần API key\n✓ Không dùng cleartext network\n✓ Không yêu cầu quyền đọc bộ nhớ\n\nMã chủ/AI được kiểm tra bằng hash trong ứng dụng; đây là bảo vệ cục bộ, không phải xác thực máy chủ."
+  AlertDialog.Builder(this).setTitle("⚙ Cài đặt & Bảo mật").setMessage(info).setPositiveButton("OK",null).show()
  }
  private fun showWelcomeIfNeeded(){
   val prefs=getSharedPreferences("music_app",MODE_PRIVATE)
@@ -204,7 +225,7 @@ class MainActivity:AppCompatActivity(){
    box.addView(TextView(this).apply{text=tr.title;textSize=14f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
    box.addView(TextView(this).apply{text=when{tr.youtubeUrl!=null->"YouTube • Mở video";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
    row.addView(box);box.setOnClickListener{playTrack(tr)}
-   val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
+   val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;saveFavorite(tr);renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
   }
  }
@@ -256,5 +277,5 @@ class MainActivity:AppCompatActivity(){
  }
  private fun previous(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
  private fun next(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1])}
- override fun onDestroy(){destroyed=true;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
+ override fun onDestroy(){destroyed=true;sleepTimer?.cancel();sleepTimer=null;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
 }
