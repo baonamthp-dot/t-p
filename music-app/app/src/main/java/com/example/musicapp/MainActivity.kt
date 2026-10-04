@@ -48,7 +48,6 @@ class MainActivity:AppCompatActivity(){
   Track(null,"☁️ Chill - Mưa nhẹ",melody=melody(220.0,277.18,329.63,369.99,329.63,277.18,220.0)),
   Track(null,"☁️ Chill - Gió biển",melody=melody(246.94,329.63,392.0,440.0,392.0,329.63,246.94)),
   Track(null,"☁️ Chill - Thư giãn",melody=melody(196.0,246.94,329.63,392.0,329.63,246.94,196.0)),
-  Track(null,"▶️ Shape of You - Ed Sheeran",youtubeUrl="https://music.youtube.com/watch?v=JGwWNGJdvx8"),
   Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://music.youtube.com/watch?v=liTfD88dbCo")
  )
  private fun melody(vararg n:Double)=n.map{it to 650}
@@ -236,10 +235,12 @@ class MainActivity:AppCompatActivity(){
   if(!destroyed&&::playButton.isInitialized)playButton.text="▶"
  }
  private fun showTrackDetails(t:Track){
+  if(t.youtubeUrl==null && t.melody==null && t.uri!=null){
   val message=when{
    t.title.contains("Shape of You")->"🎧 Shape of You — Ed Sheeran\n\n• Chất nhạc: dance-pop/electropop, groove đều và dễ bắt nhịp.\n• Điểm nổi bật: bassline và nhịp bộ gõ tạo cảm giác chuyển động liên tục.\n• Cảm xúc: năng lượng, tự tin, vui và mang màu sắc nightlife.\n• Cách nghe: nghe bằng tai nghe ở âm lượng vừa; chú ý phần bass, nhịp và cách lớp âm thanh vào ra.\n• Lưu ý: ứng dụng chỉ mở nguồn nghe chính thức, không sao chép hay nhúng bản thu có bản quyền."
    else->"🎵 "+t.title+"\n\nĐây là bản nhạc trong thư viện Music. Hãy nghe ở âm lượng vừa và thử tập trung vào nhịp, giai điệu và cảm xúc của bài."
   };
+  }
   AlertDialog.Builder(this).setTitle("✦ Chi tiết sâu hơn").setMessage(message).setPositiveButton("Nghe ngay"){_,_->playTrack(t)}.setNegativeButton("Đóng",null).show()
  }
  private fun openYoutube(url:String){
