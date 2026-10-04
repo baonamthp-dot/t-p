@@ -48,14 +48,14 @@ class MainActivity:AppCompatActivity(){
   Track(null,"☁️ Chill - Mưa nhẹ",melody=melody(220.0,277.18,329.63,369.99,329.63,277.18,220.0)),
   Track(null,"☁️ Chill - Gió biển",melody=melody(246.94,329.63,392.0,440.0,392.0,329.63,246.94)),
   Track(null,"☁️ Chill - Thư giãn",melody=melody(196.0,246.94,329.63,392.0,329.63,246.94,196.0)),
-  Track(null,"▶️ Shape of You - Ed Sheeran",youtubeUrl="https://www.youtube.com/watch?v=JGwWNGJdvx8"),
-  Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://www.youtube.com/watch?v=liTfD88dbCo")
+  Track(null,"▶️ Shape of You - Ed Sheeran",youtubeUrl="https://music.youtube.com/watch?v=JGwWNGJdvx8"),
+  Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://music.youtube.com/watch?v=liTfD88dbCo")
  )
  private fun melody(vararg n:Double)=n.map{it to 650}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){tts?.language=Locale("vi","VN");tts?.setSpeechRate(0.95f)}};buildUi();renderList("");showWelcomeIfNeeded()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background)}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -162,7 +162,7 @@ class MainActivity:AppCompatActivity(){
    .setPositiveButton("OK",null).show()
  }
  private fun sha256(value:String):String=MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it)}
- private fun speakAi(text:String){val engine=tts?:return;engine.language=Locale("vi","VN");engine.speak(text,TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")}
+ private fun speakAi(text:String){val engine=tts;if(engine==null){Toast.makeText(this,"⚠️ Giọng nói AI chưa sẵn sàng.",Toast.LENGTH_SHORT).show();return};val vi=Locale("vi","VN");val result=engine.setLanguage(vi);if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){Toast.makeText(this,"⚠️ Chưa có giọng tiếng Việt trên máy.",Toast.LENGTH_LONG).show();return};engine.speak(text,TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")}
  private fun showAiAssistantGate(){
   if(aiUnlocked){showAiTutor();return}
   val input=EditText(this).apply{hint="Nhập mã trợ lý";setSingleLine();inputType=android.text.InputType.TYPE_CLASS_NUMBER;setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)}
@@ -223,8 +223,8 @@ class MainActivity:AppCompatActivity(){
    row.addView(icon,LinearLayout.LayoutParams(dp(50),dp(50)).apply{rightMargin=dp(9)});icon.setOnClickListener{playTrack(tr)}
    val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
    box.addView(TextView(this).apply{text=tr.title;textSize=14f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
-   box.addView(TextView(this).apply{text=when{tr.youtubeUrl!=null->"YouTube • Mở video";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
-   row.addView(box);box.setOnClickListener{playTrack(tr)}
+   box.addView(TextView(this).apply{text=when{tr.youtubeUrl!=null->"YouTube Music • Chỉ nghe nhạc";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
+   row.addView(box);box.setOnClickListener{playTrack(tr)};box.setOnLongClickListener{showTrackDetails(tr);true}
    val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;saveFavorite(tr);renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
   }
@@ -235,19 +235,26 @@ class MainActivity:AppCompatActivity(){
   val p=player;player=null;if(p!=null){try{p.setOnPreparedListener(null)}catch(_:Exception){};try{p.setOnCompletionListener(null)}catch(_:Exception){};try{p.setOnErrorListener(null)}catch(_:Exception){};try{p.stop()}catch(_:Exception){};try{p.release()}catch(_:Exception){}}
   if(!destroyed&&::playButton.isInitialized)playButton.text="▶"
  }
+ private fun showTrackDetails(t:Track){
+  val message=when{
+   t.title.contains("Shape of You")->"🎧 Shape of You — Ed Sheeran\n\n• Chất nhạc: dance-pop/electropop, groove đều và dễ bắt nhịp.\n• Điểm nổi bật: bassline và nhịp bộ gõ tạo cảm giác chuyển động liên tục.\n• Cảm xúc: năng lượng, tự tin, vui và mang màu sắc nightlife.\n• Cách nghe: nghe bằng tai nghe ở âm lượng vừa; chú ý phần bass, nhịp và cách lớp âm thanh vào ra.\n• Lưu ý: ứng dụng chỉ mở nguồn nghe chính thức, không sao chép hay nhúng bản thu có bản quyền."
+   else->"🎵 "+t.title+"\n\nĐây là bản nhạc trong thư viện Music. Hãy nghe ở âm lượng vừa và thử tập trung vào nhịp, giai điệu và cảm xúc của bài."
+  };
+  AlertDialog.Builder(this).setTitle("✦ Chi tiết sâu hơn").setMessage(message).setPositiveButton("Nghe ngay"){_,_->playTrack(t)}.setNegativeButton("Đóng",null).show()
+ }
  private fun openYoutube(url:String){
   val parsed=Uri.parse(url)
   val host=parsed.host?.lowercase(Locale.ROOT)
-  val safeHost=host=="youtube.com"||host=="www.youtube.com"||host=="m.youtube.com"||host=="youtu.be"||host=="www.youtu.be"
+  val safeHost=host=="music.youtube.com"
   if(parsed.scheme!="https"||!safeHost){nowPlaying.text="Liên kết YouTube không an toàn";return}
   try{
-   val appIntent=Intent(Intent.ACTION_VIEW,parsed).apply{setPackage("com.google.android.youtube")}
+   val appIntent=Intent(Intent.ACTION_VIEW,parsed).apply{setPackage("com.google.android.apps.youtube.music")}
    startActivity(appIntent)
-   nowPlaying.text="Đang mở YouTube: "+(parsed.getQueryParameter("v")?:"video")
+   nowPlaying.text="🎧 Đang mở YouTube Music: "+(parsed.getQueryParameter("v")?:"bài hát")
   }catch(_:Exception){
    try{
     startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW,parsed),"Mở bằng"))
-    nowPlaying.text="Đang mở video YouTube"
+    nowPlaying.text="🎧 Đang mở YouTube Music"
    }catch(_:Exception){
     nowPlaying.text="Không tìm thấy ứng dụng mở YouTube"
    }
