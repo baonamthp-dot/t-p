@@ -184,17 +184,17 @@ class MainActivity:AppCompatActivity(){
  private fun showAiTutor(){
   if(openAiApiKey.isBlank()){showApiKeyDialog();return}
   val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(4),dp(2),dp(4),dp(2))}
-  val chat=TextView(this).apply{text="🤖 ChatGPT\n\nXin chào! Mình đang kết nối với OpenAI. Hãy nhập câu hỏi bên dưới.\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
+  val chat=TextView(this).apply{text="🤖 AI Bảo Nam\n\nXin chào! Mình đang kết nối với OpenAI. Hãy nhập câu hỏi bên dưới.\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
   val scroll=ScrollView(this).apply{addView(chat)};panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
   val input=EditText(this).apply{hint="Nhắn tin với ChatGPT...";setSingleLine(false);maxLines=4;setTextColor(Color.WHITE);setHintTextColor(Color.GRAY);background=rounded(Color.rgb(16,27,52),16);setPadding(dp(12),dp(8),dp(12),dp(8))}
   val send=button("Gửi").apply{background=rounded(Color.rgb(36,118,225),18)}
   val speak=button("🔊 Nói").apply{background=rounded(Color.rgb(24,75,110),18)}
   val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL};row.addView(input,LinearLayout.LayoutParams(0,dp(58),1f));row.addView(send,LinearLayout.LayoutParams(dp(70),dp(58)).apply{leftMargin=dp(7)});row.addView(speak,LinearLayout.LayoutParams(dp(75),dp(58)).apply{leftMargin=dp(7)})
   panel.addView(row,LinearLayout.LayoutParams(-1,dp(64)).apply{topMargin=dp(7)})
-  val dialog=AlertDialog.Builder(this).setTitle("🤖 ChatGPT").setView(panel).setNegativeButton("Đóng",null).create()
+  val dialog=AlertDialog.Builder(this).setTitle("🤖 AI Bảo Nam").setView(panel).setNegativeButton("Đóng",null).create()
   val history=JSONArray()
   var lastAnswer="Xin chào! Bạn hãy nhập câu hỏi."
-  fun append(role:String,text:String){chat.append((if(role=="user")"\n👤 Bạn: " else "\n🤖 ChatGPT: ")+text+"\n");scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}}
+  fun append(role:String,text:String){chat.append((if(role=="user")"\n👤 Bạn: " else "\n🤖 AI Bảo Nam: ")+text+"\n");scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}}
   fun ask(){
    val q=input.text.toString().trim();if(q.isEmpty())return
    input.setText("");append("user",q);send.isEnabled=false;send.text="…"
@@ -222,7 +222,7 @@ class MainActivity:AppCompatActivity(){
    setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)
   }
   AlertDialog.Builder(this)
-   .setTitle("🔑 Kết nối ChatGPT")
+   .setTitle("🔑 Kết nối AI Bảo Nam")
    .setMessage("Nhập OpenAI API key của bạn. Key chỉ được giữ trong bộ nhớ của app trong phiên hiện tại và không được ghi vào mã nguồn.")
    .setView(input)
    .setNegativeButton("Hủy",null)
