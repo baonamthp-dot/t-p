@@ -63,7 +63,7 @@ class MainActivity:AppCompatActivity(){
   titleBox.addView(TextView(this).apply{text="Music";textSize=28f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE)})
   titleBox.addView(TextView(this).apply{text="Âm nhạc cho tâm hồn";textSize=12f;setTextColor(Color.rgb(145,170,205))})
   top.addView(titleBox)
-  top.addView(TextView(this).apply{text="⌕";textSize=30f;setTextColor(Color.WHITE);gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(42),dp(48)))
+  top.addView(TextView(this).apply{text="⌕";textSize=30f;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setOnClickListener{search.requestFocus();(getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager).showSoftInput(search,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)}},LinearLayout.LayoutParams(dp(42),dp(48)))
   top.addView(TextView(this).apply{text="⚙";textSize=23f;setTextColor(Color.rgb(180,195,220));gravity=Gravity.CENTER;setOnClickListener{showSettings()}},LinearLayout.LayoutParams(dp(42),dp(48)))
   top.addView(TextView(this).apply{text="👑";textSize=23f;setTextColor(Color.rgb(255,215,80));gravity=Gravity.CENTER;setOnClickListener{showOwnerLogin()}},LinearLayout.LayoutParams(dp(42),dp(48)))
   root.addView(top)
@@ -79,7 +79,7 @@ class MainActivity:AppCompatActivity(){
   fun action(label:String,icon:String,click:()->Unit)=TextView(this).apply{text="$icon\n$label";textSize=12f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(13,27,57),20);setPadding(0,dp(6),0,dp(4));setOnClickListener{click()}}
   actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("Nhạc ngủ","☾"){search.setText("Ru ngủ")},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Nhạc ngủ","☾"){showSleepTimer()}),LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("YouTube","▶"){tracks.firstOrNull{it.youtubeUrl!=null}?.let{playTrack(it)}},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Bản đồ","🗺️"){openMap()},LinearLayout.LayoutParams(dp(92),dp(62)).apply{leftMargin=dp(7)})
   actions.addView(action("AI","🤖"){showAiAssistantGate()},LinearLayout.LayoutParams(dp(82),dp(62)).apply{leftMargin=dp(7)})
@@ -236,12 +236,12 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showTrackDetails(t:Track){
   val message=when{
-   t.melody!=null -> "🎵 "+t.title+"\n\n• Loại: nhạc nền tích hợp trong Music.\n• Không khí: nhẹ nhàng, phù hợp thư giãn hoặc nghe trước khi ngủ.\n• Điểm nên chú ý: giai điệu lặp êm, nhịp ổn định và âm lượng đều.\n• Gợi ý: nghe ở âm lượng vừa và thử tập trung vào từng lớp giai điệu."
-   t.youtubeUrl!=null -> "🎧 "+t.title+"\n\n• Nguồn: liên kết YouTube Music.\n• Ứng dụng chỉ mở nguồn nghe, không tải hoặc nhúng bản thu.\n• Gợi ý: có thể dùng tai nghe ở âm lượng vừa để cảm nhận rõ nhịp và không gian âm thanh."
-   t.uri!=null -> "🎵 "+t.title+"\n\n• Nguồn: tệp nhạc từ thiết bị của bạn.\n• Có thể phát trực tiếp trong thư viện Music.\n• Gợi ý: thử chú ý đến nhịp, giai điệu, giọng hát và các lớp âm thanh."
-   else -> "🎵 "+t.title+"\n\nĐây là bài nhạc trong thư viện Music. Hãy nghe ở âm lượng vừa và thử tập trung vào nhịp, giai điệu và cảm xúc của bài."
+   t.melody!=null -> "🌙 "+t.title+"\n\n• Không gian: nhạc nền nhẹ, thiên về thư giãn và đi vào trạng thái chậm.\n• Cấu trúc: giai điệu ngắn lặp lại với nhịp ổn định để tạo cảm giác quen thuộc.\n• Chi tiết đáng nghe: hãy để ý lúc nốt cao xuất hiện rồi trở về nốt thấp; sự lên xuống đó tạo cảm giác như một hơi thở.\n• Cách nghe sâu: giảm âm lượng vừa đủ nghe, nhắm mắt vài phút và tập trung vào khoảng lặng giữa các nốt.\n• Phù hợp: nghỉ ngơi, đọc sách hoặc chuẩn bị ngủ."
+   t.youtubeUrl!=null -> "🎧 "+t.title+"\n\n• Nguồn: YouTube Music.\n• Vai trò của Music App: chỉ mở nguồn nghe bên ngoài, không tải hay nhúng bản thu.\n• Chi tiết đáng chú ý: khi nghe, thử tách riêng nhịp, bass, giai điệu và không gian phía sau thay vì chỉ nghe toàn bộ cùng lúc.\n• Gợi ý: dùng tai nghe ở âm lượng vừa và nghỉ tai nếu nghe lâu."
+   t.uri!=null -> "🎵 "+t.title+"\n\n• Nguồn: tệp nhạc bạn đã chọn từ thiết bị.\n• Có thể phát trực tiếp trong thư viện và lưu trạng thái yêu thích.\n• Chi tiết đáng nghe: thử nhận ra 3 lớp — nhịp nền, giai điệu chính và âm thanh phụ.\n• Cách nghe sâu: chọn một đoạn ngắn, nghe lại và xem cảm xúc của bạn thay đổi thế nào theo nhịp và cao độ."
+   else -> "🎵 "+t.title+"\n\nĐây là một bài trong thư viện Music. Hãy nghe ở âm lượng vừa và chú ý đến nhịp, giai điệu, khoảng lặng và cảm xúc mà bài tạo ra."
   }
-  AlertDialog.Builder(this).setTitle("✦ Chi tiết sâu hơn").setMessage(message).setPositiveButton("Nghe ngay"){_,_->playTrack(t)}.setNegativeButton("Đóng",null).show()
+  AlertDialog.Builder(this).setTitle("✦ Chi tiết sâu hơn").setMessage(message).setPositiveButton("▶ Nghe ngay"){_,_->playTrack(t)}.setNegativeButton("Đóng",null).show()
  }
  private fun openYoutube(url:String){
   val parsed=Uri.parse(url)
