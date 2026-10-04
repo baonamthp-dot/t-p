@@ -6,6 +6,10 @@ on:
     paths:
       - 'music-app/**'
       - '.github/workflows/build-music-app.yml'
+  pull_request:
+    paths:
+      - 'music-app/**'
+      - '.github/workflows/build-music-app.yml'
 
 jobs:
   build:
@@ -13,24 +17,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10'
+
       - name: Prepare app icon
         working-directory: music-app
         run: |
           mkdir -p app/src/main/res/drawable-nodpi
           base64 -d app/icon/app_icon.b64 > app/src/main/res/drawable-nodpi/app_icon.jpg
+
       - name: Dependency security review
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
@@ -38,8 +47,23 @@ jobs:
       - name: Build debug APK
         working-directory: music-app
         run: gradle assembleDebug
+
+      - name: Verify APK exists
+        working-directory: music-app
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          echo "APK build verified."
+
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: MusicApp-debug-apk
           path: music-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Report build failure
+        if: failure()
+        run: |
+          echo "❌ Music App build failed."
+          echo "Check the failed step above for the exact error."
