@@ -33,8 +33,15 @@ jobs:
         working-directory: time-bomb-duels-android
         run: gradle assembleRelease --no-daemon
 
+      - name: Verify APK
+        run: |
+          test -f time-bomb-duels-android/app/build/outputs/apk/release/app-release.apk
+          ls -lh time-bomb-duels-android/app/build/outputs/apk/release/app-release.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Time-Bomb-Duels-APK
           path: time-bomb-duels-android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
