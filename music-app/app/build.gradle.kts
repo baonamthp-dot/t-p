@@ -19,7 +19,6 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-}
     buildTypes {
         debug {
             isMinifyEnabled = true
