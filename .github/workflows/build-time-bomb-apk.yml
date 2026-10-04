@@ -29,19 +29,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build release APK
+      - name: Build installable APK
         working-directory: time-bomb-duels-android
-        run: gradle assembleRelease --no-daemon
+        run: gradle assembleDebug --no-daemon
 
-      - name: Verify APK
+      - name: Prepare APK
         run: |
-          test -f time-bomb-duels-android/app/build/outputs/apk/release/app-release.apk
-          ls -lh time-bomb-duels-android/app/build/outputs/apk/release/app-release.apk
+          mkdir -p dist
+          cp time-bomb-duels-android/app/build/outputs/apk/debug/app-debug.apk dist/Time-Bomb-Duels.apk
+          ls -lh dist/Time-Bomb-Duels.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Time-Bomb-Duels-APK
-          path: time-bomb-duels-android/app/build/outputs/apk/release/app-release.apk
+          path: dist/Time-Bomb-Duels.apk
           if-no-files-found: error
           retention-days: 30
