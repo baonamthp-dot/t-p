@@ -235,11 +235,11 @@ class MainActivity:AppCompatActivity(){
   if(!destroyed&&::playButton.isInitialized)playButton.text="▶"
  }
  private fun showTrackDetails(t:Track){
-  if(t.youtubeUrl==null && t.melody==null && t.uri!=null){
   val message=when{
-   t.title.contains("Shape of You")->"🎧 Shape of You — Ed Sheeran\n\n• Chất nhạc: dance-pop/electropop, groove đều và dễ bắt nhịp.\n• Điểm nổi bật: bassline và nhịp bộ gõ tạo cảm giác chuyển động liên tục.\n• Cảm xúc: năng lượng, tự tin, vui và mang màu sắc nightlife.\n• Cách nghe: nghe bằng tai nghe ở âm lượng vừa; chú ý phần bass, nhịp và cách lớp âm thanh vào ra.\n• Lưu ý: ứng dụng chỉ mở nguồn nghe chính thức, không sao chép hay nhúng bản thu có bản quyền."
-   else->"🎵 "+t.title+"\n\nĐây là bản nhạc trong thư viện Music. Hãy nghe ở âm lượng vừa và thử tập trung vào nhịp, giai điệu và cảm xúc của bài."
-  };
+   t.melody!=null -> "🎵 "+t.title+"\n\n• Loại: nhạc nền tích hợp trong Music.\n• Không khí: nhẹ nhàng, phù hợp thư giãn hoặc nghe trước khi ngủ.\n• Điểm nên chú ý: giai điệu lặp êm, nhịp ổn định và âm lượng đều.\n• Gợi ý: nghe ở âm lượng vừa và thử tập trung vào từng lớp giai điệu."
+   t.youtubeUrl!=null -> "🎧 "+t.title+"\n\n• Nguồn: liên kết YouTube Music.\n• Ứng dụng chỉ mở nguồn nghe, không tải hoặc nhúng bản thu.\n• Gợi ý: có thể dùng tai nghe ở âm lượng vừa để cảm nhận rõ nhịp và không gian âm thanh."
+   t.uri!=null -> "🎵 "+t.title+"\n\n• Nguồn: tệp nhạc từ thiết bị của bạn.\n• Có thể phát trực tiếp trong thư viện Music.\n• Gợi ý: thử chú ý đến nhịp, giai điệu, giọng hát và các lớp âm thanh."
+   else -> "🎵 "+t.title+"\n\nĐây là bài nhạc trong thư viện Music. Hãy nghe ở âm lượng vừa và thử tập trung vào nhịp, giai điệu và cảm xúc của bài."
   }
   AlertDialog.Builder(this).setTitle("✦ Chi tiết sâu hơn").setMessage(message).setPositiveButton("Nghe ngay"){_,_->playTrack(t)}.setNegativeButton("Đóng",null).show()
  }
