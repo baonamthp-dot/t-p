@@ -131,8 +131,23 @@ class MainActivity:AppCompatActivity(){
   }.setNegativeButton("Hủy",null).show()
  }
  private fun showSettings(){
-  val info="Music App 1.0\n\n✓ Nhạc tích hợp\n✓ Nhạc từ thiết bị\n✓ Yêu thích được lưu trên máy\n✓ Hẹn giờ ngủ\n✓ YouTube mở bằng HTTPS an toàn\n✓ AI ChatGPT qua OpenAI API (không lưu key)\n✓ Không dùng cleartext network\n✓ Không yêu cầu quyền đọc bộ nhớ\n\nMã chủ/AI được kiểm tra bằng hash trong ứng dụng; đây là bảo vệ cục bộ, không phải xác thực máy chủ."
-  AlertDialog.Builder(this).setTitle("⚙ Cài đặt & Bảo mật").setMessage(info).setPositiveButton("OK",null).show()
+  val items=arrayOf("🌍 Chọn quốc gia","🔐 Bảo mật","ℹ️ Thông tin ứng dụng")
+  AlertDialog.Builder(this).setTitle("⚙ Cài đặt").setItems(items){_,which->
+   when(which){
+    0->showCountryPicker()
+    1->AlertDialog.Builder(this).setTitle("🔐 Bảo mật").setMessage("AI Bảo Nam không lưu API key vào mã nguồn.\n\nMã chủ và mã AI chỉ là lớp mở khóa cục bộ.").setPositiveButton("OK",null).show()
+    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App").setMessage("Music App 1.0\n\n🎵 Nhạc tích hợp\n📱 Nhạc từ thiết bị\n♥ Yêu thích\n☾ Hẹn giờ ngủ\n🤖 AI Bảo Nam\n🌍 Chọn quốc gia").setPositiveButton("OK",null).show()
+   }
+  }.setNegativeButton("Đóng",null).show()
+ }
+ private fun showCountryPicker(){
+  val countries=arrayOf("🇻🇳 Việt Nam","🇺🇸 Hoa Kỳ","🇬🇧 Vương quốc Anh","🇯🇵 Nhật Bản","🇰🇷 Hàn Quốc","🇨🇳 Trung Quốc","🇹🇭 Thái Lan","🇫🇷 Pháp","🇩🇪 Đức","🇪🇸 Tây Ban Nha","🇮🇹 Ý","🇷🇺 Nga","🇮🇩 Indonesia","🇲🇾 Malaysia","🇵🇭 Philippines","🇮🇳 Ấn Độ","🇧🇷 Brazil","🇵🇹 Bồ Đào Nha","🇹🇷 Thổ Nhĩ Kỳ","🇸🇦 Ả Rập Xê Út")
+  val selected=prefs.getInt("country_index",0)
+  AlertDialog.Builder(this).setTitle("🌍 Chọn quốc gia").setSingleChoiceItems(countries,selected){dialog,which->
+   prefs.edit().putInt("country_index",which).apply()
+   Toast.makeText(this,"✅ Đã chọn "+countries[which],Toast.LENGTH_SHORT).show()
+   dialog.dismiss()
+  }.setNegativeButton("Đóng",null).show()
  }
  private fun showWelcomeIfNeeded(){
   val prefs=getSharedPreferences("music_app",MODE_PRIVATE)
