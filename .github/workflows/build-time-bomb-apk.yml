@@ -1,0 +1,40 @@
+name: Build Time Bomb Duels APK
+
+on:
+  push:
+    paths:
+      - "time-bomb-duels/**"
+      - "time-bomb-duels-android/**"
+      - ".github/workflows/build-time-bomb-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare game asset
+        run: |
+          mkdir -p time-bomb-duels-android/app/src/main/assets
+          cp time-bomb-duels/index.html time-bomb-duels-android/app/src/main/assets/index.html
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK
+        working-directory: time-bomb-duels-android
+        run: gradle assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Time-Bomb-Duels-APK
+          path: time-bomb-duels-android/app/build/outputs/apk/release/app-release.apk
