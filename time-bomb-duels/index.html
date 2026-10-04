@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Time Bomb Duels</title>
+<style>
+:root{--bg:#090d18;--panel:#121a2b;--text:#f4f7ff;--muted:#9eabc7;--p1:#5aa9ff;--p2:#ff6d8a;--accent:#ffd34d}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#18233c,#090d18 65%);font-family:system-ui,sans-serif;color:var(--text);min-height:100vh;display:grid;place-items:center;padding:14px}
+.wrap{width:min(980px,100%)}header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.title{font-size:clamp(24px,5vw,42px);font-weight:900}.sub{color:var(--muted);font-size:13px}.score{display:flex;gap:8px}.score span{padding:7px 10px;border-radius:10px;background:var(--panel);font-weight:800}
+.game{background:#0e1525;border:1px solid #293653;border-radius:22px;padding:12px;box-shadow:0 18px 50px #0008}
+.hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-bottom:10px}.bar{height:10px;background:#202b43;border-radius:99px;overflow:hidden}.fill{height:100%;width:100%;transition:width .1s linear}.p1 .fill{background:var(--p1)}.p2 .fill{background:var(--p2)}
+.timer{font-size:32px;font-weight:1000;min-width:90px;text-align:center;color:var(--accent)}.danger{animation:pulse .35s infinite alternate;color:#ff667c}@keyframes pulse{to{transform:scale(1.08)}}
+.arena{position:relative;aspect-ratio:16/9;min-height:320px;overflow:hidden;border-radius:17px;background:linear-gradient(#142038,#0b1220);border:1px solid #2a3854}
+.grid{position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:42px 42px}
+.wall{position:absolute;background:#273650;border-radius:12px}.w1{left:24%;top:25%;width:16%;height:9%}.w2{right:24%;top:66%;width:16%;height:9%}.w3{left:45%;top:46%;width:10%;height:9%}
+.player{position:absolute;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:1000;box-shadow:0 7px 18px #0008;user-select:none}.one{background:var(--p1)}.two{background:var(--p2)}.player small{font-size:10px}.bomb{position:absolute;width:31px;height:31px;border-radius:50%;background:#202532;border:4px solid var(--accent);display:grid;place-items:center;font-size:16px;box-shadow:0 0 18px #ffd34d99;z-index:5}.bomb:after{content:"";position:absolute;width:8px;height:8px;background:#ff6578;border-radius:50%;top:-5px;right:-2px}.toast{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font-size:clamp(22px,5vw,48px);font-weight:1000;text-shadow:0 5px 20px #000;opacity:0;transition:.2s}.toast.show{opacity:1}.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.card{background:var(--panel);border:1px solid #273653;border-radius:14px;padding:10px}.card b{display:block;margin-bottom:5px}.keys{color:var(--muted);font-size:13px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.btn{border:0;border-radius:11px;padding:11px 16px;background:#e8edf8;color:#101522;font-weight:900;cursor:pointer;min-height:44px}.btn.secondary{background:#202c44;color:#fff}.note{margin-top:9px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:650px){.hud{grid-template-columns:1fr 74px 1fr}.timer{font-size:25px;min-width:0}.controls{grid-template-columns:1fr}.player{width:36px;height:36px}.bomb{width:28px;height:28px}.arena{min-height:280px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header><div><div class="title">💣 Time Bomb Duels</div><div class="sub">Duel 2 người • Chuyền bom • Sống sót đến cuối round</div></div><div class="score"><span id="s1">P1 0</span><span id="s2">P2 0</span></div></header>
+<section class="game">
+<div class="hud">
+<div class="p1"><div class="bar"><div class="fill" id="b1"></div></div></div>
+<div class="timer" id="timer">12.0</div>
+<div class="p2"><div class="bar"><div class="fill" id="b2"></div></div></div>
+</div>
+<div class="arena" id="arena" tabindex="0" aria-label="Đấu trường Time Bomb Duels">
+<div class="grid"></div><div class="wall w1"></div><div class="wall w2"></div><div class="wall w3"></div>
+<div class="player one" id="p1">P1</div><div class="player two" id="p2">P2</div><div class="bomb" id="bomb">💣</div>
+<div class="toast" id="toast"></div>
+</div>
+<div class="controls">
+<div class="card"><b>🔵 Player 1</b><div class="keys">W A S D để di chuyển</div></div>
+<div class="card"><b>🔴 Player 2</b><div class="keys">Phím ↑ ← ↓ → để di chuyển</div></div>
+</div>
+<div class="actions"><button class="btn" id="start">Bắt đầu round</button><button class="btn secondary" id="reset">Reset điểm</button></div>
+<div class="note">Chạm đối thủ để chuyền bom. Khi đồng hồ về 0, người đang giữ bom thua round. Đây là cơ chế hư cấu trong game.</div>
+</section>
+</main>
+<script>
+(()=>{const arena=document.querySelector('#arena'),p1=document.querySelector('#p1'),p2=document.querySelector('#p2'),bomb=document.querySelector('#bomb'),timer=document.querySelector('#timer'),toast=document.querySelector('#toast'),b1=document.querySelector('#b1'),b2=document.querySelector('#b2'),s1=document.querySelector('#s1'),s2=document.querySelector('#s2'),start=document.querySelector('#start'),reset=document.querySelector('#reset');
+const state={running:false,bombOwner:1,time:12,last:0,scores:[0,0],pos:[{x:12,y:50},{x:88,y:50}],keys:{}};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)); const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function draw(){const w=arena.clientWidth,h=arena.clientHeight;state.pos.forEach((q,i)=>{const el=i?p2:p1;el.style.left=(q.x/100*w-el.offsetWidth/2)+'px';el.style.top=(q.y/100*h-el.offsetHeight/2)+'px'});const q=state.pos[state.bombOwner-1];bomb.style.left=(q.x/100*w-bomb.offsetWidth/2)+'px';bomb.style.top=(q.y/100*h-bomb.offsetHeight/2)+'px';b1.style.width=(state.bombOwner===1?100:0)+'%';b2.style.width=(state.bombOwner===2?100:0)+'%';timer.textContent=Math.max(0,state.time).toFixed(1);timer.classList.toggle('danger',state.time<4)}
+function msg(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),900)}
+function begin(){state.running=true;state.time=10+Math.random()*4;state.bombOwner=Math.random()<.5?1:2;state.pos=[{x:12,y:50},{x:88,y:50}];state.last=performance.now();start.textContent='Đang đấu…';arena.focus();msg('ROUND!');draw()}
+function finish(){if(!state.running)return;const loser=state.bombOwner,winner=loser===1?2:1;state.scores[winner-1]++;s1.textContent='P1 '+state.scores[0];s2.textContent='P2 '+state.scores[1];state.running=false;start.textContent='Round tiếp theo';msg('P'+winner+' THẮNG!');draw()}
+function loop(now){if(state.running){const dt=Math.min(.04,(now-state.last)/1000);state.last=now;state.time-=dt;const sp=24;[[87,65],[65,87]].forEach(()=>{});
+for(let i=0;i<2;i++){let q=state.pos[i],dx=0,dy=0;if(i===0){dx=(state.keys.d?1:0)-(state.keys.a?1:0);dy=(state.keys.s?1:0)-(state.keys.w?1:0)}else{dx=(state.keys.ArrowRight?1:0)-(state.keys.ArrowLeft?1:0);dy=(state.keys.ArrowDown?1:0)-(state.keys.ArrowUp?1:0)}const m=Math.hypot(dx,dy)||1;q.x=clamp(q.x+dx/m*sp*dt,5,95);q.y=clamp(q.y+dy/m*sp*dt,7,93)}
+if(dist(state.pos[0],state.pos[1])<7){state.bombOwner=state.bombOwner===1?2:1;state.time=Math.max(state.time,3.5);msg('💣 CHUYỀN BOM!') }
+if(state.time<=0)finish();draw()}requestAnimationFrame(loop)}
+addEventListener('keydown',e=>{if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;state.keys[e.key]=true;if(e.key===' '&&!state.running)begin()});addEventListener('keyup',e=>state.keys[e.key]=false);
+start.addEventListener('click',begin);reset.addEventListener('click',()=>{state.running=false;state.scores=[0,0];s1.textContent='P1 0';s2.textContent='P2 0';start.textContent='Bắt đầu round';state.pos=[{x:12,y:50},{x:88,y:50}];state.time=12;draw()});addEventListener('resize',draw);draw();requestAnimationFrame(loop)})()
+</script>
+</body>
+</html>
