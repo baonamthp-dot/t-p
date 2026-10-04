@@ -19,6 +19,10 @@ import androidx.appcompat.app.AppCompatActivity
 import java.security.MessageDigest
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -34,6 +38,8 @@ class MainActivity:AppCompatActivity(){
  private val prefs by lazy{getSharedPreferences("music_app",MODE_PRIVATE)}
  private var isOwner=false
  private var aiUnlocked=false
+ private var openAiApiKey=""
+ private val openAiModel="gpt-6-luna"
  private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
  private var tts:TextToSpeech?=null
  private val ownerCodeHash="0bc685edb692c7d408cd670c5b73c29a577188b66dd3a7b8f75e357a5b9b00e8"
@@ -125,7 +131,7 @@ class MainActivity:AppCompatActivity(){
   }.setNegativeButton("Hủy",null).show()
  }
  private fun showSettings(){
-  val info="Music App 1.0\n\n✓ Nhạc tích hợp\n✓ Nhạc từ thiết bị\n✓ Yêu thích được lưu trên máy\n✓ Hẹn giờ ngủ\n✓ YouTube mở bằng HTTPS an toàn\n✓ AI offline, không cần API key\n✓ Không dùng cleartext network\n✓ Không yêu cầu quyền đọc bộ nhớ\n\nMã chủ/AI được kiểm tra bằng hash trong ứng dụng; đây là bảo vệ cục bộ, không phải xác thực máy chủ."
+  val info="Music App 1.0\n\n✓ Nhạc tích hợp\n✓ Nhạc từ thiết bị\n✓ Yêu thích được lưu trên máy\n✓ Hẹn giờ ngủ\n✓ YouTube mở bằng HTTPS an toàn\n✓ AI ChatGPT qua OpenAI API (không lưu key)\n✓ Không dùng cleartext network\n✓ Không yêu cầu quyền đọc bộ nhớ\n\nMã chủ/AI được kiểm tra bằng hash trong ứng dụng; đây là bảo vệ cục bộ, không phải xác thực máy chủ."
   AlertDialog.Builder(this).setTitle("⚙ Cài đặt & Bảo mật").setMessage(info).setPositiveButton("OK",null).show()
  }
  private fun showWelcomeIfNeeded(){
@@ -176,34 +182,87 @@ class MainActivity:AppCompatActivity(){
    }.show()
  }
  private fun showAiTutor(){
+  if(openAiApiKey.isBlank()){showApiKeyDialog();return}
   val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(4),dp(2),dp(4),dp(2))}
-  val chat=TextView(this).apply{text="🤖 AI offline: Xin chào! Mình có thể giúp giải thích Toán, Văn, Anh, Khoa học và lập trình. Không cần API key.\n\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
+  val chat=TextView(this).apply{text="🤖 ChatGPT\n\nXin chào! Mình đang kết nối với OpenAI. Hãy nhập câu hỏi bên dưới.\n";textSize=14f;setTextColor(Color.WHITE);setPadding(dp(10),dp(10),dp(10),dp(10));background=rounded(Color.rgb(10,18,38),16)}
   val scroll=ScrollView(this).apply{addView(chat)};panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
-  val input=EditText(this).apply{hint="Nhập câu hỏi...";setSingleLine(false);maxLines=3;setTextColor(Color.WHITE);setHintTextColor(Color.GRAY);background=rounded(Color.rgb(16,27,52),16);setPadding(dp(12),dp(8),dp(12),dp(8))}
+  val input=EditText(this).apply{hint="Nhắn tin với ChatGPT...";setSingleLine(false);maxLines=4;setTextColor(Color.WHITE);setHintTextColor(Color.GRAY);background=rounded(Color.rgb(16,27,52),16);setPadding(dp(12),dp(8),dp(12),dp(8))}
   val send=button("Gửi").apply{background=rounded(Color.rgb(36,118,225),18)}
   val speak=button("🔊 Nói").apply{background=rounded(Color.rgb(24,75,110),18)}
-  val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL};row.addView(input,LinearLayout.LayoutParams(0,dp(54),1f));row.addView(send,LinearLayout.LayoutParams(dp(70),dp(54)).apply{leftMargin=dp(7)});row.addView(speak,LinearLayout.LayoutParams(dp(75),dp(54)).apply{leftMargin=dp(7)})
-  panel.addView(row,LinearLayout.LayoutParams(-1,dp(60)).apply{topMargin=dp(7)})
-  val dialog=AlertDialog.Builder(this).setTitle("🤖 AI Giảng Dạy Offline").setView(panel).setNegativeButton("Đóng",null).create()
+  val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL};row.addView(input,LinearLayout.LayoutParams(0,dp(58),1f));row.addView(send,LinearLayout.LayoutParams(dp(70),dp(58)).apply{leftMargin=dp(7)});row.addView(speak,LinearLayout.LayoutParams(dp(75),dp(58)).apply{leftMargin=dp(7)})
+  panel.addView(row,LinearLayout.LayoutParams(-1,dp(64)).apply{topMargin=dp(7)})
+  val dialog=AlertDialog.Builder(this).setTitle("🤖 ChatGPT").setView(panel).setNegativeButton("Đóng",null).create()
+  val history=JSONArray()
   var lastAnswer="Xin chào! Bạn hãy nhập câu hỏi."
-  fun append(role:String,text:String){chat.append((if(role=="user")"\n👤 Bạn: " else "\n🤖 AI: ")+text+"\n");scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}}
-  fun ask(){val q=input.text.toString().trim();if(q.isEmpty())return;input.setText("");append("user",q);send.isEnabled=false;send.text="…";Thread{val answer=offlineTutor(q);runOnUiThread{lastAnswer=answer;send.isEnabled=true;send.text="Gửi";append("assistant",answer);speakAi(answer)}}}
-  send.setOnClickListener{ask()};speak.setOnClickListener{if(lastAnswer.isNotBlank())speakAi(lastAnswer)};input.setOnEditorActionListener{_,_,_->ask();true};dialog.setOnDismissListener{tts?.stop()};dialog.show()
- }
- private fun offlineTutor(q:String):String{
-  val s=q.lowercase(Locale.getDefault()).trim()
-  return when{
-   s.contains("2+2")||s.contains("2 + 2")->"2 cộng 2 bằng 4."
-   s.contains("đạo hàm")||s.contains("dao ham")->"Đạo hàm mô tả tốc độ thay đổi của hàm số. Ví dụ, nếu f của x bằng x bình phương thì đạo hàm là 2x."
-   s.contains("phân số")||s.contains("phan so")->"Muốn cộng hai phân số, hãy quy đồng mẫu số, cộng các tử số rồi rút gọn kết quả."
-   s.contains("diện tích")||s.contains("dien tich")->"Diện tích hình chữ nhật bằng chiều dài nhân chiều rộng. Diện tích tam giác bằng đáy nhân chiều cao rồi chia 2."
-   s.contains("ngữ văn")||s.contains("ngu van")||s.contains("biện pháp tu từ")||s.contains("bien phap tu tu")->"Mình có thể giúp phân tích nhân vật, chủ đề, biện pháp tu từ, người kể chuyện và lập dàn ý. Hãy gửi đề bài cụ thể."
-   s.contains("tiếng anh")||s.contains("tieng anh")||s.contains("english")->"Mình có thể giải thích từ vựng, ngữ pháp, các thì và cách làm bài tiếng Anh. Hãy gửi câu cụ thể."
-   s.contains("python")||s.contains("lập trình")||s.contains("lap trinh")->"Mình có thể giải thích Python và lập trình từng bước. Hãy gửi đoạn code hoặc mô tả bài toán."
-   s.contains("hóa học")||s.contains("hoa hoc")||s.contains("sinh học")||s.contains("sinh hoc")||s.contains("vật lý")||s.contains("vat ly")->"Mình có thể giải thích kiến thức Khoa học và hướng dẫn bài tập từng bước. Hãy gửi đề bài cụ thể."
-   s.contains("xin chào")||s.contains("xin chao")||s=="hello"||s=="hi"||s=="chào"||s=="chao"->"Xin chào! Bạn muốn học môn nào hôm nay?"
-   else->"Mình đang chạy offline nên chưa có kiến thức như ChatGPT đầy đủ. Hãy gửi một câu hỏi cụ thể về Toán, Văn, Anh, Khoa học hoặc lập trình; mình sẽ hướng dẫn trong phạm vi kiến thức tích hợp."
+  fun append(role:String,text:String){chat.append((if(role=="user")"\n👤 Bạn: " else "\n🤖 ChatGPT: ")+text+"\n");scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}}
+  fun ask(){
+   val q=input.text.toString().trim();if(q.isEmpty())return
+   input.setText("");append("user",q);send.isEnabled=false;send.text="…"
+   history.put(JSONObject().put("role","user").put("content",q))
+   Thread{
+    val answer=callOpenAi(history)
+    runOnUiThread{
+     if(answer.startsWith("⚠️")){append("assistant",answer);history.remove(history.length()-1)}
+     else{history.put(JSONObject().put("role","assistant").put("content",answer));lastAnswer=answer;append("assistant",answer);speakAi(answer)}
+     send.isEnabled=true;send.text="Gửi"
+    }
+   }.start()
   }
+  send.setOnClickListener{ask()}
+  speak.setOnClickListener{if(lastAnswer.isNotBlank())speakAi(lastAnswer)}
+  input.setOnEditorActionListener{_,_,_->ask();true}
+  dialog.setOnDismissListener{tts?.stop()}
+  dialog.show()
+ }
+ private fun showApiKeyDialog(){
+  val input=EditText(this).apply{
+   hint="sk-..."
+   setSingleLine(true)
+   inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+   setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)
+  }
+  AlertDialog.Builder(this)
+   .setTitle("🔑 Kết nối ChatGPT")
+   .setMessage("Nhập OpenAI API key của bạn. Key chỉ được giữ trong bộ nhớ của app trong phiên hiện tại và không được ghi vào mã nguồn.")
+   .setView(input)
+   .setNegativeButton("Hủy",null)
+   .setPositiveButton("Kết nối"){_,_->
+    val key=input.text.toString().trim()
+    if(key.isBlank()){Toast.makeText(this,"⚠️ Chưa nhập API key.",Toast.LENGTH_SHORT).show()}
+    else{openAiApiKey=key;Toast.makeText(this,"✅ Đã kết nối ChatGPT cho phiên này.",Toast.LENGTH_SHORT).show();showAiTutor()}
+   }.show()
+ }
+ private fun callOpenAi(history:JSONArray):String{
+  var conn:HttpURLConnection?=null
+  return try{
+   val body=JSONObject().put("model",openAiModel).put("input",history)
+   conn=(URL("https://api.openai.com/v1/responses").openConnection() as HttpURLConnection).apply{
+    requestMethod="POST";connectTimeout=20000;readTimeout=60000;doOutput=true
+    setRequestProperty("Authorization","Bearer "+openAiApiKey)
+    setRequestProperty("Content-Type","application/json")
+   }
+   conn.outputStream.use{it.write(body.toString().toByteArray(Charsets.UTF_8))}
+   val code=conn.responseCode
+   val stream=if(code in 200..299)conn.inputStream else conn.errorStream
+   val raw=stream?.bufferedReader()?.use{it.readText()}.orEmpty()
+   if(code !in 200..299){
+    val msg=try{JSONObject(raw).optJSONObject("error")?.optString("message").orEmpty()}catch(_:Exception){""}
+    return "⚠️ OpenAI báo lỗi $code"+if(msg.isNotBlank()){": $msg"}else{""}
+   }
+   val json=JSONObject(raw)
+   val output=json.optJSONArray("output")?:return "⚠️ Không nhận được nội dung trả lời từ ChatGPT."
+   val result=StringBuilder()
+   for(i in 0 until output.length()){
+    val item=output.optJSONObject(i)?:continue
+    val content=item.optJSONArray("content")?:continue
+    for(j in 0 until content.length()){
+     val part=content.optJSONObject(j)?:continue
+     if(part.optString("type")=="output_text"){result.append(part.optString("text"))}
+    }
+   }
+   if(result.isBlank())"⚠️ ChatGPT trả về dữ liệu nhưng không có văn bản." else result.toString().trim()
+  }catch(e:Exception){"⚠️ Không kết nối được ChatGPT: "+(e.message?:"lỗi mạng")}
+  finally{conn?.disconnect()}
  }
  private fun openMap(){
   val uri=Uri.parse("geo:0,0?q=bản đồ")
