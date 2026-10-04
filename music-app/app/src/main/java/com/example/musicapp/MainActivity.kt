@@ -1,10 +1,8 @@
 package com.example.musicapp
 
-import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioFormat
@@ -18,8 +16,7 @@ import android.view.Gravity
 import android.widget.*
 import android.speech.tts.TextToSpeech
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import java.security.MessageDigest
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.PI
@@ -35,9 +32,9 @@ class MainActivity:AppCompatActivity(){
  private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var search:EditText;private var favoritesOnly=false
  private var isOwner=false
  private var aiUnlocked=false
- private val aiCode="67673636"
+ private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
  private var tts:TextToSpeech?=null
- private val ownerCode="Bảo Nam đẹp trai nhất trên thế giới"
+ private val ownerCodeHash="0bc685edb692c7d408cd670c5b73c29a577188b66dd3a7b8f75e357a5b9b00e8"
  private val builtIn=listOf(
   Track(null,"🌙 Ru ngủ - Đêm yên bình",melody=melody(261.63,293.66,329.63,392.0,329.63,293.66,261.63)),
   Track(null,"🌙 Ru ngủ - Mây mềm",melody=melody(220.0,261.63,293.66,349.23,293.66,261.63,220.0)),
@@ -56,7 +53,7 @@ class MainActivity:AppCompatActivity(){
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){tts?.language=Locale("vi","VN");tts?.setSpeechRate(0.95f)}};buildUi();renderList("");requestAudioPermission();showWelcomeIfNeeded()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){tts?.language=Locale("vi","VN");tts?.setSpeechRate(0.95f)}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background)}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -130,7 +127,7 @@ class MainActivity:AppCompatActivity(){
    .setView(input)
    .setNegativeButton("Hủy",null)
    .setPositiveButton("Xác nhận"){_,_->
-    if(input.text.toString()==ownerCode){
+    if(sha256(input.text.toString())==ownerCodeHash){
      isOwner=true
      Toast.makeText(this,"👑 Bảo Nam đã trở thành chủ app!",Toast.LENGTH_LONG).show()
      showOwnerPanel()
@@ -143,6 +140,7 @@ class MainActivity:AppCompatActivity(){
    .setMessage("Bạn đã xác nhận là chủ app.\n\nTên chủ app: Bảo Nam\nTrạng thái: Đã xác nhận")
    .setPositiveButton("OK",null).show()
  }
+ private fun sha256(value:String):String=MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it)}
  private fun speakAi(text:String){val engine=tts?:return;engine.language=Locale("vi","VN");engine.speak(text,TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")}
  private fun showAiAssistantGate(){
   if(aiUnlocked){showAiTutor();return}
@@ -153,7 +151,7 @@ class MainActivity:AppCompatActivity(){
    .setView(input)
    .setNegativeButton("Hủy",null)
    .setPositiveButton("Xác nhận"){_,_->
-    if(input.text.toString()==aiCode){aiUnlocked=true;Toast.makeText(this,"✅ Đã mở trợ lý AI!",Toast.LENGTH_SHORT).show();showAiTutor()}
+    if(sha256(input.text.toString())==aiCodeHash){aiUnlocked=true;Toast.makeText(this,"✅ Đã mở trợ lý AI!",Toast.LENGTH_SHORT).show();showAiTutor()}
     else Toast.makeText(this,"❌ Sai mã trợ lý!",Toast.LENGTH_SHORT).show()
    }.show()
  }
@@ -192,7 +190,6 @@ class MainActivity:AppCompatActivity(){
   try{startActivity(Intent(Intent.ACTION_VIEW,uri))}
   catch(_:Exception){try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps")))}catch(_:Exception){nowPlaying.text="Không mở được Bản đồ"}}
  }
- private fun requestAudioPermission(){val p=if(android.os.Build.VERSION.SDK_INT>=33)Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE;if(ContextCompat.checkSelfPermission(this,p)!=PackageManager.PERMISSION_GRANTED)ActivityCompat.requestPermissions(this,arrayOf(p),10)}
  private fun chooseAudio(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addCategory(Intent.CATEGORY_OPENABLE)},100)}
  @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
@@ -219,13 +216,16 @@ class MainActivity:AppCompatActivity(){
  }
  private fun openYoutube(url:String){
   val parsed=Uri.parse(url)
+  val host=parsed.host?.lowercase(Locale.ROOT)
+  val safeHost=host=="youtube.com"||host=="www.youtube.com"||host=="m.youtube.com"||host=="youtu.be"||host=="www.youtu.be"
+  if(parsed.scheme!="https"||!safeHost){nowPlaying.text="Liên kết YouTube không an toàn";return}
   try{
    val appIntent=Intent(Intent.ACTION_VIEW,parsed).apply{setPackage("com.google.android.youtube")}
    startActivity(appIntent)
    nowPlaying.text="Đang mở YouTube: "+(parsed.getQueryParameter("v")?:"video")
   }catch(_:Exception){
    try{
-    startActivity(Intent(Intent.ACTION_VIEW,parsed))
+    startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW,parsed),"Mở bằng"))
     nowPlaying.text="Đang mở video YouTube"
    }catch(_:Exception){
     nowPlaying.text="Không tìm thấy ứng dụng mở YouTube"
@@ -247,7 +247,7 @@ class MainActivity:AppCompatActivity(){
    val at=try{AudioTrack(AudioManager.STREAM_MUSIC,sr,AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT,mb.coerceAtLeast(4096),AudioTrack.MODE_STREAM)}catch(_:Exception){return@Thread}
    synchronized(audioLock){if(g!=generation.get()||stopBuiltin){try{at.release()}catch(_:Exception){};return@Thread};audioTrack=at}
    var completed=false
-   try{at.play();repeat(3){for((freq,dur)in t.melody?:emptyList()){val count=sr*dur/1000;val s=ShortArray(count);var i=0;while(i<count){if(stopBuiltin||g!=generation.get())return@Thread;while(builtinPaused&&!stopBuiltin&&g==generation.get()){try{Thread.sleep(50)}catch(_:Exception){}};if(stopBuiltin||g!=generation.get())return@Thread;val x=i.toDouble()/sr;val fi=(i/(sr*.04)).coerceAtMost(1.0);val fo=((count-i)/(sr*.04)).coerceAtMost(1.0);s[i]=(sin(2*PI*freq*x)*.18*minOf(fi,fo)*Short.MAX_VALUE).toInt().toShort();i++};synchronized(audioLock){if(audioTrack!==at)return@Thread;try{at.write(s,0,s.size)}catch(_:Exception){return@Thread}}}};completed=true}catch(_:Exception){}finally{var owner=false;synchronized(audioLock){if(audioTrack===at){audioTrack=null;owner=true}};if(owner){try{at.stop()}catch(_:Exception){};try{at.release()}catch(_:Exception){}};runOnUiThread{if(g==generation.get()&&!stopBuiltin&&completed&&!destroyed){playButton.text="▶";next()}}}
+   try{at.play();repeat(3){for((freq,dur)in t.melody?:emptyList()){val count=sr*dur/1000;val s=ShortArray(count);var i=0;while(i<count){if(stopBuiltin||g!=generation.get())return@Thread;while(builtinPaused&&!stopBuiltin&&g==generation.get()){try{Thread.sleep(50)}catch(_:Exception){}};if(stopBuiltin||g!=generation.get())return@Thread;val x=i.toDouble()/sr;val fi=(i/(sr*.04)).coerceAtMost(1.0);val fo=((count-i)/(sr*.04)).coerceAtMost(1.0);s[i]=(sin(2*PI*freq*x)*.18*minOf(fi,fo)*Short.MAX_VALUE).toInt().toShort();i++};synchronized(audioLock){if(audioTrack!==at)return@Thread;try{at.write(s,0,s.size)}catch(_:Exception){return@Thread}}}};completed=true}catch(_:Exception){}finally{var owner=false;synchronized(audioLock){if(audioTrack===at){audioTrack=null;owner=true}};if(owner){try{at.stop()}catch(_:Exception){};try{at.release()}catch(_:Exception){}};runOnUiThread{if(g==generation.get()&&!stopBuiltin&&completed&&!destroyed&&!isFinishing){playButton.text="▶";next()}}}
   }.start()
  }
  private fun togglePlay(){
