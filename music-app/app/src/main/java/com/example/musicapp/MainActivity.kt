@@ -90,7 +90,10 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Nhạc ngủ","☾"){showSleepTimer()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("YouTube","▶"){tracks.firstOrNull{it.youtubeUrl!=null}?.let{playTrack(it)}},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Bản đồ","🗺️"){openMap()},LinearLayout.LayoutParams(dp(92),dp(62)).apply{leftMargin=dp(7)})
-  actions.addView(action("AI","🤖"){showAiAssistantGate()},LinearLayout.LayoutParams(dp(82),dp(62)).apply{leftMargin=dp(7)})
+  val aiAction=action("AI","🤖"){showAiAssistantGate()}
+  val aiParams=LinearLayout.LayoutParams(dp(82),dp(62))
+  aiParams.leftMargin=dp(7)
+  actions.addView(aiAction,aiParams)
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
