@@ -307,7 +307,7 @@ class MainActivity:AppCompatActivity(){
  private fun callOpenAi(history:JSONArray):String{
   var conn:HttpURLConnection?=null
   return try{
-   val body=JSONObject().put("model",openAiModel).put("input",history)
+   val body=JSONObject().put("model",openAiModel).put("instructions","Bạn là AI Bảo Nam, trợ lý học tập thân thiện. Trả lời rõ ràng bằng tiếng Việt, giải thích bài tập từng bước, không bịa khi không chắc và nhắc người dùng không chia sẻ thông tin riêng tư.").put("max_output_tokens",1200).put("input",history)
    conn=(URL("https://api.openai.com/v1/responses").openConnection() as HttpURLConnection).apply{
     requestMethod="POST";connectTimeout=20000;readTimeout=60000;doOutput=true
     setRequestProperty("Authorization","Bearer "+openAiApiKey)
