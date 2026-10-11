@@ -34,7 +34,7 @@ class MainActivity:AppCompatActivity(){
  private val generation=AtomicInteger(0);private val audioLock=Any();@Volatile private var stopBuiltin=false
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
- private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var search:EditText;private var favoritesOnly=false
+ private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var progressBar:SeekBar;private lateinit var elapsedLabel:TextView;private lateinit var durationLabel:TextView;private val progressHandler=android.os.Handler(android.os.Looper.getMainLooper());private lateinit var search:EditText;private var favoritesOnly=false
  private var shuffle=false
  private var repeatOne=false
  private var pendingExportText=""
@@ -66,7 +66,7 @@ class MainActivity:AppCompatActivity(){
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);tracks.addAll(builtIn.map{it.copy()});tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);progressHandler.post(progressUpdate);tracks.addAll(builtIn.map{it.copy()});tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background)}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -115,6 +115,23 @@ class MainActivity:AppCompatActivity(){
   np.addView(TextView(this).apply{text="ĐANG CHỜ PHÁT";textSize=9f;setTextColor(Color.rgb(100,185,255));setPadding(0,dp(3),0,0)});nowCard.addView(np)
   playButton=button("▶").apply{textSize=21f;background=rounded(Color.rgb(36,118,225),28);setOnClickListener{togglePlay()}};nowCard.addView(playButton,LinearLayout.LayoutParams(dp(54),dp(54)))
   root.addView(nowCard,LinearLayout.LayoutParams(-1,dp(76)).apply{bottomMargin=dp(8)})
+  val progressRow=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(6),0,dp(6),dp(2))}
+  val times=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
+  elapsedLabel=TextView(this).apply{text="00:00";textSize=10f;setTextColor(Color.rgb(145,180,225))}
+  durationLabel=TextView(this).apply{text="00:00";textSize=10f;setTextColor(Color.rgb(145,180,225))}
+  times.addView(elapsedLabel,LinearLayout.LayoutParams(0,dp(18),1f))
+  times.addView(durationLabel)
+  progressRow.addView(times)
+  progressBar=SeekBar(this).apply{max=1000;progress=0;setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(bar:SeekBar?,value:Int,fromUser:Boolean){}
+   override fun onStartTrackingTouch(bar:SeekBar?){}
+   override fun onStopTrackingTouch(bar:SeekBar?){
+    val mp=player
+    if(mp!=null)try{val dur=mp.duration;if(dur>0)mp.seekTo((dur.toLong()*bar!!.progress/1000L).toInt())}catch(_:Exception){}
+   }
+  })}
+  progressRow.addView(progressBar,LinearLayout.LayoutParams(-1,dp(28)))
+  root.addView(progressRow,LinearLayout.LayoutParams(-1,dp(46)))
   val controls=LinearLayout(this).apply{gravity=Gravity.CENTER}
   val prev=button("⏮");prev.textSize=18f;controls.addView(prev,LinearLayout.LayoutParams(dp(58),dp(46)))
   val nextBtn=button("⏭");nextBtn.textSize=18f;controls.addView(nextBtn,LinearLayout.LayoutParams(dp(58),dp(46)).apply{leftMargin=dp(8)})
@@ -607,6 +624,26 @@ class MainActivity:AppCompatActivity(){
    }
   }
  }
+ private fun formatTime(ms:Int):String{
+  val total=(ms.coerceAtLeast(0)/1000)
+  return String.format(Locale.US,"%02d:%02d",total/60,total%60)
+ }
+ private val progressUpdate=object:Runnable{
+  override fun run(){
+   if(destroyed)return
+   val mp=player
+   if(mp!=null)try{
+    val duration=mp.duration.coerceAtLeast(0)
+    val position=mp.currentPosition.coerceAtLeast(0)
+    if(duration>0){
+     if(!progressBar.isPressed)progressBar.progress=((position.toLong()*1000L)/duration).toInt().coerceIn(0,1000)
+     elapsedLabel.text=formatTime(position)
+     durationLabel.text=formatTime(duration)
+    }
+   }catch(_:Exception){}
+   progressHandler.postDelayed(this,500)
+  }
+ }
  private fun playTrack(t:Track){
   if(destroyed||isFinishing)return
   if(!tracks.contains(t)){Toast.makeText(this,"Bài hát không còn trong thư viện.",Toast.LENGTH_SHORT).show();return}
@@ -615,7 +652,7 @@ class MainActivity:AppCompatActivity(){
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
    if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";return}
-   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};try{mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸";applySavedEqualizer(mp)}catch(_:Exception){player=null;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
+   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};try{mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸";progressBar.progress=0;elapsedLabel.text="00:00";durationLabel.text=formatTime(mp.duration);applySavedEqualizer(mp)}catch(_:Exception){player=null;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
  }
  private fun playBuiltin(t:Track){
   val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
@@ -634,5 +671,5 @@ class MainActivity:AppCompatActivity(){
  }
  private fun previous(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){playlistPosition=if(playlistPosition<=0)queue.lastIndex else playlistPosition-1;playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
  private fun next(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){if(shuffle){val choices=queue.indices.filter{it!=playlistPosition};playlistPosition=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{playlistPosition=if(repeatOne)playlistPosition else (playlistPosition+1)%queue.size};playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty()){val idx:Int;if(shuffle){val choices=tracks.indices.filter{it!=currentIndex};idx=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{idx=if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1};playTrack(tracks[idx])}}
- override fun onDestroy(){destroyed=true;sleepTimer?.cancel();sleepTimer=null;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
+ override fun onDestroy(){destroyed=true;progressHandler.removeCallbacks(progressUpdate);sleepTimer?.cancel();sleepTimer=null;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
 }
