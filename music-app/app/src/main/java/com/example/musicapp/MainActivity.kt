@@ -331,6 +331,7 @@ class MainActivity:AppCompatActivity(){
   }.setNegativeButton("Đóng",null).show()
  }
  private fun showHistory(){
+  if(destroyed||isFinishing)return
   val history=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()}
   if(history.isEmpty()){
    AlertDialog.Builder(this).setTitle("🕘 Lịch sử nghe").setMessage("Bạn chưa phát bài nào trong lịch sử được lưu.").setPositiveButton("OK",null).show()
@@ -346,6 +347,7 @@ class MainActivity:AppCompatActivity(){
   prefs.edit().putString("play_history",(listOf(title)+old).take(20).joinToString("|")).apply()
  }
  private fun showSleepTimerDialog(){
+  if(destroyed||isFinishing)return
   val options=arrayOf("5 phút","10 phút","15 phút","30 phút","45 phút","60 phút","Hủy hẹn giờ")
   AlertDialog.Builder(this).setTitle("🌙 Hẹn giờ tắt nhạc").setItems(options){_,which->
    if(which==6){sleepTimer?.cancel();sleepTimer=null;Toast.makeText(this,"Đã hủy hẹn giờ.",Toast.LENGTH_SHORT).show()}
@@ -361,6 +363,7 @@ class MainActivity:AppCompatActivity(){
   }.setNegativeButton("Đóng",null).show()
  }
  private fun showVolume(){
+  if(destroyed||isFinishing)return
   val audio=getSystemService(AUDIO_SERVICE) as AudioManager
   val max=audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
   val current=audio.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -375,6 +378,7 @@ class MainActivity:AppCompatActivity(){
   AlertDialog.Builder(this).setTitle("🔊 Điều chỉnh âm lượng").setView(panel).setPositiveButton("Xong",null).show()
  }
  private fun showDiagnostics(){
+  if(destroyed||isFinishing)return
   val audio=getSystemService(AUDIO_SERVICE) as AudioManager
   val details="Music App — Kiểm tra nhanh\\n\\n"+
    "• Bài hát trong thư viện: ${tracks.size}\\n"+
@@ -401,6 +405,7 @@ class MainActivity:AppCompatActivity(){
   }.setNegativeButton("Hủy",null).show()
  }
  private fun showSettings(){
+  if(destroyed||isFinishing)return
   val items=arrayOf("🌍 Chọn quốc gia","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
   AlertDialog.Builder(this).setTitle("⚙ Cài đặt").setItems(items){_,which->
    when(which){
@@ -568,6 +573,7 @@ class MainActivity:AppCompatActivity(){
  @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r==103){val target=pendingYoutubeAudio;pendingYoutubeAudio=null;if(c==Activity.RESULT_OK&&d?.data!=null&&target!=null){val u=d.data!!;try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};target.uri=u;prefs.edit().putString(audioPreferenceKey(target),u.toString()).apply();renderList(search.text.toString());Toast.makeText(this,"Đã gắn âm thanh vào “"+target.title+"”. Bài sẽ phát trong app, không mở YouTube Music.",Toast.LENGTH_LONG).show();playTrack(target)};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
  private fun renderList(qs:String){
+  if(destroyed||!::list.isInitialized||!::search.isInitialized)return
   list.removeAllViews();val q=qs.trim().lowercase(Locale.getDefault());val visible=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.lowercase(Locale.getDefault()).contains(q)}
   if(visible.isEmpty()){list.addView(TextView(this).apply{text="🌙\n\nChưa có bài phù hợp";textSize=15f;gravity=Gravity.CENTER;setTextColor(Color.rgb(125,145,180));setPadding(0,dp(28),0,dp(28))});return}
   visible.forEach{tr->
@@ -583,12 +589,13 @@ class MainActivity:AppCompatActivity(){
   }
  }
  private fun stopCurrentPlayback(){
-  generation.incrementAndGet();stopBuiltin=true;builtinPaused=false
+  generation.incrementAndGet();stopBuiltin=true;builtinPaused=false;sleepTimer?.cancel();sleepTimer=null
   synchronized(audioLock){val a=audioTrack;audioTrack=null;if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}}
   val p=player;player=null;if(p!=null){try{p.setOnPreparedListener(null)}catch(_:Exception){};try{p.setOnCompletionListener(null)}catch(_:Exception){};try{p.setOnErrorListener(null)}catch(_:Exception){};try{p.stop()}catch(_:Exception){};try{p.release()}catch(_:Exception){}}
   if(!destroyed&&::playButton.isInitialized)playButton.text="▶"
  }
  private fun showTrackDetails(t:Track){
+  if(destroyed||isFinishing)return
   val message=when{
    t.melody!=null -> "🌙 "+t.title+"\n\n• Không gian: nhạc nền nhẹ, thiên về thư giãn và đi vào trạng thái chậm.\n• Cấu trúc: giai điệu ngắn lặp lại với nhịp ổn định để tạo cảm giác quen thuộc.\n• Chi tiết đáng nghe: hãy để ý lúc nốt cao xuất hiện rồi trở về nốt thấp; sự lên xuống đó tạo cảm giác như một hơi thở.\n• Cách nghe sâu: giảm âm lượng vừa đủ nghe, nhắm mắt vài phút và tập trung vào khoảng lặng giữa các nốt.\n• Phù hợp: nghỉ ngơi, đọc sách hoặc chuẩn bị ngủ."
    t.streamUrl!=null && t.title.contains("Thanh niên") -> "🎤 "+t.title+"\n\n• Nguồn: Wikimedia Commons.\n• Giấy phép bản ghi: Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0).\n• Khi chia sẻ lại, cần ghi công và giữ điều kiện giấy phép tương thích.\n• Cần Internet để phát trực tuyến."
@@ -618,12 +625,14 @@ class MainActivity:AppCompatActivity(){
   }
  }
  private fun playTrack(t:Track){
+  if(destroyed||isFinishing)return
+  if(!tracks.contains(t)){Toast.makeText(this,"Bài hát không còn trong thư viện.",Toast.LENGTH_SHORT).show();return}
   currentIndex=tracks.indexOf(t);saveHistory(t.title);stopCurrentPlayback()
   if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
-   if(u==null&&t.streamUrl==null)return
-   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(repeatOne)playTrack(t) else next()}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player=null;playButton.text="▶"}
+   if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";return}
+   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};try{mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"}catch(_:Exception){player=null;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
  }
  private fun playBuiltin(t:Track){
   val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
