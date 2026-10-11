@@ -57,7 +57,8 @@ class MainActivity:AppCompatActivity(){
   Track(null,"☁️ Chill - Mưa nhẹ",melody=melody(220.0,277.18,329.63,369.99,329.63,277.18,220.0)),
   Track(null,"☁️ Chill - Gió biển",melody=melody(246.94,329.63,392.0,440.0,392.0,329.63,246.94)),
   Track(null,"☁️ Chill - Thư giãn",melody=melody(196.0,246.94,329.63,392.0,329.63,246.94,196.0)),
-  Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://music.youtube.com/watch?v=liTfD88dbCo")
+  Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://music.youtube.com/watch?v=liTfD88dbCo"),
+  Track(null,"▶️ YouTube Music - Bài bạn gửi",youtubeUrl="https://music.youtube.com/watch?v=tu9KGLE7zLs&si=rqYnO5JnnTml768F")
  )
  private fun melody(vararg n:Double)=n.map{it to 650}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
