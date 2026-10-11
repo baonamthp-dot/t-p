@@ -164,7 +164,8 @@ class MainActivity:AppCompatActivity(){
    "🎼 Nguồn nhạc và giấy phép",
    "👑 Giới thiệu ứng dụng",
    "🎚️ Bộ chỉnh âm (EQ)",
-   "🎵 Danh sách phát riêng"
+   "🎵 Danh sách phát riêng",
+   "⏩ Tốc độ phát"
   )
   AlertDialog.Builder(this).setTitle("Tiện ích cần thiết").setItems(items){_,which->
    when(which){
@@ -196,6 +197,7 @@ class MainActivity:AppCompatActivity(){
     13->AlertDialog.Builder(this).setTitle("Về Music App").setMessage("Music App\nNgười tạo: Bảo Nam\n\nTrình phát nhạc tập trung vào thư viện cá nhân, yêu thích, tìm kiếm và hẹn giờ ngủ.").setPositiveButton("Đóng",null).show()
     14->showEqualizer()
     15->showPlaylistManager()
+    16->showPlaybackSpeed()
    }
   }.setNegativeButton("Đóng",null).show()
  }
@@ -360,6 +362,24 @@ class MainActivity:AppCompatActivity(){
    eq.enabled=true
    equalizer=eq
   }catch(_:Exception){try{equalizer?.release()}catch(_:Exception){};equalizer=null}
+ }
+ private fun showPlaybackSpeed(){
+  if(destroyed||isFinishing)return
+  val speeds=floatArrayOf(0.75f,1.0f,1.25f,1.5f,2.0f)
+  val labels=arrayOf("0,75× — Chậm","1,0× — Bình thường","1,25×","1,5×","2,0× — Nhanh")
+  val saved=prefs.getFloat("playback_speed",1.0f)
+  val selected=speeds.indices.minByOrNull{ kotlin.math.abs(speeds[it]-saved) }?:1
+  AlertDialog.Builder(this).setTitle("⏩ Tốc độ phát").setSingleChoiceItems(labels,selected){dialog,which->
+   val speed=speeds[which]
+   prefs.edit().putFloat("playback_speed",speed).apply()
+   val mp=player
+   if(mp!=null)try{
+    if(android.os.Build.VERSION.SDK_INT>=23)mp.playbackParams=mp.playbackParams.setSpeed(speed)
+    else Toast.makeText(this,"Tốc độ phát cần Android 6.0 trở lên.",Toast.LENGTH_LONG).show()
+   }catch(_:Exception){Toast.makeText(this,"Nguồn phát này không hỗ trợ đổi tốc độ.",Toast.LENGTH_LONG).show()}
+   Toast.makeText(this,"Đã chọn tốc độ ${labels[which].substringBefore(" —")}. Áp dụng cho bài nhạc tương thích.",Toast.LENGTH_SHORT).show()
+   dialog.dismiss()
+  }.setNegativeButton("Đóng",null).show()
  }
  private fun showVolume(){
   if(destroyed||isFinishing)return
@@ -652,7 +672,7 @@ class MainActivity:AppCompatActivity(){
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
    if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";return}
-   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};try{mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸";progressBar.progress=0;elapsedLabel.text="00:00";durationLabel.text=formatTime(mp.duration);applySavedEqualizer(mp)}catch(_:Exception){player=null;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
+   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};try{mp.start();if(android.os.Build.VERSION.SDK_INT>=23)mp.playbackParams=mp.playbackParams.setSpeed(prefs.getFloat("playback_speed",1.0f));nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸";progressBar.progress=0;elapsedLabel.text="00:00";durationLabel.text=formatTime(mp.duration);applySavedEqualizer(mp)}catch(_:Exception){player=null;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
  }
  private fun playBuiltin(t:Track){
   val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
