@@ -151,7 +151,7 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showToolsPanel(){
   val items=arrayOf(
-   "📊 Thống kê thư viện",
+   "📈 Thống kê nghe nhạc",
    "📤 Chia sẻ danh sách bài hát",
    "🔤 Sắp xếp tên A–Z",
    "♥ Chỉ xem bài yêu thích",
@@ -171,10 +171,7 @@ class MainActivity:AppCompatActivity(){
   )
   AlertDialog.Builder(this).setTitle("Tiện ích cần thiết").setItems(items){_,which->
    when(which){
-    0->{
-     val msg="Tổng số bài: ${tracks.size}\nNhạc tích hợp: ${tracks.count{it.melody!=null}}\nNhạc từ thiết bị: ${tracks.count{it.uri!=null}}\nNhạc trực tuyến: ${tracks.count{it.streamUrl!=null}}\nBài yêu thích: ${tracks.count{it.favorite}}"
-     AlertDialog.Builder(this).setTitle("Thống kê thư viện").setMessage(msg).setPositiveButton("Đóng",null).show()
-    }
+    0->{showListeningStats()}
     1->{
      val content=tracks.joinToString("\n"){(if(it.favorite)"♥ " else "")+it.title}
      val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"Danh sách nhạc Music App");putExtra(Intent.EXTRA_TEXT,if(content.isBlank())"Thư viện nhạc đang trống." else "🎵 Danh sách nhạc Music App\n\n$content")}
@@ -274,6 +271,29 @@ class MainActivity:AppCompatActivity(){
  private fun saveHistory(title:String){
   val old=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()&&it!=title}
   prefs.edit().putString("play_history",(listOf(title)+old).take(20).joinToString("|")).apply()
+ }
+ private fun recordPlay(title:String){
+  try{
+   val counts=JSONObject(prefs.getString("play_counts","{}").orEmpty())
+   counts.put(title,counts.optInt(title,0)+1)
+   prefs.edit().putString("play_counts",counts.toString()).apply()
+  }catch(_:Exception){}
+ }
+ private fun showListeningStats(){
+  if(destroyed||isFinishing)return
+  val counts=try{JSONObject(prefs.getString("play_counts","{}").orEmpty())}catch(_:Exception){JSONObject()}
+  val ranking=mutableListOf<Pair<String,Int>>()
+  val keys=counts.keys()
+  while(keys.hasNext()){val key=keys.next();ranking.add(key to counts.optInt(key,0))}
+  ranking.sortByDescending{it.second}
+  val total=ranking.sumOf{it.second}
+  val history=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()}
+  val top=if(ranking.isEmpty())"Chưa có dữ liệu phát nhạc. Hãy mở một bài để bắt đầu thống kê." else ranking.take(5).joinToString("\n\n"){(name,count)->
+   val bars="▰".repeat(count.coerceAtMost(10))+"▱".repeat((10-count.coerceAtMost(10)).coerceAtLeast(0))
+   "$bars  $name\n$count lượt chọn phát"
+  }
+  val message="🎧 TỔNG QUAN\nTổng lượt chọn phát: $total\nBài trong thư viện: ${tracks.size}\nBài yêu thích: ${tracks.count{it.favorite}}\nGần đây: ${history.size} bài\n\n🏆 NGHE NHIỀU NHẤT\n$top\n\nLượt phát được lưu trên thiết bị này."
+  AlertDialog.Builder(this).setTitle("📈 Thống kê nghe nhạc").setMessage(message).setPositiveButton("Đóng",null).setNeutralButton("Đặt lại thống kê"){_,_->prefs.edit().remove("play_counts").apply();Toast.makeText(this,"Đã đặt lại thống kê.",Toast.LENGTH_SHORT).show()}.show()
  }
  private fun showSleepTimerDialog(){
   if(destroyed||isFinishing)return
@@ -690,7 +710,7 @@ class MainActivity:AppCompatActivity(){
  private fun playTrack(t:Track){
   if(destroyed||isFinishing)return
   if(!tracks.contains(t)){Toast.makeText(this,"Bài hát không còn trong thư viện.",Toast.LENGTH_SHORT).show();return}
-  currentIndex=tracks.indexOf(t);coverIcon.text=when{t.title.startsWith("🌙")->"🌙";t.title.startsWith("☁️")->"☁️";t.streamUrl!=null->"🎤";t.youtubeUrl!=null->"🎧";t.uri!=null->"🎵";else->"♫"};coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17);applyCoverArtwork(t);saveHistory(t.title);stopCurrentPlayback()
+  currentIndex=tracks.indexOf(t);recordPlay(t.title);coverIcon.text=when{t.title.startsWith("🌙")->"🌙";t.title.startsWith("☁️")->"☁️";t.streamUrl!=null->"🎤";t.youtubeUrl!=null->"🎧";t.uri!=null->"🎵";else->"♫"};coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17);applyCoverArtwork(t);saveHistory(t.title);stopCurrentPlayback()
   if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
