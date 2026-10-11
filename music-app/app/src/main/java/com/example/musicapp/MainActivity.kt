@@ -650,7 +650,19 @@ class MainActivity:AppCompatActivity(){
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
   }
  }
- private fun applyCoverArtwork(t:Track){\n  val uri=t.uri ?: return\n  val expectedTitle=t.title\n  Thread{\n   var retriever:android.media.MediaMetadataRetriever?=null\n   val bitmap=try{retriever=android.media.MediaMetadataRetriever();retriever!!.setDataSource(this,uri);val bytes=retriever!!.embeddedPicture;if(bytes!=null)BitmapFactory.decodeByteArray(bytes,0,bytes.size)else null}catch(_:Exception){null}finally{try{retriever?.release()}catch(_:Exception){}}\n   runOnUiThread{\n    if(!destroyed&&currentIndex in tracks.indices&&tracks[currentIndex].title==expectedTitle&&bitmap!=null){coverIcon.text="";coverIcon.background=BitmapDrawable(resources,bitmap).apply{gravity=Gravity.FILL}\n    }\n   }\n  }.start()\n }\n private fun stopCurrentPlayback(){
+ private fun applyCoverArtwork(t:Track){
+  val uri=t.uri ?: return
+  val expectedTitle=t.title
+  Thread{
+   var retriever:android.media.MediaMetadataRetriever?=null
+   val bitmap=try{retriever=android.media.MediaMetadataRetriever();retriever!!.setDataSource(this,uri);val bytes=retriever!!.embeddedPicture;if(bytes!=null)BitmapFactory.decodeByteArray(bytes,0,bytes.size)else null}catch(_:Exception){null}finally{try{retriever?.release()}catch(_:Exception){}}
+   runOnUiThread{
+    if(!destroyed&&currentIndex in tracks.indices&&tracks[currentIndex].title==expectedTitle&&bitmap!=null){coverIcon.text="";coverIcon.background=BitmapDrawable(resources,bitmap).apply{gravity=Gravity.FILL}
+    }
+   }
+  }.start()
+ }
+ private fun stopCurrentPlayback(){
   generation.incrementAndGet();stopBuiltin=true;builtinPaused=false;sleepTimer?.cancel();sleepTimer=null
   synchronized(audioLock){val a=audioTrack;audioTrack=null;if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}}
   try{equalizer?.release()}catch(_:Exception){};equalizer=null
