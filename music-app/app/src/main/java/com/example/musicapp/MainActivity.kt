@@ -77,7 +77,15 @@ class MainActivity:AppCompatActivity(){
   root.addView(top)
   search=EditText(this).apply{hint="🔎  Tìm bài hát";setSingleLine();textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.rgb(120,140,175));setPadding(dp(15),0,dp(15),0);background=GradientDrawable().apply{setColor(Color.rgb(13,22,46));cornerRadius=dp(22).toFloat();setStroke(dp(1),Color.rgb(35,65,110))}}
   root.addView(search,LinearLayout.LayoutParams(-1,dp(48)).apply{topMargin=dp(6);bottomMargin=dp(10)})
-  val hero=LinearLayout(this).apply{\n   orientation=LinearLayout.VERTICAL\n   gravity=Gravity.CENTER\n   setPadding(dp(16),dp(12),dp(16),dp(12))\n   background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(7,35,75),Color.rgb(28,12,60),Color.rgb(8,18,42))).apply{\n    cornerRadius=dp(25).toFloat()\n    setStroke(dp(1),Color.rgb(47,102,175))\n   }\n  }
+  val hero=LinearLayout(this).apply{
+   orientation=LinearLayout.VERTICAL
+   gravity=Gravity.CENTER
+   setPadding(dp(16),dp(12),dp(16),dp(12))
+   background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(7,35,75),Color.rgb(28,12,60),Color.rgb(8,18,42))).apply{
+    cornerRadius=dp(25).toFloat()
+    setStroke(dp(1),Color.rgb(47,102,175))
+   }
+  }
   hero.addView(TextView(this).apply{text="✦  ·  ✧   ☾   ✧  ·  ✦";textSize=12f;setTextColor(Color.rgb(100,180,255));gravity=Gravity.CENTER})
   hero.addView(TextView(this).apply{text="🌕";textSize=58f;gravity=Gravity.CENTER;setShadowLayer(dp(14).toFloat(),0f,0f,Color.rgb(80,160,255))})
   hero.addView(TextView(this).apply{text="Những bản nhạc đưa bạn đến bình yên";textSize=18f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);gravity=Gravity.CENTER})
@@ -94,6 +102,8 @@ class MainActivity:AppCompatActivity(){
   val aiParams=LinearLayout.LayoutParams(dp(82),dp(62))
   aiParams.leftMargin=dp(7)
   actions.addView(aiAction,aiParams)
+  actions.addView(action("Lịch sử","🕘"){showHistory()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
+  actions.addView(action("Âm lượng","🔊"){showVolume()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -122,6 +132,46 @@ class MainActivity:AppCompatActivity(){
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?) {}})
   setContentView(root)
  }
+ private fun showHistory(){
+  val history=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()}
+  if(history.isEmpty()){
+   AlertDialog.Builder(this).setTitle("🕘 Lịch sử nghe").setMessage("Bạn chưa phát bài nào trong lịch sử được lưu.").setPositiveButton("OK",null).show()
+   return
+  }
+  AlertDialog.Builder(this).setTitle("🕘 Bài nghe gần đây").setItems(history.toTypedArray()){_,which->
+   val t=tracks.firstOrNull{it.title==history[which]}
+   if(t!=null)playTrack(t) else Toast.makeText(this,"Bài này không còn trong thư viện hiện tại.",Toast.LENGTH_SHORT).show()
+  }.setNeutralButton("Xóa lịch sử"){_,_->prefs.edit().remove("play_history").apply();Toast.makeText(this,"Đã xóa lịch sử.",Toast.LENGTH_SHORT).show()}.setNegativeButton("Đóng",null).show()
+ }
+ private fun saveHistory(title:String){
+  val old=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()&&it!=title}
+  prefs.edit().putString("play_history",(listOf(title)+old).take(20).joinToString("|")).apply()
+ }
+ private fun showVolume(){
+  val audio=getSystemService(AUDIO_SERVICE) as AudioManager
+  val max=audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+  val current=audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+  val seek=SeekBar(this).apply{this.max=max;progress=current}
+  val label=TextView(this).apply{text="Âm lượng: $current / $max";setTextColor(Color.WHITE);gravity=Gravity.CENTER;padding=dp(8)}
+  seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+   override fun onProgressChanged(bar:SeekBar?,value:Int,fromUser:Boolean){audio.setStreamVolume(AudioManager.STREAM_MUSIC,value,0);label.text="Âm lượng: $value / $max"}
+   override fun onStartTrackingTouch(bar:SeekBar?){}
+   override fun onStopTrackingTouch(bar:SeekBar?){}
+  })
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(8),dp(18),dp(4));addView(label);addView(seek)}
+  AlertDialog.Builder(this).setTitle("🔊 Điều chỉnh âm lượng").setView(panel).setPositiveButton("Xong",null).show()
+ }
+ private fun showDiagnostics(){
+  val audio=getSystemService(AUDIO_SERVICE) as AudioManager
+  val details="Music App — Kiểm tra nhanh\\n\\n"+
+   "• Bài hát trong thư viện: ${tracks.size}\\n"+
+   "• Bài yêu thích: ${tracks.count{it.favorite}}\\n"+
+   "• Trạng thái phát: ${if(player!=null||audioTrack!=null)"Có thiết bị phát" else "Đang chờ / phát ngoài ứng dụng"}\\n"+
+   "• Giọng nói: ${if(tts!=null)"Đã khởi tạo" else "Chưa sẵn sàng"}\\n"+
+   "• Mạng: ${if(android.net.ConnectivityManager::class.java!=null)"Kiểm tra khi dùng AI/YouTube" else "Không rõ"}\\n\\n"+
+   "Nếu ứng dụng tự thoát, hãy gửi ảnh lỗi hoặc log để xác định nguyên nhân."
+  AlertDialog.Builder(this).setTitle("🛠️ Chẩn đoán ứng dụng").setMessage(details).setPositiveButton("OK",null).show()
+ }
  private fun loadFavorites(){tracks.forEach{it.favorite=prefs.getBoolean("fav_"+it.title,false)}}
  private fun saveFavorite(t:Track){prefs.edit().putBoolean("fav_"+t.title,t.favorite).apply()}
  private fun showSleepTimer(){
@@ -138,7 +188,7 @@ class MainActivity:AppCompatActivity(){
   }.setNegativeButton("Hủy",null).show()
  }
  private fun showSettings(){
-  val items=arrayOf("🌍 Chọn quốc gia","🔐 Bảo mật","ℹ️ Thông tin ứng dụng")
+  val items=arrayOf("🌍 Chọn quốc gia","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
   AlertDialog.Builder(this).setTitle("⚙ Cài đặt").setItems(items){_,which->
    when(which){
     0->showCountryPicker()
@@ -343,7 +393,7 @@ class MainActivity:AppCompatActivity(){
   }
  }
  private fun playTrack(t:Track){
-  currentIndex=tracks.indexOf(t);stopCurrentPlayback()
+  currentIndex=tracks.indexOf(t);saveHistory(t.title);stopCurrentPlayback()
   if(t.youtubeUrl!=null){openYoutube(t.youtubeUrl);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri?:return
