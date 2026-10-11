@@ -295,13 +295,13 @@ class MainActivity:AppCompatActivity(){
   }
   AlertDialog.Builder(this)
    .setTitle("🔑 Kết nối AI Bảo Nam")
-   .setMessage("Nhập OpenAI API key của bạn. Key chỉ được giữ trong bộ nhớ của app trong phiên hiện tại và không được ghi vào mã nguồn.")
+   .setMessage("Nhập OpenAI API key do bạn hoặc phụ huynh quản lý tạo. Key chỉ giữ trong bộ nhớ của app ở phiên hiện tại, không ghi vào mã nguồn. Không gửi key cho người khác. API có thể tính phí; hãy nhờ phụ huynh quản lý tài khoản và chi phí.")
    .setView(input)
    .setNegativeButton("Hủy",null)
    .setPositiveButton("Kết nối"){_,_->
     val key=input.text.toString().trim()
     if(key.isBlank()){Toast.makeText(this,"⚠️ Chưa nhập API key.",Toast.LENGTH_SHORT).show()}
-    else{openAiApiKey=key;Toast.makeText(this,"✅ Đã kết nối ChatGPT cho phiên này.",Toast.LENGTH_SHORT).show();showAiTutor()}
+    else{openAiApiKey=key;Toast.makeText(this,"Đã lưu key trong bộ nhớ phiên này. Hãy gửi câu hỏi để kiểm tra kết nối.",Toast.LENGTH_LONG).show();showAiTutor()}
    }.show()
  }
  private fun callOpenAi(history:JSONArray):String{
@@ -317,10 +317,16 @@ class MainActivity:AppCompatActivity(){
    val code=conn.responseCode
    val stream=if(code in 200..299)conn.inputStream else conn.errorStream
    val raw=stream?.bufferedReader()?.use{it.readText()}.orEmpty()
-   if(code !in 200..299){
-    val msg=try{JSONObject(raw).optJSONObject("error")?.optString("message").orEmpty()}catch(_:Exception){""}
-    return "⚠️ OpenAI báo lỗi $code"+if(msg.isNotBlank()){": $msg"}else{""}
-   }
+    if(code !in 200..299){
+     val msg=try{JSONObject(raw).optJSONObject("error")?.optString("message").orEmpty()}catch(_:Exception){""}
+     val hint=when(code){
+      401,403->"API key không hợp lệ hoặc tài khoản chưa có quyền."
+      404->"Không tìm thấy model hoặc tài khoản chưa được cấp quyền dùng model."
+      429->"Đã chạm giới hạn yêu cầu hoặc hạn mức API. Hãy kiểm tra quota/billing."
+      else->"Yêu cầu tới OpenAI thất bại."
+     }
+     return "⚠️ $hint (HTTP $code)"+if(msg.isNotBlank()){"\\nChi tiết: $msg"}else{""}
+    }
    val json=JSONObject(raw)
    val output=json.optJSONArray("output")?:return "⚠️ Không nhận được nội dung trả lời từ ChatGPT."
    val result=StringBuilder()
