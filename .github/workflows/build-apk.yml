@@ -31,11 +31,22 @@ jobs:
       - name: Generate Gradle wrapper
         run: gradle -p music-app wrapper --gradle-version 8.9
 
+      - name: Prepare app icon
+        working-directory: music-app
+        run: |
+          mkdir -p app/src/main/res/drawable-nodpi
+          base64 -d app/icon/app_icon.b64 > app/src/main/res/drawable-nodpi/app_icon.jpg
+          test -s app/src/main/res/drawable-nodpi/app_icon.jpg
+
       - name: Build debug APK
         run: cd music-app && ./gradlew assembleDebug
+
+      - name: Verify APK exists
+        run: test -s music-app/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MusicApp-debug-apk
           path: music-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
