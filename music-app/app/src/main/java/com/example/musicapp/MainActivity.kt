@@ -722,12 +722,71 @@ class MainActivity:AppCompatActivity(){
  private fun playTrack(t:Track){
   if(destroyed||isFinishing)return
   if(!tracks.contains(t)){Toast.makeText(this,"Bài hát không còn trong thư viện.",Toast.LENGTH_SHORT).show();return}
-  currentIndex=tracks.indexOf(t);recordPlay(t.title);coverIcon.text=when{t.title.startsWith("🌙")->"🌙";t.title.startsWith("☁️")->"☁️";t.streamUrl!=null->"🎤";t.youtubeUrl!=null->"🎧";t.uri!=null->"🎵";else->"♫"};coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17);applyCoverArtwork(t);saveHistory(t.title);stopCurrentPlayback()
+  currentIndex=tracks.indexOf(t)
+  recordPlay(t.title)
+  coverIcon.text=when{t.title.startsWith("🌙")->"🌙";t.title.startsWith("☁️")->"☁️";t.streamUrl!=null->"🎤";t.youtubeUrl!=null->"🎧";t.uri!=null->"🎵";else->"♫"}
+  coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17)
+  applyCoverArtwork(t)
+  saveHistory(t.title)
+  stopCurrentPlayback()
   if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
-   if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";return}
-   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};if(android.os.Build.VERSION.SDK_INT>=23){try{mp.playbackParams=mp.playbackParams.setSpeed(prefs.getFloat("playback_speed",1.0f).coerceIn(0.5f,2.0f))}catch(_:Exception){}};mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸";progressBar.isEnabled=true;progressBar.progress=0;elapsedLabel.text="00:00";durationLabel.text=formatTime(mp.duration);applySavedEqualizer(mp)}catch(_:Exception){player=null;progressBar.isEnabled=false;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";Toast.makeText(this,"Không phát được bài này. Hãy thử tệp khác hoặc kiểm tra kết nối.",Toast.LENGTH_LONG).show();try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,what,extra->if(player===mp){player=null;progressBar.isEnabled=false;nowPlaying.text="Không phát được tệp này (lỗi $what/$extra)";playButton.text="▶";Toast.makeText(this,"Nguồn nhạc không phát được (lỗi $what/$extra).",Toast.LENGTH_LONG).show();try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
+  if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";progressBar.isEnabled=false;return}
+  try{
+   val mp=MediaPlayer()
+   if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!)
+   mp.setOnPreparedListener{prepared->
+    if(player!==prepared||destroyed){try{prepared.release()}catch(_:Exception){};return@setOnPreparedListener}
+    try{
+     if(android.os.Build.VERSION.SDK_INT>=23){
+      try{prepared.playbackParams=prepared.playbackParams.setSpeed(prefs.getFloat("playback_speed",1.0f).coerceIn(0.5f,2.0f))}catch(_:Exception){}
+     }
+     prepared.start()
+     nowPlaying.text="Đang phát: "+t.title
+     playButton.text="⏸"
+     progressBar.isEnabled=true
+     progressBar.progress=0
+     elapsedLabel.text="00:00"
+     durationLabel.text=formatTime(prepared.duration)
+     applySavedEqualizer(prepared)
+    }catch(e:Exception){
+     player=null
+     progressBar.isEnabled=false
+     nowPlaying.text="Không thể bắt đầu phát bài này: "+(e.message?:"lỗi thiết bị")
+     playButton.text="▶"
+     Toast.makeText(this,"Không phát được bài này. Hãy thử tệp khác hoặc kiểm tra kết nối.",Toast.LENGTH_LONG).show()
+     try{prepared.release()}catch(_:Exception){}
+    }
+   }
+   mp.setOnCompletionListener{
+    if(player===mp){
+     player=null
+     progressBar.isEnabled=false
+     try{mp.release()}catch(_:Exception){}
+     if(!destroyed){if(repeatOne)playTrack(t) else next()}
+    }
+   }
+   mp.setOnErrorListener{_,what,extra->
+    if(player===mp){
+     player=null
+     progressBar.isEnabled=false
+     nowPlaying.text="Không phát được tệp này (lỗi $what/$extra)"
+     playButton.text="▶"
+     Toast.makeText(this,"Nguồn nhạc không phát được (lỗi $what/$extra).",Toast.LENGTH_LONG).show()
+     try{mp.release()}catch(_:Exception){}
+    }
+    true
+   }
+   player=mp
+   mp.prepareAsync()
+   nowPlaying.text="Đang tải: "+t.title
+  }catch(e:Exception){
+   player?.let{try{it.release()}catch(_:Exception){}}
+   player=null
+   progressBar.isEnabled=false
+   if(!destroyed){nowPlaying.text="Không thể mở bài này: "+(e.message?:"lỗi");playButton.text="▶"}
+  }
  }
  private fun playBuiltin(t:Track){
   val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
