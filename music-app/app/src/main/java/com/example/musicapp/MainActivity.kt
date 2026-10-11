@@ -9,6 +9,7 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.MediaPlayer
+import android.media.audiofx.Equalizer
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -29,7 +30,7 @@ import kotlin.math.sin
 data class Track(var uri:Uri?,val title:String,var favorite:Boolean=false,val melody:List<Pair<Double,Int>>?=null,val youtubeUrl:String?=null,val streamUrl:String?=null)
 
 class MainActivity:AppCompatActivity(){
- private val tracks=mutableListOf<Track>();private var currentIndex=-1;private var player:MediaPlayer?=null;private var audioTrack:AudioTrack?=null
+ private val tracks=mutableListOf<Track>();private var currentIndex=-1;private var player:MediaPlayer?=null;private var audioTrack:AudioTrack?=null;private var equalizer:Equalizer?=null
  private val generation=AtomicInteger(0);private val audioLock=Any();@Volatile private var stopBuiltin=false
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
@@ -144,7 +145,8 @@ class MainActivity:AppCompatActivity(){
    "🔊 Âm lượng",
    "🛠️ Chẩn đoán ứng dụng",
    "🎼 Nguồn nhạc và giấy phép",
-   "👑 Giới thiệu ứng dụng"
+   "👑 Giới thiệu ứng dụng",
+   "🎚️ Bộ chỉnh âm (EQ)"
   )
   AlertDialog.Builder(this).setTitle("Tiện ích cần thiết").setItems(items){_,which->
    when(which){
@@ -174,6 +176,7 @@ class MainActivity:AppCompatActivity(){
     11->showDiagnostics()
     12->AlertDialog.Builder(this).setTitle("Nguồn nhạc và giấy phép").setMessage("• Giai điệu tích hợp: âm thanh tổng hợp trong ứng dụng.\n• Nhạc trực tuyến: cần Internet; hãy xem giấy phép của từng bản ghi trước khi chia sẻ lại.\n• Tệp nhạc từ thiết bị: do bạn chọn và quản lý.").setPositiveButton("Đã hiểu",null).show()
     13->AlertDialog.Builder(this).setTitle("Về Music App").setMessage("Music App\nNgười tạo: Bảo Nam\n\nTrình phát nhạc tập trung vào thư viện cá nhân, yêu thích, tìm kiếm và hẹn giờ ngủ.").setPositiveButton("Đóng",null).show()
+    14->showEqualizer()
    }
   }.setNegativeButton("Đóng",null).show()
  }
@@ -208,6 +211,80 @@ class MainActivity:AppCompatActivity(){
     Toast.makeText(this,"Nhạc sẽ dừng sau $mins phút.",Toast.LENGTH_SHORT).show()
    }
   }.setNegativeButton("Đóng",null).show()
+ }
+ private fun showEqualizer(){
+  if(destroyed||isFinishing)return
+  val mp=player
+  if(mp==null){
+   AlertDialog.Builder(this).setTitle("🎚️ Bộ chỉnh âm").setMessage("Hãy phát một tệp nhạc từ thiết bị trước. Bộ chỉnh âm chỉ hoạt động với nguồn phát có phiên âm thanh tương thích; nhạc tích hợp hoặc một số thiết bị có thể không hỗ trợ.").setPositiveButton("Đã hiểu",null).show()
+   return
+  }
+  val eq=try{
+   equalizer?.release()
+   Equalizer(0,mp.audioSessionId).also{equalizer=it}
+  }catch(_:Exception){
+   equalizer=null
+   AlertDialog.Builder(this).setTitle("Bộ chỉnh âm chưa khả dụng").setMessage("Thiết bị hoặc nguồn phát hiện tại không hỗ trợ EQ. Bạn vẫn có thể dùng bộ chỉnh âm trong cài đặt âm thanh của thiết bị nếu có.").setPositiveButton("Đóng",null).show()
+   return
+  }
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(4))}
+  val enabled=CheckBox(this).apply{
+   text="Bật bộ chỉnh âm";setTextColor(Color.WHITE);isChecked=eq.enabled
+   setOnCheckedChangeListener{_,checked->try{eq.enabled=checked}catch(_:Exception){}}
+  }
+  panel.addView(enabled)
+  val range=eq.bandLevelRange
+  val min=range[0].toInt();val max=range[1].toInt()
+  val count=eq.numberOfBands.toInt().coerceAtMost(10)
+  val sliders=mutableListOf<SeekBar>()
+  val labels=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
+  for(i in 0 until count){
+   val band=i.toShort()
+   val hz=try{eq.getCenterFreq(band)/1000f}catch(_:Exception){0f}
+   val name=when{hz>=1000f->String.format(Locale.US,"%.1fk",hz/1000f);hz>=1f->String.format(Locale.US,"%.0f",hz);else->"B${i+1}"}
+   val col=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(1),0,dp(1),0)}
+   val valueLabel=TextView(this).apply{text="0 dB";textSize=9f;gravity=Gravity.CENTER;setTextColor(Color.rgb(125,195,255))}
+   val seek=SeekBar(this).apply{this.max=(max-min).coerceAtLeast(1)}
+   sliders.add(seek)
+   seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+    override fun onProgressChanged(bar:SeekBar?,progress:Int,fromUser:Boolean){
+     val level=(progress+min).coerceIn(min,max)
+     valueLabel.text=String.format(Locale.US,"%.1f dB",level/100f)
+     if(fromUser)try{eq.setBandLevel(band,level.toShort());prefs.edit().putInt("eq_band_$i",level).apply()}catch(_:Exception){}
+    }
+    override fun onStartTrackingTouch(bar:SeekBar?){}
+    override fun onStopTrackingTouch(bar:SeekBar?){}
+   })
+   val saved=prefs.getInt("eq_band_$i",0).coerceIn(min,max)
+   seek.progress=saved-min
+   try{eq.setBandLevel(band,saved.toShort())}catch(_:Exception){}
+   valueLabel.text=String.format(Locale.US,"%.1f dB",saved/100f)
+   col.addView(valueLabel)
+   col.addView(seek,LinearLayout.LayoutParams(dp(34),dp(142)))
+   col.addView(TextView(this).apply{text=name;textSize=9f;gravity=Gravity.CENTER;setTextColor(Color.LTGRAY)})
+   labels.addView(col,LinearLayout.LayoutParams(0,-2,1f))
+  }
+  panel.addView(labels)
+  val reset=button("Đặt lại EQ")
+  reset.setOnClickListener{
+   sliders.forEachIndexed{i,seek->seek.progress=(0-min).coerceIn(0,seek.max);prefs.edit().putInt("eq_band_$i",0).apply()}
+   Toast.makeText(this,"Đã đặt EQ về mức trung tính.",Toast.LENGTH_SHORT).show()
+  }
+  panel.addView(reset,LinearLayout.LayoutParams(-1,dp(44)).apply{topMargin=dp(8)})
+  AlertDialog.Builder(this).setTitle("🎚️ Bộ chỉnh âm").setView(ScrollView(this).apply{addView(panel)}).setPositiveButton("Xong",null).setNegativeButton("Đóng",null).show()
+ }
+ private fun applySavedEqualizer(mp:MediaPlayer){
+  try{
+   equalizer?.release()
+   val eq=Equalizer(0,mp.audioSessionId)
+   val range=eq.bandLevelRange
+   for(i in 0 until eq.numberOfBands.toInt()){
+    val level=prefs.getInt("eq_band_$i",0).coerceIn(range[0].toInt(),range[1].toInt())
+    eq.setBandLevel(i.toShort(),level.toShort())
+   }
+   eq.enabled=true
+   equalizer=eq
+  }catch(_:Exception){try{equalizer?.release()}catch(_:Exception){};equalizer=null}
  }
  private fun showVolume(){
   if(destroyed||isFinishing)return
@@ -438,6 +515,7 @@ class MainActivity:AppCompatActivity(){
  private fun stopCurrentPlayback(){
   generation.incrementAndGet();stopBuiltin=true;builtinPaused=false;sleepTimer?.cancel();sleepTimer=null
   synchronized(audioLock){val a=audioTrack;audioTrack=null;if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}}
+  try{equalizer?.release()}catch(_:Exception){};equalizer=null
   val p=player;player=null;if(p!=null){try{p.setOnPreparedListener(null)}catch(_:Exception){};try{p.setOnCompletionListener(null)}catch(_:Exception){};try{p.setOnErrorListener(null)}catch(_:Exception){};try{p.stop()}catch(_:Exception){};try{p.release()}catch(_:Exception){}}
   if(!destroyed&&::playButton.isInitialized)playButton.text="▶"
  }
@@ -479,7 +557,7 @@ class MainActivity:AppCompatActivity(){
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
    if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";return}
-   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};try{mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"}catch(_:Exception){player=null;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
+   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp||destroyed){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};try{mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸";applySavedEqualizer(mp)}catch(_:Exception){player=null;nowPlaying.text="Không thể bắt đầu phát bài này";playButton.text="▶";try{mp.release()}catch(_:Exception){}}};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(!destroyed){if(repeatOne)playTrack(t) else next()}}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player?.let{try{it.release()}catch(_:Exception){}};player=null;if(!destroyed){nowPlaying.text="Không thể mở bài này";playButton.text="▶"}}
  }
  private fun playBuiltin(t:Track){
   val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
