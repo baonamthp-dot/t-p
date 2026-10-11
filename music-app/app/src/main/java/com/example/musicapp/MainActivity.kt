@@ -142,7 +142,7 @@ class MainActivity:AppCompatActivity(){
   setContentView(root)
  }
  private fun showToolsPanel(){
-  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả","📥 Xuất danh sách dạng TXT","🧹 Xóa nhạc đã thêm từ thiết bị","🔎 Tìm bài ngẫu nhiên","🌙 Hẹn giờ ngủ","🗣️ Kiểm tra giọng nói","📋 Sao chép tên bài hát")
+  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả","📥 Xuất danh sách dạng TXT","🧹 Xóa nhạc đã thêm từ thiết bị","🔎 Tìm bài ngẫu nhiên","🌙 Hẹn giờ ngủ","🗣️ Kiểm tra giọng nói","📋 Sao chép tên bài hát","🎵 Chia sẻ bài đang phát","📋 Sao chép bài đang phát","♥ Chỉ phát bài yêu thích","🧽 Xóa nội dung tìm kiếm","📤 Xuất riêng bài yêu thích","⭐ Ưu tiên bài yêu thích khi sắp xếp","🔃 Sắp xếp tên Z–A","▶ Phát bài yêu thích ngẫu nhiên","🧹 Xóa bài trùng tên","ℹ️ Giấy phép nhạc trực tuyến","🛠️ Chẩn đoán ứng dụng")
   AlertDialog.Builder(this).setTitle("🧰 Tiện ích Music App").setItems(items){_,which->
    when(which){
     0->{
@@ -192,6 +192,37 @@ class MainActivity:AppCompatActivity(){
      clip.setPrimaryClip(android.content.ClipData.newPlainText("Tên bài hát",names))
      Toast.makeText(this,"Đã sao chép tên bài hát.",Toast.LENGTH_SHORT).show()
     }
+     11->{
+      val t=tracks.getOrNull(currentIndex)
+      if(t==null)Toast.makeText(this,"Chưa chọn bài hát nào.",Toast.LENGTH_SHORT).show()
+      else startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,t.title);putExtra(Intent.EXTRA_TEXT,"🎵 Đang nghe: ${t.title}\nMusic App") },"Chia sẻ bài hát"))
+     }
+     12->{
+      val t=tracks.getOrNull(currentIndex)
+      if(t==null)Toast.makeText(this,"Chưa chọn bài hát nào.",Toast.LENGTH_SHORT).show()
+      else{(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Bài đang phát",t.title));Toast.makeText(this,"Đã sao chép: ${t.title}",Toast.LENGTH_SHORT).show()}
+     }
+     13->{favoritesOnly=!favoritesOnly;renderList(search.text.toString());Toast.makeText(this,if(favoritesOnly)"Đang chỉ hiển thị bài yêu thích." else "Đang hiển thị toàn bộ thư viện.",Toast.LENGTH_SHORT).show()}
+     14->{search.setText("");favoritesOnly=false;renderList("");Toast.makeText(this,"Đã xóa tìm kiếm và bộ lọc.",Toast.LENGTH_SHORT).show()}
+     15->{
+      val fav=tracks.filter{it.favorite}
+      if(fav.isEmpty())Toast.makeText(this,"Bạn chưa có bài yêu thích.",Toast.LENGTH_SHORT).show()
+      else{pendingExportText="Danh sách bài yêu thích Music App\n\n"+fav.joinToString("\n"){it.title};startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"music-favorites.txt")},102)}
+     }
+     16->{tracks.sortWith(compareByDescending<Track>{it.favorite}.thenBy{it.title.lowercase(Locale.ROOT)});currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã xếp bài yêu thích lên đầu.",Toast.LENGTH_SHORT).show()}
+     17->{tracks.sortByDescending{it.title.lowercase(Locale.ROOT)};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã sắp xếp tên Z–A.",Toast.LENGTH_SHORT).show()}
+     18->{val fav=tracks.filter{it.favorite};if(fav.isEmpty())Toast.makeText(this,"Bạn chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else playTrack(fav[java.util.Random().nextInt(fav.size)])}
+     19->{
+      val seen=HashSet<String>();val before=tracks.size
+      tracks.removeAll{!seen.add(it.title.trim().lowercase(Locale.ROOT))}
+      val removed=before-tracks.size
+      renderList(search.text.toString());Toast.makeText(this,if(removed==0)"Không tìm thấy bài trùng tên." else "Đã gỡ $removed bài trùng tên khỏi danh sách.",Toast.LENGTH_SHORT).show()
+     }
+     20->AlertDialog.Builder(this).setTitle("🎼 Nguồn và giấy phép").setMessage("• Nhạc tự tạo trong app: giai điệu tổng hợp.\n• Nhạc tiếng Việt trực tuyến: mở từ Wikimedia Commons theo giấy phép hiển thị trong chi tiết bài hát.\n• Liên kết YouTube: mở nguồn bên ngoài; không tải hoặc nhúng bản ghi.\n\nHãy kiểm tra giấy phép từng bản ghi trước khi chia sẻ lại.").setPositiveButton("Đã hiểu",null).show()
+     21->{
+      val msg="Phiên bản Android: ${android.os.Build.VERSION.RELEASE}\nThiết bị: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\nSố bài trong thư viện: ${tracks.size}\nBài yêu thích: ${tracks.count{it.favorite}}\nBài từ thiết bị: ${tracks.count{it.uri!=null}}\nNhạc trực tuyến: ${tracks.count{it.streamUrl!=null}}\nKết nối mạng: cần Internet để phát nhạc trực tuyến."
+      AlertDialog.Builder(this).setTitle("🛠️ Chẩn đoán Music App").setMessage(msg).setPositiveButton("OK",null).show()
+     }
    }
   }.setNegativeButton("Đóng",null).show()
  }
