@@ -58,11 +58,6 @@ class MainActivity:AppCompatActivity(){
   Track(null,"☁️ Chill - Mưa nhẹ",melody=melody(220.0,277.18,329.63,369.99,329.63,277.18,220.0)),
   Track(null,"☁️ Chill - Gió biển",melody=melody(246.94,329.63,392.0,440.0,392.0,329.63,246.94)),
   Track(null,"☁️ Chill - Thư giãn",melody=melody(196.0,246.94,329.63,392.0,329.63,246.94,196.0)),
-  Track(null,"▶️ Bài YouTube mới",youtubeUrl="https://music.youtube.com/watch?v=liTfD88dbCo"),
-  Track(null,"▶️ YouTube Music - Bài bạn gửi",youtubeUrl="https://music.youtube.com/watch?v=tu9KGLE7zLs&si=rqYnO5JnnTml768F"),
-  Track(null,"▶️ YouTube Music - Bài 2",youtubeUrl="https://music.youtube.com/watch?v=0GVExpdmoDs&si=nGyRCBfO_XpkVmsi"),
-  Track(null,"▶️ YouTube Music - Bài 3",youtubeUrl="https://music.youtube.com/watch?v=AYr6emQJnM0&si=vDkbqfP1BPYdnCIL"),
-  Track(null,"▶️ YouTube Music - Bài 4",youtubeUrl="https://music.youtube.com/watch?v=mY9fNwGE7YA&si=CUMjMXKy0nh45fVB"),
   Track(null,"🎤 Thanh niên làm theo lời Bác",streamUrl="https://commons.wikimedia.org/wiki/Special:Redirect/file/Thanh_ni%C3%AAn_l%C3%A0m_theo_l%E1%BB%9Di_B%C3%A1c_(c%C3%B3_l%E1%BB%9Di).ogg"),
   Track(null,"🎤 Tiến Quân Ca (bản ghi CC0)",streamUrl="https://commons.wikimedia.org/wiki/Special:Redirect/file/TienQuanCa_PAVN_records.ogg")
  )
@@ -103,16 +98,9 @@ class MainActivity:AppCompatActivity(){
   fun action(label:String,icon:String,click:()->Unit)=TextView(this).apply{text="$icon\n$label";textSize=12f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(13,27,57),20);setPadding(0,dp(6),0,dp(4));setOnClickListener{click()}}
   actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("Nhạc ngủ","☾"){showSleepTimer()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("YouTube","▶"){tracks.firstOrNull{it.youtubeUrl!=null}?.youtubeUrl?.let{openYoutube(it)}},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("Bản đồ","🗺️"){openMap()},LinearLayout.LayoutParams(dp(92),dp(62)).apply{leftMargin=dp(7)})
-  val aiAction=action("AI","🤖"){showAiAssistantGate()}
-  val aiParams=LinearLayout.LayoutParams(dp(82),dp(62))
-  aiParams.leftMargin=dp(7)
-  actions.addView(aiAction,aiParams)
-  actions.addView(action("Lịch sử","🕘"){showHistory()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
-  actions.addView(action("Âm lượng","🔊"){showVolume()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
-  actions.addView(action("Tiện ích","🧰"){showToolsPanel()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
+  actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("AI Bảo Nam","🤖"){showAiAssistantGate()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -142,191 +130,50 @@ class MainActivity:AppCompatActivity(){
   setContentView(root)
  }
  private fun showToolsPanel(){
-  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả","📥 Xuất danh sách dạng TXT","🧹 Xóa nhạc đã thêm từ thiết bị","🔎 Tìm bài ngẫu nhiên","🌙 Hẹn giờ ngủ","🗣️ Kiểm tra giọng nói","📋 Sao chép tên bài hát","🎵 Chia sẻ bài đang phát","📋 Sao chép bài đang phát","♥ Chỉ phát bài yêu thích","🧽 Xóa nội dung tìm kiếm","📤 Xuất riêng bài yêu thích","⭐ Ưu tiên bài yêu thích khi sắp xếp","🔃 Sắp xếp tên Z–A","▶ Phát bài yêu thích ngẫu nhiên","🧹 Xóa bài trùng tên","ℹ️ Giấy phép nhạc trực tuyến","🛠️ Chẩn đoán ứng dụng","⏹ Dừng nhạc ngay","🕘 Phát bài nghe gần nhất","🔎 Chi tiết bài đang phát","🔁 Bật/tắt lặp bài","🎲 Bật/tắt phát ngẫu nhiên","♥ Phát bài yêu thích kế tiếp","♥ Phát bài yêu thích trước đó","🔤 Tìm bài theo chữ đầu","🧹 Xóa lịch sử nghe","📤 Xuất lịch sử nghe","♥ Chia sẻ danh sách yêu thích","📋 Sao chép danh sách yêu thích","📚 Thống kê nguồn nhạc","🧽 Đặt lại bộ lọc","🗣️ Đọc tên bài đang phát","🌐 Hướng dẫn nghe nhạc trực tuyến","👑 Thông tin người tạo app","🎼 Gợi ý cách nghe nhạc","🔊 Kiểm tra âm thanh","🌙 Mở hẹn giờ ngủ","🌙 Chỉ xem nhạc ngủ","☁️ Chỉ xem nhạc chill","🎤 Chỉ xem nhạc trực tuyến","📱 Chỉ xem nhạc thiết bị","⭐ Xem bài yêu thích","🎲 Phát ngẫu nhiên nhạc ngủ","☁️ Phát ngẫu nhiên nhạc chill","🎤 Phát ngẫu nhiên nhạc trực tuyến","♥ Thêm bài đang chọn vào yêu thích","💔 Bỏ yêu thích bài đang chọn","🗣️ Đọc danh sách bài hát","📤 Chia sẻ ứng dụng","🔗 Mở trang dự án GitHub","🗺️ Mở bản đồ","🤖 Mở AI Bảo Nam","⚙️ Mở cài đặt","🎵 Thêm nhạc từ thiết bị","🕘 Mở lịch sử nghe","🔊 Mở chỉnh âm lượng","🌙 Dừng nhạc và hẹn giờ","▶ Phát bài đầu tiên","▶ Phát bài cuối cùng","🎲 Phát bài bất kỳ","📚 Đếm bài theo thể loại","🔎 Tìm bài theo tên","📋 Sao chép bài yêu thích đầu tiên","♥ Phát bài yêu thích cuối cùng","📤 Chia sẻ bài yêu thích đầu tiên","🕘 Xem 5 bài nghe gần nhất","🧾 Xem thông tin thiết bị","🔋 Kiểm tra trạng thái ứng dụng","🌐 Mở trang Wikimedia Commons","🎧 Hướng dẫn dùng tai nghe","🔇 Dừng và xóa thông báo phát","🔁 Đặt lại chế độ phát","⭐ Đếm bài yêu thích","🎼 Đếm giai điệu tích hợp","📱 Đếm bài từ thiết bị","▶️ Đếm liên kết YouTube","🎤 Đếm bài nhạc trực tuyến","🧹 Xóa bộ lọc yêu thích","📌 Hiện bài đang chọn","📖 Đếm ký tự tên bài","🔡 Sắp xếp tên ngắn đến dài","🔡 Sắp xếp tên dài đến ngắn","🆕 Xem bài mới thêm","🕰️ Xem bài cũ trong thư viện","🎧 Lọc bài có thể phát trong app","▶️ Lọc bài mở YouTube","🧩 Lọc giai điệu tích hợp","🗂️ Xem toàn bộ nguồn nhạc","📑 Xuất danh sách yêu thích nhanh","📋 Sao chép lịch sử nghe","🧹 Xóa các bài chưa yêu thích","⭐ Đánh dấu tất cả yêu thích","🔎 Tìm bài có chữ số","🔠 Tìm bài có biểu tượng","🎲 Phát bài ngắn tên nhất","🎲 Phát bài tên dài nhất","🎤 Phát bài trực tuyến đầu tiên","📱 Phát bài thiết bị đầu tiên","🌙 Phát bài ngủ đầu tiên","☁️ Phát bài chill đầu tiên","🕘 Phát bài thứ hai trong lịch sử","🗣️ Đọc số bài trong thư viện","🗣️ Đọc số bài yêu thích","📋 Sao chép nguồn bài đang chọn","🔗 Chia sẻ liên kết bài đang chọn","🧾 Xem tóm tắt thư viện","🔊 Kiểm tra mức âm lượng","🎛️ Đặt âm lượng 50%","🎛️ Đặt âm lượng tối đa","🎛️ Giảm âm lượng media","🎛️ Tăng âm lượng media","🔄 Làm mới danh sách","🧹 Xóa bài đã chọn khỏi yêu thích","🛡️ Mẹo bảo vệ quyền riêng tư","📚 Mẹo quản lý thư viện","🌐 Kiểm tra trạng thái mạng","🧭 Mở trang trợ giúp Android")
-  AlertDialog.Builder(this).setTitle("🧰 Tiện ích Music App").setItems(items){_,which->
+  val items=arrayOf(
+   "📊 Thống kê thư viện",
+   "📤 Chia sẻ danh sách bài hát",
+   "🔤 Sắp xếp tên A–Z",
+   "♥ Chỉ xem bài yêu thích",
+   "🧽 Xóa tìm kiếm và bộ lọc",
+   "📥 Xuất danh sách bài hát (TXT)",
+   "🎲 Bật/tắt phát ngẫu nhiên",
+   "🔁 Bật/tắt lặp bài hiện tại",
+   "🌙 Hẹn giờ ngủ",
+   "🕘 Lịch sử nghe gần đây",
+   "🔊 Âm lượng",
+   "🛠️ Chẩn đoán ứng dụng",
+   "🎼 Nguồn nhạc và giấy phép",
+   "👑 Giới thiệu ứng dụng"
+  )
+  AlertDialog.Builder(this).setTitle("Tiện ích cần thiết").setItems(items){_,which->
    when(which){
     0->{
-     val builtInCount=tracks.count{it.melody!=null}
-     val deviceCount=tracks.count{it.uri!=null}
-     val youtubeCount=tracks.count{it.youtubeUrl!=null}
-     val favoriteCount=tracks.count{it.favorite}
-     val historyCount=prefs.getString("play_history","").orEmpty().split("|").count{it.isNotBlank()}
-     val msg="📚 Tổng số bài: ${tracks.size}\n\n🌙 Nhạc tích hợp: $builtInCount\n📱 Nhạc từ thiết bị: $deviceCount\n▶️ Liên kết YouTube: $youtubeCount\n♥ Bài yêu thích: $favoriteCount\n🕘 Lịch sử gần đây: $historyCount/20"
-     AlertDialog.Builder(this).setTitle("📊 Thống kê thư viện").setMessage(msg).setPositiveButton("OK",null).show()
+     val msg="Tổng số bài: ${tracks.size}\nNhạc tích hợp: ${tracks.count{it.melody!=null}}\nNhạc từ thiết bị: ${tracks.count{it.uri!=null}}\nNhạc trực tuyến: ${tracks.count{it.streamUrl!=null}}\nBài yêu thích: ${tracks.count{it.favorite}}"
+     AlertDialog.Builder(this).setTitle("Thống kê thư viện").setMessage(msg).setPositiveButton("Đóng",null).show()
     }
     1->{
-     val content=tracks.joinToString("\n"){t->(if(t.favorite)"♥ " else "")+t.title}
+     val content=tracks.joinToString("\n"){(if(it.favorite)"♥ " else "")+it.title}
      val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"Danh sách nhạc Music App");putExtra(Intent.EXTRA_TEXT,if(content.isBlank())"Thư viện nhạc đang trống." else "🎵 Danh sách nhạc Music App\n\n$content")}
      startActivity(Intent.createChooser(send,"Chia sẻ danh sách nhạc"))
     }
-    2->{tracks.sortBy{it.title.lowercase(Locale.ROOT)};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã sắp xếp thư viện theo tên A–Z.",Toast.LENGTH_SHORT).show()}
-    3->{shuffle=!shuffle;Toast.makeText(this,if(shuffle)"🎲 Đã bật phát ngẫu nhiên." else "🎲 Đã tắt phát ngẫu nhiên.",Toast.LENGTH_SHORT).show()}
-    4->{
-     AlertDialog.Builder(this).setTitle("Bỏ yêu thích tất cả?").setMessage("Thao tác này sẽ xóa dấu yêu thích của các bài hát, không xóa tệp nhạc.").setNegativeButton("Hủy",null).setPositiveButton("Bỏ yêu thích"){_,_->
-      tracks.forEach{it.favorite=false;saveFavorite(it)}
-      favoritesOnly=false;renderList(search.text.toString());Toast.makeText(this,"Đã cập nhật danh sách yêu thích.",Toast.LENGTH_SHORT).show()
-     }.show()
-    }
+    2->{tracks.sortBy{it.title.lowercase(Locale.ROOT)};renderList(search.text.toString());Toast.makeText(this,"Đã sắp xếp tên A–Z.",Toast.LENGTH_SHORT).show()}
+    3->{favoritesOnly=!favoritesOnly;renderList(search.text.toString());Toast.makeText(this,if(favoritesOnly)"Đang chỉ hiện bài yêu thích." else "Đang hiện toàn bộ thư viện.",Toast.LENGTH_SHORT).show()}
+    4->{search.setText("");favoritesOnly=false;renderList("");Toast.makeText(this,"Đã xóa tìm kiếm và bộ lọc.",Toast.LENGTH_SHORT).show()}
     5->{
-     val body=tracks.joinToString("\\n"){(if(it.favorite)"♥ " else "")+it.title}
+     val body=tracks.joinToString("\n"){(if(it.favorite)"♥ " else "")+it.title}
+     pendingExportText=if(body.isBlank())"Thư viện nhạc đang trống." else "Danh sách nhạc Music App\n\n$body"
      val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"music-app-playlist.txt")}
-     pendingExportText=if(body.isBlank())"Thư viện nhạc đang trống." else "Danh sách nhạc Music App\\n\\n$body"
      startActivityForResult(intent,102)
     }
-    6->{
-     val count=tracks.count{it.uri!=null}
-     if(count==0)Toast.makeText(this,"Không có bài nhạc từ thiết bị để xóa khỏi thư viện.",Toast.LENGTH_SHORT).show()
-     else AlertDialog.Builder(this).setTitle("Xóa nhạc khỏi thư viện?").setMessage("Sẽ gỡ $count bài đã thêm từ thiết bị khỏi danh sách trong app. Tệp gốc trên máy không bị xóa.").setNegativeButton("Hủy",null).setPositiveButton("Gỡ khỏi thư viện"){_,_->
-      tracks.removeAll{it.uri!=null};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã gỡ nhạc khỏi thư viện.",Toast.LENGTH_SHORT).show()
-     }.show()
-    }
-    7->{if(tracks.isEmpty())Toast.makeText(this,"Thư viện đang trống.",Toast.LENGTH_SHORT).show() else playTrack(tracks[java.util.Random().nextInt(tracks.size)])}
+    6->{shuffle=!shuffle;Toast.makeText(this,if(shuffle)"Đã bật phát ngẫu nhiên." else "Đã tắt phát ngẫu nhiên.",Toast.LENGTH_SHORT).show()}
+    7->{repeatOne=!repeatOne;Toast.makeText(this,if(repeatOne)"Đã bật lặp bài hiện tại." else "Đã tắt lặp bài.",Toast.LENGTH_SHORT).show()}
     8->showSleepTimerDialog()
-    9->{
-     if(tts==null)Toast.makeText(this,"Giọng nói chưa sẵn sàng trên thiết bị.",Toast.LENGTH_SHORT).show()
-     else{tts?.language=Locale.getDefault();tts?.speak("Xin chào! Đây là kiểm tra giọng nói của Music App.",TextToSpeech.QUEUE_FLUSH,null,"music_voice_test")}
-    }
-    10->{
-     val names=tracks.joinToString("\\n"){it.title}
-     val clip=getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-     clip.setPrimaryClip(android.content.ClipData.newPlainText("Tên bài hát",names))
-     Toast.makeText(this,"Đã sao chép tên bài hát.",Toast.LENGTH_SHORT).show()
-    }
-     11->{
-      val t=tracks.getOrNull(currentIndex)
-      if(t==null)Toast.makeText(this,"Chưa chọn bài hát nào.",Toast.LENGTH_SHORT).show()
-      else startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,t.title);putExtra(Intent.EXTRA_TEXT,"🎵 Đang nghe: ${t.title}\nMusic App") },"Chia sẻ bài hát"))
-     }
-     12->{
-      val t=tracks.getOrNull(currentIndex)
-      if(t==null)Toast.makeText(this,"Chưa chọn bài hát nào.",Toast.LENGTH_SHORT).show()
-      else{(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Bài đang phát",t.title));Toast.makeText(this,"Đã sao chép: ${t.title}",Toast.LENGTH_SHORT).show()}
-     }
-     13->{favoritesOnly=!favoritesOnly;renderList(search.text.toString());Toast.makeText(this,if(favoritesOnly)"Đang chỉ hiển thị bài yêu thích." else "Đang hiển thị toàn bộ thư viện.",Toast.LENGTH_SHORT).show()}
-     14->{search.setText("");favoritesOnly=false;renderList("");Toast.makeText(this,"Đã xóa tìm kiếm và bộ lọc.",Toast.LENGTH_SHORT).show()}
-     15->{
-      val fav=tracks.filter{it.favorite}
-      if(fav.isEmpty())Toast.makeText(this,"Bạn chưa có bài yêu thích.",Toast.LENGTH_SHORT).show()
-      else{pendingExportText="Danh sách bài yêu thích Music App\n\n"+fav.joinToString("\n"){it.title};startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"music-favorites.txt")},102)}
-     }
-     16->{tracks.sortWith(compareByDescending<Track>{it.favorite}.thenBy{it.title.lowercase(Locale.ROOT)});currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã xếp bài yêu thích lên đầu.",Toast.LENGTH_SHORT).show()}
-     17->{tracks.sortByDescending{it.title.lowercase(Locale.ROOT)};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã sắp xếp tên Z–A.",Toast.LENGTH_SHORT).show()}
-     18->{val fav=tracks.filter{it.favorite};if(fav.isEmpty())Toast.makeText(this,"Bạn chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else playTrack(fav[java.util.Random().nextInt(fav.size)])}
-     19->{
-      val seen=HashSet<String>();val before=tracks.size
-      tracks.removeAll{!seen.add(it.title.trim().lowercase(Locale.ROOT))}
-      val removed=before-tracks.size
-      renderList(search.text.toString());Toast.makeText(this,if(removed==0)"Không tìm thấy bài trùng tên." else "Đã gỡ $removed bài trùng tên khỏi danh sách.",Toast.LENGTH_SHORT).show()
-     }
-     20->AlertDialog.Builder(this).setTitle("🎼 Nguồn và giấy phép").setMessage("• Nhạc tự tạo trong app: giai điệu tổng hợp.\n• Nhạc tiếng Việt trực tuyến: mở từ Wikimedia Commons theo giấy phép hiển thị trong chi tiết bài hát.\n• Liên kết YouTube: mở nguồn bên ngoài; không tải hoặc nhúng bản ghi.\n\nHãy kiểm tra giấy phép từng bản ghi trước khi chia sẻ lại.").setPositiveButton("Đã hiểu",null).show()
-     21->{
-      val msg="Phiên bản Android: ${android.os.Build.VERSION.RELEASE}\nThiết bị: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\nSố bài trong thư viện: ${tracks.size}\nBài yêu thích: ${tracks.count{it.favorite}}\nBài từ thiết bị: ${tracks.count{it.uri!=null}}\nNhạc trực tuyến: ${tracks.count{it.streamUrl!=null}}\nKết nối mạng: cần Internet để phát nhạc trực tuyến."
-      AlertDialog.Builder(this).setTitle("🛠️ Chẩn đoán Music App").setMessage(msg).setPositiveButton("OK",null).show()
-     }
-
-     22->{stopCurrentPlayback();nowPlaying.text="Đã dừng phát nhạc";Toast.makeText(this,"Đã dừng nhạc.",Toast.LENGTH_SHORT).show()}
-     23->{val recent=prefs.getString("play_history","").orEmpty().split("|").firstOrNull{it.isNotBlank()};val t=tracks.firstOrNull{it.title==recent};if(t!=null)playTrack(t) else Toast.makeText(this,"Chưa có bài nghe gần nhất trong thư viện.",Toast.LENGTH_SHORT).show()}
-     24->{val t=tracks.getOrNull(currentIndex);if(t!=null)showTrackDetails(t) else Toast.makeText(this,"Chưa chọn bài hát nào.",Toast.LENGTH_SHORT).show()}
-     25->{repeatOne=!repeatOne;Toast.makeText(this,if(repeatOne)"Đã bật lặp bài hiện tại." else "Đã tắt lặp bài hiện tại.",Toast.LENGTH_SHORT).show()}
-     26->{shuffle=!shuffle;Toast.makeText(this,if(shuffle)"Đã bật phát ngẫu nhiên." else "Đã tắt phát ngẫu nhiên.",Toast.LENGTH_SHORT).show()}
-     27->{val fav=tracks.filter{it.favorite};val idx=fav.indexOfFirst{tracks.indexOf(it)>currentIndex};if(fav.isEmpty())Toast.makeText(this,"Chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else playTrack(if(idx>=0)fav[idx] else fav.first())}
-     28->{val fav=tracks.filter{it.favorite};val idx=fav.indexOfLast{tracks.indexOf(it)<currentIndex};if(fav.isEmpty())Toast.makeText(this,"Chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else playTrack(if(idx>=0)fav[idx] else fav.last())}
-     29->{val input=EditText(this).apply{hint="Nhập chữ đầu hoặc từ khóa";setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)};AlertDialog.Builder(this).setTitle("🔤 Tìm bài nhanh").setView(input).setNegativeButton("Hủy",null).setPositiveButton("Tìm"){_,_->search.setText(input.text.toString().trim())}.show()}
-     30->{AlertDialog.Builder(this).setTitle("Xóa lịch sử nghe?").setMessage("Chỉ xóa lịch sử lưu trong app, không xóa nhạc.").setNegativeButton("Hủy",null).setPositiveButton("Xóa"){_,_->prefs.edit().remove("play_history").apply();Toast.makeText(this,"Đã xóa lịch sử nghe.",Toast.LENGTH_SHORT).show()}.show()}
-     31->{val h=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()};if(h.isEmpty())Toast.makeText(this,"Lịch sử đang trống.",Toast.LENGTH_SHORT).show() else{pendingExportText="Lịch sử nghe Music App\n\n"+h.joinToString("\n");startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"music-history.txt")},102)}}
-     32->{val fav=tracks.filter{it.favorite};if(fav.isEmpty())Toast.makeText(this,"Chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"Bài yêu thích");putExtra(Intent.EXTRA_TEXT,"♥ Bài yêu thích Music App\n\n"+fav.joinToString("\n"){it.title})},"Chia sẻ bài yêu thích"))}
-     33->{val fav=tracks.filter{it.favorite};val names=fav.joinToString("\n"){it.title};(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Bài yêu thích",names));Toast.makeText(this,"Đã sao chép ${fav.size} bài yêu thích.",Toast.LENGTH_SHORT).show()}
-     34->{val msg="Tổng bài: ${tracks.size}\nNhạc tạo sẵn: ${tracks.count{it.melody!=null}}\nTệp từ thiết bị: ${tracks.count{it.uri!=null}}\nNhạc trực tuyến: ${tracks.count{it.streamUrl!=null}}\nLiên kết YouTube: ${tracks.count{it.youtubeUrl!=null}}\nYêu thích: ${tracks.count{it.favorite}}";AlertDialog.Builder(this).setTitle("📚 Thống kê nguồn nhạc").setMessage(msg).setPositiveButton("OK",null).show()}
-     35->{favoritesOnly=false;search.setText("");renderList("");Toast.makeText(this,"Đã đặt lại tìm kiếm và bộ lọc.",Toast.LENGTH_SHORT).show()}
-     36->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài hát.",Toast.LENGTH_SHORT).show() else speakAi("Bài đang chọn là ${t.title}")}
-     37->AlertDialog.Builder(this).setTitle("👑 Về Music App").setMessage("Music App\nNgười tạo: Bảo Nam\n\nỨng dụng nghe nhạc, thư giãn và hỗ trợ học tập.").setPositiveButton("OK",null).show()
-     38->AlertDialog.Builder(this).setTitle("🎼 Gợi ý nghe nhạc").setMessage("• Giữ âm lượng ở mức vừa phải.\n• Dùng hẹn giờ nếu nghe trước khi ngủ.\n• Thử tai nghe hoặc loa khác nếu âm thanh bị rè.\n• Nhạc trực tuyến cần kết nối Internet ổn định.").setPositiveButton("Đã hiểu",null).show()
-     39->{val audio=getSystemService(AUDIO_SERVICE) as AudioManager;val max=audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);val cur=audio.getStreamVolume(AudioManager.STREAM_MUSIC);AlertDialog.Builder(this).setTitle("🔊 Kiểm tra âm thanh").setMessage("Âm lượng hệ thống: $cur/$max\n\nNếu không nghe thấy tiếng, hãy kiểm tra chế độ im lặng, âm lượng thiết bị và đầu ra Bluetooth.").setPositiveButton("Mở điều chỉnh"){_,_->showVolume()}.setNegativeButton("Đóng",null).show()}
-     40->showSleepTimerDialog()
-
-
-     42->{favoritesOnly=false;search.setText("Ru ngủ");Toast.makeText(this,"Đang lọc nhạc ngủ.",Toast.LENGTH_SHORT).show()}
-     43->{favoritesOnly=false;search.setText("Chill");Toast.makeText(this,"Đang lọc nhạc chill.",Toast.LENGTH_SHORT).show()}
-     44->{favoritesOnly=false;search.setText("🎤");val count=tracks.count{it.streamUrl!=null};Toast.makeText(this,"Có $count bài nhạc trực tuyến trong thư viện.",Toast.LENGTH_SHORT).show()}
-     45->{favoritesOnly=false;search.setText("");val local=tracks.filter{it.uri!=null};if(local.isEmpty())Toast.makeText(this,"Chưa có nhạc từ thiết bị.",Toast.LENGTH_SHORT).show() else{val names=local.joinToString("\n"){it.title};AlertDialog.Builder(this).setTitle("📱 Nhạc từ thiết bị").setMessage(names).setPositiveButton("OK",null).show()}}
-     46->{favoritesOnly=true;renderList(search.text.toString());Toast.makeText(this,"Đang hiển thị bài yêu thích.",Toast.LENGTH_SHORT).show()}
-     47->{val pool=tracks.filter{it.title.contains("Ru ngủ",true)};if(pool.isEmpty())Toast.makeText(this,"Chưa có nhạc ngủ.",Toast.LENGTH_SHORT).show() else playTrack(pool.random())}
-     48->{val pool=tracks.filter{it.title.contains("Chill",true)};if(pool.isEmpty())Toast.makeText(this,"Chưa có nhạc chill.",Toast.LENGTH_SHORT).show() else playTrack(pool.random())}
-     49->{val pool=tracks.filter{it.streamUrl!=null};if(pool.isEmpty())Toast.makeText(this,"Chưa có bài trực tuyến.",Toast.LENGTH_SHORT).show() else playTrack(pool.random())}
-     50->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài hát.",Toast.LENGTH_SHORT).show() else{t.favorite=true;saveFavorite(t);renderList(search.text.toString());Toast.makeText(this,"Đã thêm vào yêu thích.",Toast.LENGTH_SHORT).show()}}
-     51->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài hát.",Toast.LENGTH_SHORT).show() else{t.favorite=false;saveFavorite(t);renderList(search.text.toString());Toast.makeText(this,"Đã bỏ yêu thích.",Toast.LENGTH_SHORT).show()}}
-     52->{if(tts==null)Toast.makeText(this,"Giọng nói chưa sẵn sàng.",Toast.LENGTH_SHORT).show() else{val names=tracks.take(15).joinToString(". "){it.title};tts?.speak("Danh sách bài hát. $names",TextToSpeech.QUEUE_FLUSH,null,"music_read_list")}}
-     53->{startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"Music App");putExtra(Intent.EXTRA_TEXT,"🎵 Music App — ứng dụng nghe nhạc chill, nhạc ngủ và thư giãn.\nNgười tạo: Bảo Nam")}, "Chia sẻ Music App"))}
-     54->{try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/baonamthp-dot/t-p")))}catch(e:Exception){Toast.makeText(this,"Không mở được GitHub.",Toast.LENGTH_SHORT).show()}}
-     55->openMap()
-     56->showAiAssistantGate()
-     57->showSettings()
-     58->chooseAudio()
-     59->showHistory()
-     60->showVolume()
-     61->{showSleepTimerDialog()}
-
-     62->{if(tracks.isEmpty())Toast.makeText(this,"Thư viện trống.",Toast.LENGTH_SHORT).show() else playTrack(tracks.first())}
-     63->{if(tracks.isEmpty())Toast.makeText(this,"Thư viện trống.",Toast.LENGTH_SHORT).show() else playTrack(tracks.last())}
-     64->{if(tracks.isEmpty())Toast.makeText(this,"Thư viện trống.",Toast.LENGTH_SHORT).show() else playTrack(tracks.random())}
-     65->{val msg="Nhạc ngủ: ${tracks.count{it.title.contains("Ru ngủ",true)}}\nNhạc chill: ${tracks.count{it.title.contains("Chill",true)}}\nNhạc trực tuyến: ${tracks.count{it.streamUrl!=null}}\nYouTube: ${tracks.count{it.youtubeUrl!=null}}\nNhạc thiết bị: ${tracks.count{it.uri!=null}}";AlertDialog.Builder(this).setTitle("📚 Bài hát theo thể loại").setMessage(msg).setPositiveButton("OK",null).show()}
-     66->{val input=EditText(this).apply{hint="Nhập tên bài hát";setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)};AlertDialog.Builder(this).setTitle("🔎 Tìm bài theo tên").setView(input).setNegativeButton("Hủy",null).setPositiveButton("Tìm"){_,_->search.setText(input.text.toString().trim())}.show()}
-     67->{val t=tracks.firstOrNull{it.favorite};if(t==null)Toast.makeText(this,"Chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else{(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Bài yêu thích",t.title));Toast.makeText(this,"Đã sao chép: ${t.title}",Toast.LENGTH_SHORT).show()}}
-     68->{val fav=tracks.filter{it.favorite};if(fav.isEmpty())Toast.makeText(this,"Chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else playTrack(fav.last())}
-     69->{val t=tracks.firstOrNull{it.favorite};if(t==null)Toast.makeText(this,"Chưa có bài yêu thích.",Toast.LENGTH_SHORT).show() else startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,"♥ Bài yêu thích: ${t.title}")},"Chia sẻ bài yêu thích"))}
-     70->{val h=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()}.take(5);AlertDialog.Builder(this).setTitle("🕘 5 bài nghe gần nhất").setMessage(if(h.isEmpty())"Chưa có lịch sử nghe." else h.joinToString("\n")).setPositiveButton("OK",null).show()}
-     71->{val msg="Thiết bị: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}\nAndroid: ${android.os.Build.VERSION.RELEASE}\nNgôn ngữ: ${Locale.getDefault().displayName}\nPhiên bản SDK: ${android.os.Build.VERSION.SDK_INT}";AlertDialog.Builder(this).setTitle("🧾 Thông tin thiết bị").setMessage(msg).setPositiveButton("OK",null).show()}
-     72->{val msg="Ứng dụng đang hoạt động.\nSố bài: ${tracks.size}\nGiọng đọc: ${if(tts!=null)"đã khởi tạo" else "chưa sẵn sàng"}\nTrình phát: ${if(player!=null||audioTrack!=null)"đang có phiên phát" else "không có phiên phát"}";AlertDialog.Builder(this).setTitle("🔋 Trạng thái ứng dụng").setMessage(msg).setPositiveButton("OK",null).show()}
-     73->{try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://commons.wikimedia.org/")))}catch(e:Exception){Toast.makeText(this,"Không mở được trình duyệt.",Toast.LENGTH_SHORT).show()}}
-     74->{AlertDialog.Builder(this).setTitle("🎧 Nghe nhạc rõ hơn").setMessage("• Bắt đầu với âm lượng thấp rồi tăng dần.\n• Không nghe quá to hoặc quá lâu.\n• Nếu dùng tai nghe, nghỉ tai định kỳ.\n• Nếu âm thanh không phát, kiểm tra âm lượng media và kết nối mạng.").setPositiveButton("Đã hiểu",null).show()}
-     75->{stopCurrentPlayback();Toast.makeText(this,"Đã dừng phiên phát hiện tại.",Toast.LENGTH_SHORT).show()}
-     76->{shuffle=false;repeatOne=false;Toast.makeText(this,"Đã tắt phát ngẫu nhiên và lặp bài.",Toast.LENGTH_SHORT).show()}
-     77->{Toast.makeText(this,"Có ${tracks.count{it.favorite}} bài yêu thích.",Toast.LENGTH_LONG).show()}
-     78->{Toast.makeText(this,"Có ${tracks.count{it.melody!=null}} giai điệu tích hợp.",Toast.LENGTH_LONG).show()}
-     79->{Toast.makeText(this,"Có ${tracks.count{it.uri!=null}} bài từ thiết bị.",Toast.LENGTH_LONG).show()}
-     80->{Toast.makeText(this,"Có ${tracks.count{it.youtubeUrl!=null}} liên kết YouTube.",Toast.LENGTH_LONG).show()}
-     81->{Toast.makeText(this,"Có ${tracks.count{it.streamUrl!=null}} bài nhạc trực tuyến.",Toast.LENGTH_LONG).show()}
-     82->{favoritesOnly=false;search.setText("");renderList("");Toast.makeText(this,"Đã xóa bộ lọc yêu thích và tìm kiếm.",Toast.LENGTH_SHORT).show()}
-     83->{val t=tracks.getOrNull(currentIndex);AlertDialog.Builder(this).setTitle("📌 Bài đang chọn").setMessage(t?.title?: "Chưa chọn bài nào.").setPositiveButton("OK",null).show()}
-     84->{val t=tracks.getOrNull(currentIndex);Toast.makeText(this,"Tên bài có ${t?.title?.length?:0} ký tự.",Toast.LENGTH_SHORT).show()}
-     85->{tracks.sortBy{it.title.length};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã sắp xếp tên ngắn đến dài.",Toast.LENGTH_SHORT).show()}
-     86->{tracks.sortByDescending{it.title.length};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã sắp xếp tên dài đến ngắn.",Toast.LENGTH_SHORT).show()}
-     87->{val t=tracks.lastOrNull();if(t==null)Toast.makeText(this,"Thư viện trống.",Toast.LENGTH_SHORT).show() else showTrackDetails(t)}
-     88->{val t=tracks.firstOrNull();if(t==null)Toast.makeText(this,"Thư viện trống.",Toast.LENGTH_SHORT).show() else showTrackDetails(t)}
-     89->{favoritesOnly=false;search.setText("");val n=tracks.count{it.uri!=null||it.melody!=null||it.streamUrl!=null};Toast.makeText(this,"Có $n bài phát trực tiếp trong app hoặc từ tệp.",Toast.LENGTH_SHORT).show()}
-     90->{favoritesOnly=false;search.setText("YouTube");Toast.makeText(this,"Đang tìm các mục YouTube nếu tên có từ khóa này.",Toast.LENGTH_SHORT).show()}
-     91->{favoritesOnly=false;search.setText("Ru ngủ");Toast.makeText(this,"Đã lọc các giai điệu nhạc ngủ.",Toast.LENGTH_SHORT).show()}
-     92->{val msg=tracks.joinToString("\n"){ "${it.title} — "+when{it.melody!=null->"Tích hợp";it.uri!=null->"Thiết bị";it.streamUrl!=null->"Trực tuyến";else->"YouTube"} };AlertDialog.Builder(this).setTitle("🗂️ Nguồn nhạc").setMessage(msg.ifBlank{"Thư viện trống."}).setPositiveButton("OK",null).show()}
-     93->{val fav=tracks.filter{it.favorite};(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Yêu thích",fav.joinToString("\n"){it.title}));Toast.makeText(this,"Đã sao chép ${fav.size} bài yêu thích.",Toast.LENGTH_SHORT).show()}
-     94->{val h=prefs.getString("play_history","").orEmpty().replace("|","\n");(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Lịch sử nghe",h));Toast.makeText(this,"Đã sao chép lịch sử nghe.",Toast.LENGTH_SHORT).show()}
-     95->{AlertDialog.Builder(this).setTitle("Gỡ bài chưa yêu thích?").setMessage("Chỉ gỡ khỏi thư viện app, không xóa tệp gốc.").setNegativeButton("Hủy",null).setPositiveButton("Gỡ"){_,_->tracks.removeAll{!it.favorite&&it.uri!=null};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã gỡ các tệp thiết bị chưa yêu thích.",Toast.LENGTH_SHORT).show()}.show()}
-     96->{AlertDialog.Builder(this).setTitle("Yêu thích tất cả bài?").setMessage("Đánh dấu toàn bộ bài trong thư viện là yêu thích?").setNegativeButton("Hủy",null).setPositiveButton("Đồng ý"){_,_->tracks.forEach{it.favorite=true;saveFavorite(it)};renderList(search.text.toString());Toast.makeText(this,"Đã đánh dấu ${tracks.size} bài.",Toast.LENGTH_SHORT).show()}.show()}
-     97->{favoritesOnly=false;search.setText("1");Toast.makeText(this,"Đang tìm bài có số 1 trong tên.",Toast.LENGTH_SHORT).show()}
-     98->{val t=tracks.firstOrNull{it.title.any{ch->!ch.isLetterOrDigit()&& !ch.isWhitespace()}};if(t==null)Toast.makeText(this,"Không tìm thấy bài có ký hiệu.",Toast.LENGTH_SHORT).show() else showTrackDetails(t)}
-     99->{tracks.minByOrNull{it.title.length}?.let{playTrack(it)}?:Toast.makeText(this,"Thư viện trống.",Toast.LENGTH_SHORT).show()}
-     100->{tracks.maxByOrNull{it.title.length}?.let{playTrack(it)}?:Toast.makeText(this,"Thư viện trống.",Toast.LENGTH_SHORT).show()}
-     101->{tracks.firstOrNull{it.streamUrl!=null}?.let{playTrack(it)}?:Toast.makeText(this,"Chưa có bài trực tuyến.",Toast.LENGTH_SHORT).show()}
-     102->{tracks.firstOrNull{it.uri!=null}?.let{playTrack(it)}?:Toast.makeText(this,"Chưa có bài từ thiết bị.",Toast.LENGTH_SHORT).show()}
-     103->{tracks.firstOrNull{it.title.contains("Ru ngủ",true)}?.let{playTrack(it)}?:Toast.makeText(this,"Chưa có nhạc ngủ.",Toast.LENGTH_SHORT).show()}
-     104->{tracks.firstOrNull{it.title.contains("Chill",true)}?.let{playTrack(it)}?:Toast.makeText(this,"Chưa có nhạc chill.",Toast.LENGTH_SHORT).show()}
-     105->{val h=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()};val t=h.getOrNull(1)?.let{title->tracks.firstOrNull{it.title==title}};if(t!=null)playTrack(t) else Toast.makeText(this,"Chưa có bài thứ hai trong lịch sử.",Toast.LENGTH_SHORT).show()}
-     106->{tts?.speak("Thư viện có ${tracks.size} bài hát.",TextToSpeech.QUEUE_FLUSH,null,"count_tracks")?:Toast.makeText(this,"Giọng đọc chưa sẵn sàng.",Toast.LENGTH_SHORT).show()}
-     107->{tts?.speak("Bạn có ${tracks.count{it.favorite}} bài yêu thích.",TextToSpeech.QUEUE_FLUSH,null,"count_favorites")?:Toast.makeText(this,"Giọng đọc chưa sẵn sàng.",Toast.LENGTH_SHORT).show()}
-     108->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài.",Toast.LENGTH_SHORT).show() else{val source=when{t.melody!=null->"Nhạc tích hợp";t.uri!=null->"Tệp thiết bị";t.streamUrl!=null->t.streamUrl!!;else->t.youtubeUrl.orEmpty()};(getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Nguồn bài",source));Toast.makeText(this,"Đã sao chép nguồn bài.",Toast.LENGTH_SHORT).show()}}
-     109->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài.",Toast.LENGTH_SHORT).show() else startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,t.youtubeUrl?:t.streamUrl?:t.title)},"Chia sẻ nguồn bài"))}
-     110->{AlertDialog.Builder(this).setTitle("🧾 Tóm tắt thư viện").setMessage("Tổng bài: ${tracks.size}\nYêu thích: ${tracks.count{it.favorite}}\nNhạc ngủ: ${tracks.count{it.title.contains("Ru ngủ",true)}}\nNhạc chill: ${tracks.count{it.title.contains("Chill",true)}}\nTệp thiết bị: ${tracks.count{it.uri!=null}}\nBản ghi trực tuyến: ${tracks.count{it.streamUrl!=null}}").setPositiveButton("OK",null).show()}
-     111->{showVolume()}
-     112->{val a=getSystemService(AUDIO_SERVICE) as AudioManager;val max=a.getStreamMaxVolume(AudioManager.STREAM_MUSIC);a.setStreamVolume(AudioManager.STREAM_MUSIC,(max/2).coerceAtLeast(1),0);Toast.makeText(this,"Đã đặt âm lượng media khoảng 50%.",Toast.LENGTH_SHORT).show()}
-     113->{val a=getSystemService(AUDIO_SERVICE) as AudioManager;val max=a.getStreamMaxVolume(AudioManager.STREAM_MUSIC);a.setStreamVolume(AudioManager.STREAM_MUSIC,max,0);Toast.makeText(this,"Đã đặt âm lượng media tối đa. Hãy giảm nếu quá to.",Toast.LENGTH_LONG).show()}
-     114->{val a=getSystemService(AUDIO_SERVICE) as AudioManager;val cur=a.getStreamVolume(AudioManager.STREAM_MUSIC);a.adjustStreamVolume(AudioManager.STREAM_MUSIC,AudioManager.ADJUST_LOWER,0);Toast.makeText(this,"Đã giảm âm lượng media.",Toast.LENGTH_SHORT).show()}
-     115->{val a=getSystemService(AUDIO_SERVICE) as AudioManager;a.adjustStreamVolume(AudioManager.STREAM_MUSIC,AudioManager.ADJUST_RAISE,0);Toast.makeText(this,"Đã tăng âm lượng media.",Toast.LENGTH_SHORT).show()}
-     116->{renderList(search.text.toString());Toast.makeText(this,"Đã làm mới danh sách bài hát.",Toast.LENGTH_SHORT).show()}
-     117->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài.",Toast.LENGTH_SHORT).show() else{t.favorite=false;saveFavorite(t);renderList(search.text.toString());Toast.makeText(this,"Đã bỏ yêu thích bài đang chọn.",Toast.LENGTH_SHORT).show()}}
-     118->AlertDialog.Builder(this).setTitle("🛡️ Quyền riêng tư").setMessage("Không nhập mật khẩu hoặc thông tin cá nhân vào ghi chú bài hát. Chỉ cài ứng dụng từ nguồn tin cậy. API key AI có thể phát sinh chi phí; không chia sẻ key và hãy nhờ phụ huynh quản lý.").setPositiveButton("Đã hiểu",null).show()
-     119->AlertDialog.Builder(this).setTitle("📚 Quản lý thư viện").setMessage("Bạn có thể thêm tệp âm thanh từ thiết bị, tìm theo tên, đánh dấu yêu thích và xuất danh sách TXT để sao lưu tên bài.").setPositiveButton("Đã hiểu",null).show()
-     120->{val connected=try{val cm=getSystemService(CONNECTIVITY_SERVICE) as android.net.ConnectivityManager;cm.activeNetwork!=null}catch(_:Exception){false};Toast.makeText(this,if(connected)"Có kết nối mạng đang hoạt động." else "Chưa phát hiện kết nối mạng hoạt động.",Toast.LENGTH_LONG).show()}
-     121->{try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://support.google.com/android/")))}catch(_:Exception){Toast.makeText(this,"Không mở được trang trợ giúp.",Toast.LENGTH_SHORT).show()}}
-
+    9->showHistory()
+    10->showVolume()
+    11->showDiagnostics()
+    12->AlertDialog.Builder(this).setTitle("Nguồn nhạc và giấy phép").setMessage("• Giai điệu tích hợp: âm thanh tổng hợp trong ứng dụng.\n• Nhạc trực tuyến: cần Internet; hãy xem giấy phép của từng bản ghi trước khi chia sẻ lại.\n• Tệp nhạc từ thiết bị: do bạn chọn và quản lý.").setPositiveButton("Đã hiểu",null).show()
+    13->AlertDialog.Builder(this).setTitle("Về Music App").setMessage("Music App\nNgười tạo: Bảo Nam\n\nTrình phát nhạc tập trung vào thư viện cá nhân, yêu thích, tìm kiếm và hẹn giờ ngủ.").setPositiveButton("Đóng",null).show()
    }
   }.setNegativeButton("Đóng",null).show()
  }
