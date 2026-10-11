@@ -34,7 +34,7 @@ class MainActivity:AppCompatActivity(){
  private val generation=AtomicInteger(0);private val audioLock=Any();@Volatile private var stopBuiltin=false
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
- private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var progressBar:SeekBar;private lateinit var elapsedLabel:TextView;private lateinit var durationLabel:TextView;private val progressHandler=android.os.Handler(android.os.Looper.getMainLooper());private lateinit var search:EditText;private var favoritesOnly=false
+ private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var coverIcon:TextView;private lateinit var playButton:Button;private lateinit var progressBar:SeekBar;private lateinit var elapsedLabel:TextView;private lateinit var durationLabel:TextView;private val progressHandler=android.os.Handler(android.os.Looper.getMainLooper());private lateinit var search:EditText;private var favoritesOnly=false
  private var shuffle=false
  private var repeatOne=false
  private var pendingExportText=""
@@ -109,7 +109,7 @@ class MainActivity:AppCompatActivity(){
   card.addView(TextView(this).apply{text="Thư giãn - Ngủ ngon - Sống chậm";textSize=11f;setTextColor(Color.rgb(130,155,195));setPadding(0,dp(3),0,0)})
   root.addView(card,LinearLayout.LayoutParams(-1,dp(64)).apply{bottomMargin=dp(8)})
   val nowCard=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(10),dp(8),dp(8),dp(8));background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(17,31,63),Color.rgb(31,18,58))).apply{cornerRadius=dp(20).toFloat();setStroke(dp(1),Color.rgb(45,83,145))}}
-  nowCard.addView(TextView(this).apply{text="🌕";textSize=34f;gravity=Gravity.CENTER;background=rounded(Color.rgb(23,37,67),17)},LinearLayout.LayoutParams(dp(58),dp(58)).apply{rightMargin=dp(10)})
+  coverIcon=TextView(this).apply{text="🌕";textSize=34f;gravity=Gravity.CENTER;background=rounded(Color.rgb(23,37,67),17)};nowCard.addView(coverIcon,LinearLayout.LayoutParams(dp(58),dp(58)).apply{rightMargin=dp(10)})
   val np=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(60),1f)}
   nowPlaying=TextView(this).apply{text="Chưa phát bài nào";textSize=15f;setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END};np.addView(nowPlaying)
   np.addView(TextView(this).apply{text="ĐANG CHỜ PHÁT";textSize=9f;setTextColor(Color.rgb(100,185,255));setPadding(0,dp(3),0,0)});nowCard.addView(np)
@@ -667,7 +667,7 @@ class MainActivity:AppCompatActivity(){
  private fun playTrack(t:Track){
   if(destroyed||isFinishing)return
   if(!tracks.contains(t)){Toast.makeText(this,"Bài hát không còn trong thư viện.",Toast.LENGTH_SHORT).show();return}
-  currentIndex=tracks.indexOf(t);saveHistory(t.title);stopCurrentPlayback()
+  currentIndex=tracks.indexOf(t);coverIcon.text=when{t.title.startsWith("🌙")->"🌙";t.title.startsWith("☁️")->"☁️";t.streamUrl!=null->"🎤";t.youtubeUrl!=null->"🎧";t.uri!=null->"🎵";else->"♫"};coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17);saveHistory(t.title);stopCurrentPlayback()
   if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
