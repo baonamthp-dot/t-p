@@ -421,6 +421,6 @@ class MainActivity:AppCompatActivity(){
   val p=player;if(p!=null){try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}catch(_:Exception){player=null;playButton.text="▶";nowPlaying.text="Không thể tiếp tục bài hát"}}
  }
  private fun previous(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
- private fun next(){if(tracks.isNotEmpty()){val idx=if(shuffle){(tracks.indices.filter{it!=currentIndex}.ifEmpty{tracks.indices}).let{choices->choices[java.util.Random().nextInt(choices.size)]}}else if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1;playTrack(tracks[idx])}}
+ private fun next(){if(tracks.isNotEmpty()){val idx:Int;if(shuffle){val choices=tracks.indices.filter{it!=currentIndex};idx=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{idx=if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1};playTrack(tracks[idx])}}
  override fun onDestroy(){destroyed=true;sleepTimer?.cancel();sleepTimer=null;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
 }
