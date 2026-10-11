@@ -142,7 +142,7 @@ class MainActivity:AppCompatActivity(){
   setContentView(root)
  }
  private fun showToolsPanel(){
-  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả","📥 Xuất danh sách dạng TXT","🧹 Xóa nhạc đã thêm từ thiết bị","🔎 Tìm bài ngẫu nhiên","🌙 Hẹn giờ ngủ","🗣️ Kiểm tra giọng nói","📋 Sao chép tên bài hát","🎵 Chia sẻ bài đang phát","📋 Sao chép bài đang phát","♥ Chỉ phát bài yêu thích","🧽 Xóa nội dung tìm kiếm","📤 Xuất riêng bài yêu thích","⭐ Ưu tiên bài yêu thích khi sắp xếp","🔃 Sắp xếp tên Z–A","▶ Phát bài yêu thích ngẫu nhiên","🧹 Xóa bài trùng tên","ℹ️ Giấy phép nhạc trực tuyến","🛠️ Chẩn đoán ứng dụng","⏹ Dừng nhạc ngay","🕘 Phát bài nghe gần nhất","🔎 Chi tiết bài đang phát","🔁 Bật/tắt lặp bài","🎲 Bật/tắt phát ngẫu nhiên","♥ Phát bài yêu thích kế tiếp","♥ Phát bài yêu thích trước đó","🔤 Tìm bài theo chữ đầu","🧹 Xóa lịch sử nghe","📤 Xuất lịch sử nghe","♥ Chia sẻ danh sách yêu thích","📋 Sao chép danh sách yêu thích","📚 Thống kê nguồn nhạc","🧽 Đặt lại bộ lọc","🗣️ Đọc tên bài đang phát","🌐 Hướng dẫn nghe nhạc trực tuyến","👑 Thông tin người tạo app","🎼 Gợi ý cách nghe nhạc","🔊 Kiểm tra âm thanh","🌙 Mở hẹn giờ ngủ")
+  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả","📥 Xuất danh sách dạng TXT","🧹 Xóa nhạc đã thêm từ thiết bị","🔎 Tìm bài ngẫu nhiên","🌙 Hẹn giờ ngủ","🗣️ Kiểm tra giọng nói","📋 Sao chép tên bài hát","🎵 Chia sẻ bài đang phát","📋 Sao chép bài đang phát","♥ Chỉ phát bài yêu thích","🧽 Xóa nội dung tìm kiếm","📤 Xuất riêng bài yêu thích","⭐ Ưu tiên bài yêu thích khi sắp xếp","🔃 Sắp xếp tên Z–A","▶ Phát bài yêu thích ngẫu nhiên","🧹 Xóa bài trùng tên","ℹ️ Giấy phép nhạc trực tuyến","🛠️ Chẩn đoán ứng dụng","⏹ Dừng nhạc ngay","🕘 Phát bài nghe gần nhất","🔎 Chi tiết bài đang phát","🔁 Bật/tắt lặp bài","🎲 Bật/tắt phát ngẫu nhiên","♥ Phát bài yêu thích kế tiếp","♥ Phát bài yêu thích trước đó","🔤 Tìm bài theo chữ đầu","🧹 Xóa lịch sử nghe","📤 Xuất lịch sử nghe","♥ Chia sẻ danh sách yêu thích","📋 Sao chép danh sách yêu thích","📚 Thống kê nguồn nhạc","🧽 Đặt lại bộ lọc","🗣️ Đọc tên bài đang phát","🌐 Hướng dẫn nghe nhạc trực tuyến","👑 Thông tin người tạo app","🎼 Gợi ý cách nghe nhạc","🔊 Kiểm tra âm thanh",,"🌙 Chỉ xem nhạc ngủ","☁️ Chỉ xem nhạc chill","🎤 Chỉ xem nhạc trực tuyến","📱 Chỉ xem nhạc thiết bị","⭐ Xem bài yêu thích","🎲 Phát ngẫu nhiên nhạc ngủ","☁️ Phát ngẫu nhiên nhạc chill","🎤 Phát ngẫu nhiên nhạc trực tuyến","♥ Thêm bài đang chọn vào yêu thích","💔 Bỏ yêu thích bài đang chọn","🗣️ Đọc danh sách bài hát","📤 Chia sẻ ứng dụng","🔗 Mở trang dự án GitHub","🗺️ Mở bản đồ","🤖 Mở AI Bảo Nam","⚙️ Mở cài đặt","🎵 Thêm nhạc từ thiết bị","🕘 Mở lịch sử nghe","🔊 Mở chỉnh âm lượng","🌙 Dừng nhạc và hẹn giờ""🌙 Mở hẹn giờ ngủ")
   AlertDialog.Builder(this).setTitle("🧰 Tiện ích Music App").setItems(items){_,which->
    when(which){
     0->{
@@ -243,6 +243,28 @@ class MainActivity:AppCompatActivity(){
      38->AlertDialog.Builder(this).setTitle("🎼 Gợi ý nghe nhạc").setMessage("• Giữ âm lượng ở mức vừa phải.\n• Dùng hẹn giờ nếu nghe trước khi ngủ.\n• Thử tai nghe hoặc loa khác nếu âm thanh bị rè.\n• Nhạc trực tuyến cần kết nối Internet ổn định.").setPositiveButton("Đã hiểu",null).show()
      39->{val audio=getSystemService(AUDIO_SERVICE) as AudioManager;val max=audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);val cur=audio.getStreamVolume(AudioManager.STREAM_MUSIC);AlertDialog.Builder(this).setTitle("🔊 Kiểm tra âm thanh").setMessage("Âm lượng hệ thống: $cur/$max\n\nNếu không nghe thấy tiếng, hãy kiểm tra chế độ im lặng, âm lượng thiết bị và đầu ra Bluetooth.").setPositiveButton("Mở điều chỉnh"){_,_->showVolume()}.setNegativeButton("Đóng",null).show()}
      40->showSleepTimerDialog()
+
+
+     42->{favoritesOnly=false;search.setText("Ru ngủ");Toast.makeText(this,"Đang lọc nhạc ngủ.",Toast.LENGTH_SHORT).show()}
+     43->{favoritesOnly=false;search.setText("Chill");Toast.makeText(this,"Đang lọc nhạc chill.",Toast.LENGTH_SHORT).show()}
+     44->{favoritesOnly=false;search.setText("🎤");val count=tracks.count{it.streamUrl!=null};Toast.makeText(this,"Có $count bài nhạc trực tuyến trong thư viện.",Toast.LENGTH_SHORT).show()}
+     45->{favoritesOnly=false;search.setText("");val local=tracks.filter{it.uri!=null};if(local.isEmpty())Toast.makeText(this,"Chưa có nhạc từ thiết bị.",Toast.LENGTH_SHORT).show() else{val names=local.joinToString("\n"){it.title};AlertDialog.Builder(this).setTitle("📱 Nhạc từ thiết bị").setMessage(names).setPositiveButton("OK",null).show()}}
+     46->{favoritesOnly=true;renderList(search.text.toString());Toast.makeText(this,"Đang hiển thị bài yêu thích.",Toast.LENGTH_SHORT).show()}
+     47->{val pool=tracks.filter{it.title.contains("Ru ngủ",true)};if(pool.isEmpty())Toast.makeText(this,"Chưa có nhạc ngủ.",Toast.LENGTH_SHORT).show() else playTrack(pool.random())}
+     48->{val pool=tracks.filter{it.title.contains("Chill",true)};if(pool.isEmpty())Toast.makeText(this,"Chưa có nhạc chill.",Toast.LENGTH_SHORT).show() else playTrack(pool.random())}
+     49->{val pool=tracks.filter{it.streamUrl!=null};if(pool.isEmpty())Toast.makeText(this,"Chưa có bài trực tuyến.",Toast.LENGTH_SHORT).show() else playTrack(pool.random())}
+     50->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài hát.",Toast.LENGTH_SHORT).show() else{t.favorite=true;saveFavorite(t);renderList(search.text.toString());Toast.makeText(this,"Đã thêm vào yêu thích.",Toast.LENGTH_SHORT).show()}}
+     51->{val t=tracks.getOrNull(currentIndex);if(t==null)Toast.makeText(this,"Chưa chọn bài hát.",Toast.LENGTH_SHORT).show() else{t.favorite=false;saveFavorite(t);renderList(search.text.toString());Toast.makeText(this,"Đã bỏ yêu thích.",Toast.LENGTH_SHORT).show()}}
+     52->{if(tts==null)Toast.makeText(this,"Giọng nói chưa sẵn sàng.",Toast.LENGTH_SHORT).show() else{val names=tracks.take(15).joinToString(". "){it.title};tts?.speak("Danh sách bài hát. $names",TextToSpeech.QUEUE_FLUSH,null,"music_read_list")}}
+     53->{startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"Music App");putExtra(Intent.EXTRA_TEXT,"🎵 Music App — ứng dụng nghe nhạc chill, nhạc ngủ và thư giãn.\nNgười tạo: Bảo Nam")}, "Chia sẻ Music App"))}
+     54->{try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://github.com/baonamthp-dot/t-p")))}catch(e:Exception){Toast.makeText(this,"Không mở được GitHub.",Toast.LENGTH_SHORT).show()}}
+     55->openMap()
+     56->showAiAssistantGate()
+     57->showSettings()
+     58->chooseAudio()
+     59->showHistory()
+     60->showVolume()
+     61->{showSleepTimerDialog()}
 
    }
   }.setNegativeButton("Đóng",null).show()
