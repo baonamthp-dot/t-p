@@ -293,7 +293,9 @@ class MainActivity:AppCompatActivity(){
     val mins=minutes[checked-1000];val shouldFade=fade.isChecked
     prefs.edit().putInt("sleep_timer_minutes",mins).putBoolean("sleep_timer_fade",shouldFade).apply()
     sleepTimer?.cancel()
-    val started=System.currentTimeMillis();val total=mins*60_000L
+    try{player?.setVolume(1f,1f)}catch(_:Exception){}
+    try{synchronized(audioLock){audioTrack?.setVolume(android.media.AudioTrack.getMaxVolume())}}catch(_:Exception){}
+    val total=mins*60_000L
     sleepTimer=object:android.os.CountDownTimer(total,250L){
      override fun onTick(ms:Long){
       if(!shouldFade||ms>30_000L)return
