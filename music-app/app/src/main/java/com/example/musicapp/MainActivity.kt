@@ -320,7 +320,7 @@ class MainActivity:AppCompatActivity(){
      override fun onTick(ms:Long){
       if(!shouldFade||ms>30_000L)return
       val factor=(ms.coerceAtLeast(0).toFloat()/30_000f).coerceIn(0f,1f)
-      try{val max=if(android.os.Build.VERSION.SDK_INT>=21)player?.getVolume()?:1f else 1f;player?.setVolume(max*factor,max*factor)}catch(_:Exception){}
+      try{player?.setVolume(factor,factor)}catch(_:Exception){}
       try{synchronized(audioLock){audioTrack?.setVolume(android.media.AudioTrack.getMaxVolume()*factor)}}catch(_:Exception){}
      }
      override fun onFinish(){try{player?.setVolume(0f,0f)}catch(_:Exception){};stopCurrentPlayback();nowPlaying.text="🌙 Hẹn giờ kết thúc — nhạc đã dừng";sleepTimer=null}
