@@ -30,7 +30,7 @@ import kotlin.math.sin
 data class Track(var uri:Uri?,val title:String,var favorite:Boolean=false,val melody:List<Pair<Double,Int>>?=null,val youtubeUrl:String?=null,val streamUrl:String?=null)
 
 class MainActivity:AppCompatActivity(){
- private val tracks=mutableListOf<Track>();private var currentIndex=-1;private var player:MediaPlayer?=null;private var audioTrack:AudioTrack?=null;private var equalizer:Equalizer?=null
+ private val tracks=mutableListOf<Track>();private var currentIndex=-1;private var activePlaylist:List<Track>?=null;private var playlistPosition=0;private var player:MediaPlayer?=null;private var audioTrack:AudioTrack?=null;private var equalizer:Equalizer?=null
  private val generation=AtomicInteger(0);private val audioLock=Any();@Volatile private var stopBuiltin=false
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
@@ -201,7 +201,7 @@ class MainActivity:AppCompatActivity(){
      if(arr!=null)for(i in 0 until arr.length())saved.add(arr.optString(i))
      val selected=saved.mapNotNull{title->tracks.firstOrNull{it.title==title}}
      if(selected.isEmpty())Toast.makeText(this,"Danh sách này chưa có bài hợp lệ. Hãy tạo lại danh sách.",Toast.LENGTH_LONG).show()
-     else AlertDialog.Builder(this).setTitle(name).setMessage("Có ${selected.size} bài hát. Phát từ đầu danh sách?").setPositiveButton("▶ Phát"){_,_->playTrack(selected.first());Toast.makeText(this,"Đang phát danh sách: $name",Toast.LENGTH_SHORT).show()}.setNeutralButton("Chỉnh sửa"){_,_->editCustomPlaylist(name,saved)}.setNegativeButton("Đóng",null).show()
+     else AlertDialog.Builder(this).setTitle(name).setMessage("Có ${selected.size} bài hát. Phát cả danh sách theo thứ tự?").setPositiveButton("▶ Phát"){_,_->activePlaylist=selected;playlistPosition=0;playTrack(selected.first());Toast.makeText(this,"Đang phát danh sách: $name",Toast.LENGTH_SHORT).show()}.setNeutralButton("Chỉnh sửa"){_,_->editCustomPlaylist(name,saved)}.setNegativeButton("Đóng",null).show()
     }
     names.isNotEmpty()&&which==options.lastIndex->{
      val sorted=names.sorted()
@@ -632,7 +632,7 @@ class MainActivity:AppCompatActivity(){
   synchronized(audioLock){audioTrack?.let{a->try{if(a.playState==AudioTrack.PLAYSTATE_PLAYING){builtinPaused=true;a.pause();playButton.text="▶"}else{builtinPaused=false;a.play();playButton.text="⏸"}}catch(_:Exception){playButton.text="▶"};return}}
   val p=player;if(p!=null){try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}catch(_:Exception){player=null;playButton.text="▶";nowPlaying.text="Không thể tiếp tục bài hát"}}
  }
- private fun previous(){if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
- private fun next(){if(tracks.isNotEmpty()){val idx:Int;if(shuffle){val choices=tracks.indices.filter{it!=currentIndex};idx=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{idx=if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1};playTrack(tracks[idx])}}
+ private fun previous(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){playlistPosition=if(playlistPosition<=0)queue.lastIndex else playlistPosition-1;playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
+ private fun next(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){if(shuffle){val choices=queue.indices.filter{it!=playlistPosition};playlistPosition=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{playlistPosition=if(repeatOne)playlistPosition else (playlistPosition+1)%queue.size};playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty()){val idx:Int;if(shuffle){val choices=tracks.indices.filter{it!=currentIndex};idx=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{idx=if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1};playTrack(tracks[idx])}}
  override fun onDestroy(){destroyed=true;sleepTimer?.cancel();sleepTimer=null;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
 }
