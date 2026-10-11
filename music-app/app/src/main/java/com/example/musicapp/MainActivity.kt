@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioFormat
 import android.media.AudioManager
@@ -607,7 +609,7 @@ class MainActivity:AppCompatActivity(){
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
   }
  }
- private fun stopCurrentPlayback(){
+ private fun applyCoverArtwork(t:Track){\n  val uri=t.uri ?: return\n  val expectedTitle=t.title\n  Thread{\n   var retriever:android.media.MediaMetadataRetriever?=null\n   val bitmap=try{retriever=android.media.MediaMetadataRetriever();retriever!!.setDataSource(this,uri);val bytes=retriever!!.embeddedPicture;if(bytes!=null)BitmapFactory.decodeByteArray(bytes,0,bytes.size)else null}catch(_:Exception){null}finally{try{retriever?.release()}catch(_:Exception){}}\n   runOnUiThread{\n    if(!destroyed&&currentIndex in tracks.indices&&tracks[currentIndex].title==expectedTitle&&bitmap!=null){coverIcon.text="";coverIcon.background=BitmapDrawable(resources,bitmap).apply{gravity=Gravity.FILL}\n    }\n   }\n  }.start()\n }\n private fun stopCurrentPlayback(){
   generation.incrementAndGet();stopBuiltin=true;builtinPaused=false;sleepTimer?.cancel();sleepTimer=null
   synchronized(audioLock){val a=audioTrack;audioTrack=null;if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}}
   try{equalizer?.release()}catch(_:Exception){};equalizer=null
@@ -667,7 +669,7 @@ class MainActivity:AppCompatActivity(){
  private fun playTrack(t:Track){
   if(destroyed||isFinishing)return
   if(!tracks.contains(t)){Toast.makeText(this,"Bài hát không còn trong thư viện.",Toast.LENGTH_SHORT).show();return}
-  currentIndex=tracks.indexOf(t);coverIcon.text=when{t.title.startsWith("🌙")->"🌙";t.title.startsWith("☁️")->"☁️";t.streamUrl!=null->"🎤";t.youtubeUrl!=null->"🎧";t.uri!=null->"🎵";else->"♫"};coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17);saveHistory(t.title);stopCurrentPlayback()
+  currentIndex=tracks.indexOf(t);coverIcon.text=when{t.title.startsWith("🌙")->"🌙";t.title.startsWith("☁️")->"☁️";t.streamUrl!=null->"🎤";t.youtubeUrl!=null->"🎧";t.uri!=null->"🎵";else->"♫"};coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17);applyCoverArtwork(t);saveHistory(t.title);stopCurrentPlayback()
   if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
