@@ -104,6 +104,7 @@ class MainActivity:AppCompatActivity(){
   actions.addView(aiAction,aiParams)
   actions.addView(action("Lịch sử","🕘"){showHistory()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
   actions.addView(action("Âm lượng","🔊"){showVolume()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
+  actions.addView(action("Tiện ích","🧰"){showToolsPanel()},LinearLayout.LayoutParams(dp(86),dp(62)).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -131,6 +132,35 @@ class MainActivity:AppCompatActivity(){
   root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?) {}})
   setContentView(root)
+ }
+ private fun showToolsPanel(){
+  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả")
+  AlertDialog.Builder(this).setTitle("🧰 Tiện ích Music App").setItems(items){_,which->
+   when(which){
+    0->{
+     val builtInCount=tracks.count{it.melody!=null}
+     val deviceCount=tracks.count{it.uri!=null}
+     val youtubeCount=tracks.count{it.youtubeUrl!=null}
+     val favoriteCount=tracks.count{it.favorite}
+     val historyCount=prefs.getString("play_history","").orEmpty().split("|").count{it.isNotBlank()}
+     val msg="📚 Tổng số bài: ${tracks.size}\n\n🌙 Nhạc tích hợp: $builtInCount\n📱 Nhạc từ thiết bị: $deviceCount\n▶️ Liên kết YouTube: $youtubeCount\n♥ Bài yêu thích: $favoriteCount\n🕘 Lịch sử gần đây: $historyCount/20"
+     AlertDialog.Builder(this).setTitle("📊 Thống kê thư viện").setMessage(msg).setPositiveButton("OK",null).show()
+    }
+    1->{
+     val content=tracks.joinToString("\n"){t->(if(t.favorite)"♥ " else "")+t.title}
+     val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_SUBJECT,"Danh sách nhạc Music App");putExtra(Intent.EXTRA_TEXT,if(content.isBlank())"Thư viện nhạc đang trống." else "🎵 Danh sách nhạc Music App\n\n$content")}
+     startActivity(Intent.createChooser(send,"Chia sẻ danh sách nhạc"))
+    }
+    2->{tracks.sortBy{it.title.lowercase(Locale.ROOT)};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã sắp xếp thư viện theo tên A–Z.",Toast.LENGTH_SHORT).show()}
+    3->{shuffle=!shuffle;Toast.makeText(this,if(shuffle)"🎲 Đã bật phát ngẫu nhiên." else "🎲 Đã tắt phát ngẫu nhiên.",Toast.LENGTH_SHORT).show()}
+    4->{
+     AlertDialog.Builder(this).setTitle("Bỏ yêu thích tất cả?").setMessage("Thao tác này sẽ xóa dấu yêu thích của các bài hát, không xóa tệp nhạc.").setNegativeButton("Hủy",null).setPositiveButton("Bỏ yêu thích"){_,_->
+      tracks.forEach{it.favorite=false;saveFavorite(it)}
+      favoritesOnly=false;renderList(search.text.toString());Toast.makeText(this,"Đã cập nhật danh sách yêu thích.",Toast.LENGTH_SHORT).show()
+     }.show()
+    }
+   }
+  }.setNegativeButton("Đóng",null).show()
  }
  private fun showHistory(){
   val history=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()}
