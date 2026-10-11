@@ -41,7 +41,7 @@ class MainActivity:AppCompatActivity(){
  private var isOwner=false
  private var aiUnlocked=false
  private var openAiApiKey=""
- private val openAiModel="gpt-6-luna"
+ private val openAiModel="gpt-4.1-mini"
  private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
  private var tts:TextToSpeech?=null
  private val ownerCodeHash="0bc685edb692c7d408cd670c5b73c29a577188b66dd3a7b8f75e357a5b9b00e8"
@@ -193,7 +193,9 @@ class MainActivity:AppCompatActivity(){
    when(which){
     0->showCountryPicker()
     1->AlertDialog.Builder(this).setTitle("🔐 Bảo mật").setMessage("AI Bảo Nam không lưu API key vào mã nguồn.\n\nMã chủ và mã AI chỉ là lớp mở khóa cục bộ.").setPositiveButton("OK",null).show()
-    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App").setMessage("Music App 1.0\n\n🎵 Nhạc tích hợp\n📱 Nhạc từ thiết bị\n♥ Yêu thích\n☾ Hẹn giờ ngủ\n🤖 AI Bảo Nam\n🌍 Chọn quốc gia").setPositiveButton("OK",null).show()
+    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App").setMessage("Music App 1.2\n\n🎵 Nhạc tích hợp và nhạc từ thiết bị\n♥ Yêu thích, tìm kiếm, phát ngẫu nhiên và lặp bài\n☾ Hẹn giờ ngủ\n🕘 Lịch sử nghe\n🔊 Điều chỉnh âm lượng\n🤖 AI Bảo Nam và đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng").setPositiveButton("OK",null).show()
+    3->showDiagnostics()
+    4->showHistory()
    }
   }.setNegativeButton("Đóng",null).show()
  }
