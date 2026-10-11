@@ -277,19 +277,38 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showSleepTimerDialog(){
   if(destroyed||isFinishing)return
-  val options=arrayOf("5 phút","10 phút","15 phút","30 phút","45 phút","60 phút","Hủy hẹn giờ")
-  AlertDialog.Builder(this).setTitle("🌙 Hẹn giờ tắt nhạc").setItems(options){_,which->
-   if(which==6){sleepTimer?.cancel();sleepTimer=null;Toast.makeText(this,"Đã hủy hẹn giờ.",Toast.LENGTH_SHORT).show()}
-   else{
-    val mins=intArrayOf(5,10,15,30,45,60)[which]
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(20),dp(8),dp(20),dp(4))}
+  val choices=arrayOf("5 phút","10 phút","15 phút","30 phút","45 phút","60 phút")
+  val minutes=intArrayOf(5,10,15,30,45,60)
+  val group=RadioGroup(this).apply{orientation=RadioGroup.VERTICAL}
+  val selected=prefs.getInt("sleep_timer_minutes",15)
+  for(i in choices.indices){val rb=RadioButton(this).apply{text=choices[i];setTextColor(Color.WHITE);id=1000+i;isChecked=minutes[i]==selected};group.addView(rb)}
+  val fade=CheckBox(this).apply{text="Giảm âm lượng dần trong 30 giây cuối";setTextColor(Color.WHITE);isChecked=prefs.getBoolean("sleep_timer_fade",true)}
+  panel.addView(group);panel.addView(fade)
+  val dialog=AlertDialog.Builder(this).setTitle("🌙 Hẹn giờ ngủ").setView(panel).setPositiveButton("Bắt đầu",null).setNeutralButton("Hủy hẹn giờ",null).setNegativeButton("Đóng",null).create()
+  dialog.setOnShowListener{
+   dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener{
+    val checked=group.checkedRadioButtonId
+    if(checked<1000||checked>=1000+minutes.size){Toast.makeText(this,"Chọn thời gian trước nhé.",Toast.LENGTH_SHORT).show();return@setOnClickListener}
+    val mins=minutes[checked-1000];val shouldFade=fade.isChecked
+    prefs.edit().putInt("sleep_timer_minutes",mins).putBoolean("sleep_timer_fade",shouldFade).apply()
     sleepTimer?.cancel()
-    sleepTimer=object:android.os.CountDownTimer(mins*60_000L,1000L){
-     override fun onTick(ms:Long){}
-     override fun onFinish(){stopCurrentPlayback();nowPlaying.text="🌙 Hẹn giờ kết thúc — nhạc đã dừng";sleepTimer=null}
+    val started=System.currentTimeMillis();val total=mins*60_000L
+    sleepTimer=object:android.os.CountDownTimer(total,250L){
+     override fun onTick(ms:Long){
+      if(!shouldFade||ms>30_000L)return
+      val factor=(ms.coerceAtLeast(0).toFloat()/30_000f).coerceIn(0f,1f)
+      try{val max=if(android.os.Build.VERSION.SDK_INT>=21)player?.getVolume()?:1f else 1f;player?.setVolume(max*factor,max*factor)}catch(_:Exception){}
+      try{synchronized(audioLock){audioTrack?.setVolume(android.media.AudioTrack.getMaxVolume()*factor)}}catch(_:Exception){}
+     }
+     override fun onFinish(){try{player?.setVolume(0f,0f)}catch(_:Exception){};stopCurrentPlayback();nowPlaying.text="🌙 Hẹn giờ kết thúc — nhạc đã dừng";sleepTimer=null}
     }.start()
-    Toast.makeText(this,"Nhạc sẽ dừng sau $mins phút.",Toast.LENGTH_SHORT).show()
+    Toast.makeText(this,if(shouldFade)"Nhạc sẽ nhỏ dần trong 30 giây cuối rồi dừng sau $mins phút." else "Nhạc sẽ dừng sau $mins phút.",Toast.LENGTH_LONG).show()
+    dialog.dismiss()
    }
-  }.setNegativeButton("Đóng",null).show()
+   dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener{sleepTimer?.cancel();sleepTimer=null;try{player?.setVolume(1f,1f)}catch(_:Exception){};try{synchronized(audioLock){audioTrack?.setVolume(android.media.AudioTrack.getMaxVolume())}}catch(_:Exception){};Toast.makeText(this,"Đã hủy hẹn giờ.",Toast.LENGTH_SHORT).show();dialog.dismiss()}
+  }
+  dialog.show()
  }
  private fun showEqualizer(){
   if(destroyed||isFinishing)return
