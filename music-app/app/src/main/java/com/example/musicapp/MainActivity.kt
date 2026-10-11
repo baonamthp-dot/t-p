@@ -146,7 +146,8 @@ class MainActivity:AppCompatActivity(){
    "🛠️ Chẩn đoán ứng dụng",
    "🎼 Nguồn nhạc và giấy phép",
    "👑 Giới thiệu ứng dụng",
-   "🎚️ Bộ chỉnh âm (EQ)"
+   "🎚️ Bộ chỉnh âm (EQ)",
+   "🎵 Danh sách phát riêng"
   )
   AlertDialog.Builder(this).setTitle("Tiện ích cần thiết").setItems(items){_,which->
    when(which){
@@ -177,8 +178,65 @@ class MainActivity:AppCompatActivity(){
     12->AlertDialog.Builder(this).setTitle("Nguồn nhạc và giấy phép").setMessage("• Giai điệu tích hợp: âm thanh tổng hợp trong ứng dụng.\n• Nhạc trực tuyến: cần Internet; hãy xem giấy phép của từng bản ghi trước khi chia sẻ lại.\n• Tệp nhạc từ thiết bị: do bạn chọn và quản lý.").setPositiveButton("Đã hiểu",null).show()
     13->AlertDialog.Builder(this).setTitle("Về Music App").setMessage("Music App\nNgười tạo: Bảo Nam\n\nTrình phát nhạc tập trung vào thư viện cá nhân, yêu thích, tìm kiếm và hẹn giờ ngủ.").setPositiveButton("Đóng",null).show()
     14->showEqualizer()
+    15->showPlaylistManager()
    }
   }.setNegativeButton("Đóng",null).show()
+ }
+ private fun showPlaylistManager(){
+  if(destroyed||isFinishing)return
+  val playlists=try{JSONObject(prefs.getString("custom_playlists","{}").orEmpty())}catch(_:Exception){JSONObject()}
+  val names=mutableListOf<String>()
+  val keys=playlists.keys()
+  while(keys.hasNext())names.add(keys.next())
+  val options=mutableListOf("➕ Tạo danh sách phát mới")
+  options.addAll(names.sorted().map{"▶ $it"})
+  if(names.isNotEmpty())options.add("🗑️ Xóa danh sách phát")
+  AlertDialog.Builder(this).setTitle("🎵 Danh sách phát của tôi").setItems(options.toTypedArray()){_,which->
+   when{
+    which==0->createCustomPlaylist()
+    which in 1..names.size->{
+     val name=names.sorted()[which-1]
+     val arr=try{playlists.optJSONArray(name)}catch(_:Exception){null}
+     val saved=mutableListOf<String>()
+     if(arr!=null)for(i in 0 until arr.length())saved.add(arr.optString(i))
+     val selected=saved.mapNotNull{title->tracks.firstOrNull{it.title==title}}
+     if(selected.isEmpty())Toast.makeText(this,"Danh sách này chưa có bài hợp lệ. Hãy tạo lại danh sách.",Toast.LENGTH_LONG).show()
+     else AlertDialog.Builder(this).setTitle(name).setMessage("Có ${selected.size} bài hát. Phát từ đầu danh sách?").setPositiveButton("▶ Phát"){_,_->playTrack(selected.first());Toast.makeText(this,"Đang phát danh sách: $name",Toast.LENGTH_SHORT).show()}.setNeutralButton("Chỉnh sửa"){_,_->editCustomPlaylist(name,saved)}.setNegativeButton("Đóng",null).show()
+    }
+    names.isNotEmpty()&&which==options.lastIndex->{
+     val sorted=names.sorted()
+     AlertDialog.Builder(this).setTitle("Xóa danh sách phát").setItems(sorted.toTypedArray()){_,index->
+      val updated=try{JSONObject(prefs.getString("custom_playlists","{}").orEmpty())}catch(_:Exception){JSONObject()}
+      updated.remove(sorted[index]);prefs.edit().putString("custom_playlists",updated.toString()).apply()
+      Toast.makeText(this,"Đã xóa danh sách “${sorted[index]}”.",Toast.LENGTH_SHORT).show()
+     }.setNegativeButton("Hủy",null).show()
+    }
+   }
+  }.setNegativeButton("Đóng",null).show()
+ }
+ private fun createCustomPlaylist(){
+  if(tracks.isEmpty()){Toast.makeText(this,"Hãy thêm nhạc trước khi tạo danh sách.",Toast.LENGTH_SHORT).show();return}
+  val nameInput=EditText(this).apply{hint="Tên danh sách phát";setSingleLine();setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY)}
+  val wrap=LinearLayout(this).apply{setPadding(dp(20),dp(8),dp(20),dp(4));addView(nameInput)}
+  AlertDialog.Builder(this).setTitle("Tạo danh sách phát").setView(wrap).setPositiveButton("Chọn bài"){_,_->
+   val name=nameInput.text.toString().trim()
+   if(name.isBlank()){Toast.makeText(this,"Hãy nhập tên danh sách.",Toast.LENGTH_SHORT).show();return@setPositiveButton}
+   val existing=try{JSONObject(prefs.getString("custom_playlists","{}").orEmpty())}catch(_:Exception){JSONObject()}
+   if(existing.has(name)){Toast.makeText(this,"Tên danh sách đã tồn tại.",Toast.LENGTH_SHORT).show();return@setPositiveButton}
+   selectPlaylistTracks(name,emptyList())
+  }.setNegativeButton("Hủy",null).show()
+ }
+ private fun editCustomPlaylist(name:String,initial:List<String>){selectPlaylistTracks(name,initial)}
+ private fun selectPlaylistTracks(name:String,initial:List<String>){
+  val titles=tracks.map{it.title}.toTypedArray()
+  val checked=BooleanArray(tracks.size){i->initial.contains(tracks[i].title)}
+  AlertDialog.Builder(this).setTitle("Chọn bài cho “$name”").setMultiChoiceItems(titles,checked){_,which,isChecked->checked[which]=isChecked}.setPositiveButton("Lưu"){_,_->
+   val chosen=tracks.indices.filter{checked[it]}.map{tracks[it].title}
+   if(chosen.isEmpty()){Toast.makeText(this,"Chọn ít nhất một bài hát.",Toast.LENGTH_SHORT).show();return@setPositiveButton}
+   val all=try{JSONObject(prefs.getString("custom_playlists","{}").orEmpty())}catch(_:Exception){JSONObject()}
+   all.put(name,JSONArray(chosen));prefs.edit().putString("custom_playlists",all.toString()).apply()
+   Toast.makeText(this,"Đã lưu “$name” với ${chosen.size} bài hát.",Toast.LENGTH_LONG).show()
+  }.setNegativeButton("Hủy",null).show()
  }
  private fun showHistory(){
   if(destroyed||isFinishing)return
