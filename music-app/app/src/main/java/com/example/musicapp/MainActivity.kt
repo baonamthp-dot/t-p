@@ -152,7 +152,7 @@ class MainActivity:AppCompatActivity(){
   val max=audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
   val current=audio.getStreamVolume(AudioManager.STREAM_MUSIC)
   val seek=SeekBar(this).apply{this.max=max;progress=current}
-  val label=TextView(this).apply{text="Âm lượng: $current / $max";setTextColor(Color.WHITE);gravity=Gravity.CENTER;padding=dp(8)}
+  val label=TextView(this).apply{text="Âm lượng: $current / $max";setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(dp(8),dp(8),dp(8),dp(8))}
   seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
    override fun onProgressChanged(bar:SeekBar?,value:Int,fromUser:Boolean){audio.setStreamVolume(AudioManager.STREAM_MUSIC,value,0);label.text="Âm lượng: $value / $max"}
    override fun onStartTrackingTouch(bar:SeekBar?){}
@@ -168,7 +168,7 @@ class MainActivity:AppCompatActivity(){
    "• Bài yêu thích: ${tracks.count{it.favorite}}\\n"+
    "• Trạng thái phát: ${if(player!=null||audioTrack!=null)"Có thiết bị phát" else "Đang chờ / phát ngoài ứng dụng"}\\n"+
    "• Giọng nói: ${if(tts!=null)"Đã khởi tạo" else "Chưa sẵn sàng"}\\n"+
-   "• Mạng: ${if(android.net.ConnectivityManager::class.java!=null)"Kiểm tra khi dùng AI/YouTube" else "Không rõ"}\\n\\n"+
+    "• Mạng: cần Internet để dùng AI/YouTube\\n\\n"+
    "Nếu ứng dụng tự thoát, hãy gửi ảnh lỗi hoặc log để xác định nguyên nhân."
   AlertDialog.Builder(this).setTitle("🛠️ Chẩn đoán ứng dụng").setMessage(details).setPositiveButton("OK",null).show()
  }
