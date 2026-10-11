@@ -36,6 +36,7 @@ class MainActivity:AppCompatActivity(){
  private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var playButton:Button;private lateinit var search:EditText;private var favoritesOnly=false
  private var shuffle=false
  private var repeatOne=false
+ private var pendingExportText=""
  private var sleepTimer: android.os.CountDownTimer?=null
  private val prefs by lazy{getSharedPreferences("music_app",MODE_PRIVATE)}
  private var isOwner=false
@@ -134,7 +135,7 @@ class MainActivity:AppCompatActivity(){
   setContentView(root)
  }
  private fun showToolsPanel(){
-  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả")
+  val items=arrayOf("📊 Thống kê thư viện","📤 Chia sẻ danh sách bài hát","🔤 Sắp xếp tên A–Z","🎲 Trộn danh sách phát","💔 Bỏ yêu thích tất cả","📥 Xuất danh sách dạng TXT","🧹 Xóa nhạc đã thêm từ thiết bị","🔎 Tìm bài ngẫu nhiên","🌙 Hẹn giờ ngủ","🗣️ Kiểm tra giọng nói","📋 Sao chép tên bài hát")
   AlertDialog.Builder(this).setTitle("🧰 Tiện ích Music App").setItems(items){_,which->
    when(which){
     0->{
@@ -159,6 +160,31 @@ class MainActivity:AppCompatActivity(){
       favoritesOnly=false;renderList(search.text.toString());Toast.makeText(this,"Đã cập nhật danh sách yêu thích.",Toast.LENGTH_SHORT).show()
      }.show()
     }
+    5->{
+     val body=tracks.joinToString("\\n"){(if(it.favorite)"♥ " else "")+it.title}
+     val intent=Intent(Intent.ACTION_CREATE_DOCUMENT).apply{addCategory(Intent.CATEGORY_OPENABLE);type="text/plain";putExtra(Intent.EXTRA_TITLE,"music-app-playlist.txt")}
+     pendingExportText=if(body.isBlank())"Thư viện nhạc đang trống." else "Danh sách nhạc Music App\\n\\n$body"
+     startActivityForResult(intent,102)
+    }
+    6->{
+     val count=tracks.count{it.uri!=null}
+     if(count==0)Toast.makeText(this,"Không có bài nhạc từ thiết bị để xóa khỏi thư viện.",Toast.LENGTH_SHORT).show()
+     else AlertDialog.Builder(this).setTitle("Xóa nhạc khỏi thư viện?").setMessage("Sẽ gỡ $count bài đã thêm từ thiết bị khỏi danh sách trong app. Tệp gốc trên máy không bị xóa.").setNegativeButton("Hủy",null).setPositiveButton("Gỡ khỏi thư viện"){_,_->
+      tracks.removeAll{it.uri!=null};currentIndex=-1;renderList(search.text.toString());Toast.makeText(this,"Đã gỡ nhạc khỏi thư viện.",Toast.LENGTH_SHORT).show()
+     }.show()
+    }
+    7->{if(tracks.isEmpty())Toast.makeText(this,"Thư viện đang trống.",Toast.LENGTH_SHORT).show() else playTrack(tracks[java.util.Random().nextInt(tracks.size)])}
+    8->showSleepTimerDialog()
+    9->{
+     if(tts==null)Toast.makeText(this,"Giọng nói chưa sẵn sàng trên thiết bị.",Toast.LENGTH_SHORT).show()
+     else{tts?.language=Locale.getDefault();tts?.speak("Xin chào! Đây là kiểm tra giọng nói của Music App.",TextToSpeech.QUEUE_FLUSH,null,"music_voice_test")}
+    }
+    10->{
+     val names=tracks.joinToString("\\n"){it.title}
+     val clip=getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+     clip.setPrimaryClip(android.content.ClipData.newPlainText("Tên bài hát",names))
+     Toast.makeText(this,"Đã sao chép tên bài hát.",Toast.LENGTH_SHORT).show()
+    }
    }
   }.setNegativeButton("Đóng",null).show()
  }
@@ -176,6 +202,21 @@ class MainActivity:AppCompatActivity(){
  private fun saveHistory(title:String){
   val old=prefs.getString("play_history","").orEmpty().split("|").filter{it.isNotBlank()&&it!=title}
   prefs.edit().putString("play_history",(listOf(title)+old).take(20).joinToString("|")).apply()
+ }
+ private fun showSleepTimerDialog(){
+  val options=arrayOf("5 phút","10 phút","15 phút","30 phút","45 phút","60 phút","Hủy hẹn giờ")
+  AlertDialog.Builder(this).setTitle("🌙 Hẹn giờ tắt nhạc").setItems(options){_,which->
+   if(which==6){sleepTimer?.cancel();sleepTimer=null;Toast.makeText(this,"Đã hủy hẹn giờ.",Toast.LENGTH_SHORT).show()}
+   else{
+    val mins=intArrayOf(5,10,15,30,45,60)[which]
+    sleepTimer?.cancel()
+    sleepTimer=object:android.os.CountDownTimer(mins*60_000L,1000L){
+     override fun onTick(ms:Long){}
+     override fun onFinish(){stopCurrentPlayback();nowPlaying.text="🌙 Hẹn giờ kết thúc — nhạc đã dừng";sleepTimer=null}
+    }.start()
+    Toast.makeText(this,"Nhạc sẽ dừng sau $mins phút.",Toast.LENGTH_SHORT).show()
+   }
+  }.setNegativeButton("Đóng",null).show()
  }
  private fun showVolume(){
   val audio=getSystemService(AUDIO_SERVICE) as AudioManager
@@ -380,7 +421,7 @@ class MainActivity:AppCompatActivity(){
   catch(_:Exception){try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps")))}catch(_:Exception){nowPlaying.text="Không mở được Bản đồ"}}
  }
  private fun chooseAudio(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addCategory(Intent.CATEGORY_OPENABLE)},100)}
- @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
+ @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
  private fun renderList(qs:String){
   list.removeAllViews();val q=qs.trim().lowercase(Locale.getDefault());val visible=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.lowercase(Locale.getDefault()).contains(q)}
