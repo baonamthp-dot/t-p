@@ -250,7 +250,7 @@ class MainActivity:AppCompatActivity(){
     override fun onProgressChanged(bar:SeekBar?,progress:Int,fromUser:Boolean){
      val level=(progress+min).coerceIn(min,max)
      valueLabel.text=String.format(Locale.US,"%.1f dB",level/100f)
-     if(fromUser)try{eq.setBandLevel(band,level.toShort());prefs.edit().putInt("eq_band_$i",level).apply()}catch(_:Exception){}
+     try{eq.setBandLevel(band,level.toShort());if(fromUser)prefs.edit().putInt("eq_band_$i",level).apply()}catch(_:Exception){}
     }
     override fun onStartTrackingTouch(bar:SeekBar?){}
     override fun onStopTrackingTouch(bar:SeekBar?){}
