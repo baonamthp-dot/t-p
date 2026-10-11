@@ -26,7 +26,7 @@ import org.json.JSONObject
 import kotlin.math.PI
 import kotlin.math.sin
 
-data class Track(var uri:Uri?,val title:String,var favorite:Boolean=false,val melody:List<Pair<Double,Int>>?=null,val youtubeUrl:String?=null)
+data class Track(var uri:Uri?,val title:String,var favorite:Boolean=false,val melody:List<Pair<Double,Int>>?=null,val youtubeUrl:String?=null,val streamUrl:String?=null)
 
 class MainActivity:AppCompatActivity(){
  private val tracks=mutableListOf<Track>();private var currentIndex=-1;private var player:MediaPlayer?=null;private var audioTrack:AudioTrack?=null
@@ -62,7 +62,9 @@ class MainActivity:AppCompatActivity(){
   Track(null,"▶️ YouTube Music - Bài bạn gửi",youtubeUrl="https://music.youtube.com/watch?v=tu9KGLE7zLs&si=rqYnO5JnnTml768F"),
   Track(null,"▶️ YouTube Music - Bài 2",youtubeUrl="https://music.youtube.com/watch?v=0GVExpdmoDs&si=nGyRCBfO_XpkVmsi"),
   Track(null,"▶️ YouTube Music - Bài 3",youtubeUrl="https://music.youtube.com/watch?v=AYr6emQJnM0&si=vDkbqfP1BPYdnCIL"),
-  Track(null,"▶️ YouTube Music - Bài 4",youtubeUrl="https://music.youtube.com/watch?v=mY9fNwGE7YA&si=CUMjMXKy0nh45fVB")
+  Track(null,"▶️ YouTube Music - Bài 4",youtubeUrl="https://music.youtube.com/watch?v=mY9fNwGE7YA&si=CUMjMXKy0nh45fVB"),
+  Track(null,"🎤 Thanh niên làm theo lời Bác",streamUrl="https://commons.wikimedia.org/wiki/Special:Redirect/file/Thanh_ni%C3%AAn_l%C3%A0m_theo_l%E1%BB%9Di_B%C3%A1c_(c%C3%B3_l%E1%BB%9Di).ogg"),
+  Track(null,"🎤 Tiến Quân Ca (bản ghi CC0)",streamUrl="https://commons.wikimedia.org/wiki/Special:Redirect/file/TienQuanCa_PAVN_records.ogg")
  )
  private fun melody(vararg n:Double)=n.map{it to 650}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
@@ -435,11 +437,11 @@ class MainActivity:AppCompatActivity(){
   if(visible.isEmpty()){list.addView(TextView(this).apply{text="🌙\n\nChưa có bài phù hợp";textSize=15f;gravity=Gravity.CENTER;setTextColor(Color.rgb(125,145,180));setPadding(0,dp(28),0,dp(28))});return}
   visible.forEach{tr->
    val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(6),dp(7),dp(6));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(Color.rgb(11,22,43),Color.rgb(17,17,36))).apply{cornerRadius=dp(18).toFloat();setStroke(dp(1),Color.rgb(25,52,90))}}
-   val icon=TextView(this).apply{text=when{tr.title.startsWith("🌙")->"🌕";tr.title.startsWith("☁️")->"☁";tr.youtubeUrl!=null->"▶";else->"♫"};textSize=23f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(22,36,66),15)}
+   val icon=TextView(this).apply{text=when{tr.title.startsWith("🌙")->"🌕";tr.title.startsWith("☁️")->"☁";tr.streamUrl!=null->"🎤";tr.youtubeUrl!=null->"▶";else->"♫"};textSize=23f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(22,36,66),15)}
    row.addView(icon,LinearLayout.LayoutParams(dp(50),dp(50)).apply{rightMargin=dp(9)});icon.setOnClickListener{playTrack(tr)}
    val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
    box.addView(TextView(this).apply{text=tr.title;textSize=14f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
-   box.addView(TextView(this).apply{text=when{tr.youtubeUrl!=null&&tr.uri!=null->"Âm thanh từ thiết bị • Phát trong app";tr.youtubeUrl!=null->"Chọn tệp âm thanh để nghe trong app";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
+   box.addView(TextView(this).apply{text=when{tr.streamUrl!=null->"Nhạc tiếng Việt • Phát trực tuyến miễn phí";tr.youtubeUrl!=null&&tr.uri!=null->"Âm thanh từ thiết bị • Phát trong app";tr.youtubeUrl!=null->"Chọn tệp âm thanh để nghe trong app";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
    row.addView(box);box.setOnClickListener{playTrack(tr)};box.setOnLongClickListener{showTrackDetails(tr);true}
    val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;saveFavorite(tr);renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
@@ -454,6 +456,8 @@ class MainActivity:AppCompatActivity(){
  private fun showTrackDetails(t:Track){
   val message=when{
    t.melody!=null -> "🌙 "+t.title+"\n\n• Không gian: nhạc nền nhẹ, thiên về thư giãn và đi vào trạng thái chậm.\n• Cấu trúc: giai điệu ngắn lặp lại với nhịp ổn định để tạo cảm giác quen thuộc.\n• Chi tiết đáng nghe: hãy để ý lúc nốt cao xuất hiện rồi trở về nốt thấp; sự lên xuống đó tạo cảm giác như một hơi thở.\n• Cách nghe sâu: giảm âm lượng vừa đủ nghe, nhắm mắt vài phút và tập trung vào khoảng lặng giữa các nốt.\n• Phù hợp: nghỉ ngơi, đọc sách hoặc chuẩn bị ngủ."
+   t.streamUrl!=null && t.title.contains("Thanh niên") -> "🎤 "+t.title+"\n\n• Nguồn: Wikimedia Commons.\n• Giấy phép bản ghi: Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0).\n• Khi chia sẻ lại, cần ghi công và giữ điều kiện giấy phép tương thích.\n• Cần Internet để phát trực tuyến."
+   t.streamUrl!=null -> "🎤 "+t.title+"\n\n• Nguồn: Wikimedia Commons.\n• Bản ghi được đánh dấu CC0.\n• Cần Internet để phát trực tuyến."
    t.youtubeUrl!=null -> "🎧 "+t.title+"\n\n• Nguồn: YouTube Music.\n• Vai trò của Music App: chỉ mở nguồn nghe bên ngoài, không tải hay nhúng bản thu.\n• Chi tiết đáng chú ý: khi nghe, thử tách riêng nhịp, bass, giai điệu và không gian phía sau thay vì chỉ nghe toàn bộ cùng lúc.\n• Gợi ý: dùng tai nghe ở âm lượng vừa và nghỉ tai nếu nghe lâu."
    t.uri!=null -> "🎵 "+t.title+"\n\n• Nguồn: tệp nhạc bạn đã chọn từ thiết bị.\n• Có thể phát trực tiếp trong thư viện và lưu trạng thái yêu thích.\n• Chi tiết đáng nghe: thử nhận ra 3 lớp — nhịp nền, giai điệu chính và âm thanh phụ.\n• Cách nghe sâu: chọn một đoạn ngắn, nghe lại và xem cảm xúc của bạn thay đổi thế nào theo nhịp và cao độ."
    else -> "🎵 "+t.title+"\n\nĐây là một bài trong thư viện Music. Hãy nghe ở âm lượng vừa và chú ý đến nhịp, giai điệu, khoảng lặng và cảm xúc mà bài tạo ra."
@@ -482,8 +486,9 @@ class MainActivity:AppCompatActivity(){
   currentIndex=tracks.indexOf(t);saveHistory(t.title);stopCurrentPlayback()
   if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
   if(t.melody!=null){playBuiltin(t);return}
-  val u=t.uri?:return
-  try{val mp=MediaPlayer();mp.setDataSource(this,u);mp.setOnPreparedListener{if(player!==mp){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(repeatOne)playTrack(t) else next()}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player=null;playButton.text="▶"}
+  val u=t.uri
+   if(u==null&&t.streamUrl==null)return
+   try{val mp=MediaPlayer();if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!);mp.setOnPreparedListener{if(player!==mp){try{mp.release()}catch(_:Exception){};return@setOnPreparedListener};mp.start();nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"};mp.setOnCompletionListener{if(player===mp){player=null;try{mp.release()}catch(_:Exception){};if(repeatOne)playTrack(t) else next()}};mp.setOnErrorListener{_,_,_->if(player===mp){player=null;nowPlaying.text="Không phát được tệp này";playButton.text="▶";try{mp.release()}catch(_:Exception){}};true};player=mp;mp.prepareAsync();nowPlaying.text="Đang tải: "+t.title}catch(_:Exception){player=null;playButton.text="▶"}
  }
  private fun playBuiltin(t:Track){
   val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
