@@ -662,8 +662,9 @@ class MainActivity:AppCompatActivity(){
    }
   }.start()
  }
- private fun stopCurrentPlayback(){
-  generation.incrementAndGet();stopBuiltin=true;builtinPaused=false;sleepTimer?.cancel();sleepTimer=null
+ private fun stopCurrentPlayback(cancelSleepTimer:Boolean=true){
+  generation.incrementAndGet();stopBuiltin=true;builtinPaused=false
+  if(cancelSleepTimer){sleepTimer?.cancel();sleepTimer=null}
   synchronized(audioLock){val a=audioTrack;audioTrack=null;if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}}
   try{equalizer?.release()}catch(_:Exception){};equalizer=null
   val p=player;player=null;if(p!=null){try{p.setOnPreparedListener(null)}catch(_:Exception){};try{p.setOnCompletionListener(null)}catch(_:Exception){};try{p.setOnErrorListener(null)}catch(_:Exception){};try{p.stop()}catch(_:Exception){};try{p.release()}catch(_:Exception){}}
@@ -728,7 +729,12 @@ class MainActivity:AppCompatActivity(){
   coverIcon.background=rounded(when{t.title.startsWith("🌙")->Color.rgb(29,48,88);t.title.startsWith("☁️")->Color.rgb(28,54,72);t.streamUrl!=null->Color.rgb(67,39,73);else->Color.rgb(23,37,67)},17)
   applyCoverArtwork(t)
   saveHistory(t.title)
-  stopCurrentPlayback()
+  // Changing tracks must not cancel the user's sleep timer.
+  stopCurrentPlayback(cancelSleepTimer=false)
+  progressBar.progress=0
+  elapsedLabel.text="00:00"
+  durationLabel.text="00:00"
+  progressBar.isEnabled=false
   if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
@@ -789,7 +795,7 @@ class MainActivity:AppCompatActivity(){
   }
  }
  private fun playBuiltin(t:Track){
-  val g=generation.get();stopBuiltin=false;builtinPaused=false;nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
+  val g=generation.get();stopBuiltin=false;builtinPaused=false;progressBar.isEnabled=false;progressBar.progress=0;elapsedLabel.text="00:00";durationLabel.text="—";nowPlaying.text="Đang phát: "+t.title;playButton.text="⏸"
   Thread{
    val sr=22050;val mb=AudioTrack.getMinBufferSize(sr,AudioFormat.CHANNEL_OUT_MONO,AudioFormat.ENCODING_PCM_16BIT)
    if(g!=generation.get()||stopBuiltin)return@Thread
