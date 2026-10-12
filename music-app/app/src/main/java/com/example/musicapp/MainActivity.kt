@@ -61,7 +61,7 @@ class MainActivity:AppCompatActivity(){
   Track(null,"☁️ Chill - Mưa nhẹ",melody=melody(220.0,277.18,329.63,369.99,329.63,277.18,220.0)),
   Track(null,"☁️ Chill - Gió biển",melody=melody(246.94,329.63,392.0,440.0,392.0,329.63,246.94)),
   Track(null,"☁️ Chill - Thư giãn",melody=melody(196.0,246.94,329.63,392.0,329.63,246.94,196.0)),
-  Track(null,"🎤 Thanh niên làm theo lời Bác",streamUrl="https://upload.wikimedia.org/wikipedia/commons/d/db/Thanh_ni%C3%AAn_l%C3%A0m_theo_l%E1%BB%9Di_B%C3%A1c_%28c%C3%B3_l%E1%BB%9Di%29.ogg"),
+  Track(null,"🎤 Thanh niên làm theo lời Bác",streamUrl="https://upload.wikimedia.org/wikipedia/commons/transcoded/d/db/Thanh_ni%C3%AAn_l%C3%A0m_theo_l%E1%BB%9Di_B%C3%A1c_%28c%C3%B3_l%E1%BB%9Di%29.ogg/Thanh_ni%C3%AAn_l%C3%A0m_theo_l%E1%BB%9Di_B%C3%A1c_%28c%C3%B3_l%E1%BB%9Di%29.ogg.mp3"),
   Track(null,"🎤 Tiến Quân Ca (bản ghi CC0)",streamUrl="https://upload.wikimedia.org/wikipedia/commons/a/ad/TienQuanCa_PAVN_records.ogg")
  )
  private fun melody(vararg n:Double)=n.map{it to 650}
