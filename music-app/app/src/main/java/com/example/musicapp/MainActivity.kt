@@ -32,7 +32,7 @@ import kotlin.math.sin
 data class Track(var uri:Uri?,val title:String,var favorite:Boolean=false,val melody:List<Pair<Double,Int>>?=null,val youtubeUrl:String?=null,val streamUrl:String?=null)
 
 class MainActivity:AppCompatActivity(){
- private val tracks=mutableListOf<Track>();private var currentIndex=-1;private var activePlaylist:List<Track>?=null;private var playlistPosition=0;private var player:MediaPlayer?=null;private var audioTrack:AudioTrack?=null;private var equalizer:Equalizer?=null
+ private val tracks=mutableListOf<Track>();private var currentIndex=-1;private var activePlaylist:List<Track>?=null;private var playlistPosition=0;private var player:MediaPlayer?=null;@Volatile private var playerPreparing=false;private var audioTrack:AudioTrack?=null;private var equalizer:Equalizer?=null
  private val generation=AtomicInteger(0);private val audioLock=Any();@Volatile private var stopBuiltin=false
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
@@ -663,7 +663,7 @@ class MainActivity:AppCompatActivity(){
   }.start()
  }
  private fun stopCurrentPlayback(cancelSleepTimer:Boolean=true){
-  generation.incrementAndGet();stopBuiltin=true;builtinPaused=false
+  generation.incrementAndGet();stopBuiltin=true;builtinPaused=false;playerPreparing=false
   if(cancelSleepTimer){sleepTimer?.cancel();sleepTimer=null}
   synchronized(audioLock){val a=audioTrack;audioTrack=null;if(a!=null){try{a.stop()}catch(_:Exception){};try{a.release()}catch(_:Exception){}}}
   try{equalizer?.release()}catch(_:Exception){};equalizer=null
@@ -741,10 +741,12 @@ class MainActivity:AppCompatActivity(){
   if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";progressBar.isEnabled=false;return}
   try{
    val mp=MediaPlayer()
+   playerPreparing=true
    mp.setAudioStreamType(AudioManager.STREAM_MUSIC)
    if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!)
    mp.setOnPreparedListener{prepared->
     if(player!==prepared||destroyed){try{prepared.release()}catch(_:Exception){};return@setOnPreparedListener}
+    playerPreparing=false
     try{
      if(android.os.Build.VERSION.SDK_INT>=23){
       try{prepared.playbackParams=prepared.playbackParams.setSpeed(prefs.getFloat("playback_speed",1.0f).coerceIn(0.5f,2.0f))}catch(_:Exception){}
@@ -777,6 +779,7 @@ class MainActivity:AppCompatActivity(){
    mp.setOnErrorListener{_,what,extra->
     if(player===mp){
      player=null
+     playerPreparing=false
      progressBar.isEnabled=false
      nowPlaying.text="Nguồn âm thanh không tương thích hoặc không truy cập được (lỗi $what/$extra)"
      playButton.text="▶"
@@ -791,6 +794,7 @@ class MainActivity:AppCompatActivity(){
   }catch(e:Exception){
    player?.let{try{it.release()}catch(_:Exception){}}
    player=null
+   playerPreparing=false
    progressBar.isEnabled=false
    if(!destroyed){nowPlaying.text="Không thể mở bài này: "+(e.message?:"lỗi");playButton.text="▶"}
   }
@@ -808,7 +812,7 @@ class MainActivity:AppCompatActivity(){
  }
  private fun togglePlay(){
   synchronized(audioLock){audioTrack?.let{a->try{if(a.playState==AudioTrack.PLAYSTATE_PLAYING){builtinPaused=true;a.pause();playButton.text="▶"}else{builtinPaused=false;a.play();playButton.text="⏸"}}catch(_:Exception){playButton.text="▶"};return}}
-  val p=player;if(p!=null){try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}catch(_:Exception){player=null;playButton.text="▶";nowPlaying.text="Không thể tiếp tục bài hát"}}
+  val p=player;if(p!=null){if(playerPreparing){Toast.makeText(this,"Bài hát đang tải, chờ một chút nhé.",Toast.LENGTH_SHORT).show();return};try{if(p.isPlaying){p.pause();playButton.text="▶"}else{p.start();playButton.text="⏸"}}catch(_:Exception){player=null;playerPreparing=false;playButton.text="▶";nowPlaying.text="Không thể tiếp tục bài hát"}}
  }
  private fun previous(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){playlistPosition=if(playlistPosition<=0)queue.lastIndex else playlistPosition-1;playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
  private fun next(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){if(shuffle){val choices=queue.indices.filter{it!=playlistPosition};playlistPosition=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{playlistPosition=if(repeatOne)playlistPosition else (playlistPosition+1)%queue.size};playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty()){val idx:Int;if(shuffle){val choices=tracks.indices.filter{it!=currentIndex};idx=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{idx=if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1};playTrack(tracks[idx])}}
