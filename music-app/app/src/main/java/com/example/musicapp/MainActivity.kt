@@ -61,8 +61,8 @@ class MainActivity:AppCompatActivity(){
   Track(null,"☁️ Chill - Mưa nhẹ",melody=melody(220.0,277.18,329.63,369.99,329.63,277.18,220.0)),
   Track(null,"☁️ Chill - Gió biển",melody=melody(246.94,329.63,392.0,440.0,392.0,329.63,246.94)),
   Track(null,"☁️ Chill - Thư giãn",melody=melody(196.0,246.94,329.63,392.0,329.63,246.94,196.0)),
-  Track(null,"🎤 Thanh niên làm theo lời Bác",streamUrl="https://commons.wikimedia.org/wiki/Special:Redirect/file/Thanh_ni%C3%AAn_l%C3%A0m_theo_l%E1%BB%9Di_B%C3%A1c_(c%C3%B3_l%E1%BB%9Di).ogg"),
-  Track(null,"🎤 Tiến Quân Ca (bản ghi CC0)",streamUrl="https://commons.wikimedia.org/wiki/Special:Redirect/file/TienQuanCa_PAVN_records.ogg")
+  Track(null,"🎤 Thanh niên làm theo lời Bác",streamUrl="https://upload.wikimedia.org/wikipedia/commons/d/db/Thanh_ni%C3%AAn_l%C3%A0m_theo_l%E1%BB%9Di_B%C3%A1c_%28c%C3%B3_l%E1%BB%9Di%29.ogg"),
+  Track(null,"🎤 Tiến Quân Ca (bản ghi CC0)",streamUrl="https://upload.wikimedia.org/wikipedia/commons/a/ad/TienQuanCa_PAVN_records.ogg")
  )
  private fun melody(vararg n:Double)=n.map{it to 650}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
@@ -741,6 +741,7 @@ class MainActivity:AppCompatActivity(){
   if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";progressBar.isEnabled=false;return}
   try{
    val mp=MediaPlayer()
+   mp.setAudioStreamType(AudioManager.STREAM_MUSIC)
    if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!)
    mp.setOnPreparedListener{prepared->
     if(player!==prepared||destroyed){try{prepared.release()}catch(_:Exception){};return@setOnPreparedListener}
@@ -777,9 +778,9 @@ class MainActivity:AppCompatActivity(){
     if(player===mp){
      player=null
      progressBar.isEnabled=false
-     nowPlaying.text="Không phát được tệp này (lỗi $what/$extra)"
+     nowPlaying.text="Nguồn âm thanh không tương thích hoặc không truy cập được (lỗi $what/$extra)"
      playButton.text="▶"
-     Toast.makeText(this,"Nguồn nhạc không phát được (lỗi $what/$extra).",Toast.LENGTH_LONG).show()
+     Toast.makeText(this,"Không phát được nguồn nhạc (lỗi $what/$extra). Hãy kiểm tra Internet hoặc thử tệp nhạc đã tải về.",Toast.LENGTH_LONG).show()
      try{mp.release()}catch(_:Exception){}
     }
     true
