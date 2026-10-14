@@ -746,20 +746,21 @@ class MainActivity:AppCompatActivity(){
     var connection:HttpURLConnection?=null
     var cachedFile:java.io.File?=null
     try{
-     connection=(URL(t.streamUrl!!).openConnection() as HttpURLConnection).apply{
+     val conn=(URL(t.streamUrl!!).openConnection() as HttpURLConnection).apply{
       connectTimeout=15000
       readTimeout=20000
       instanceFollowRedirects=true
       requestMethod="GET"
       setRequestProperty("User-Agent","MusicApp/1.0 (Android)")
      }
-     connection.connect()
-     val status=connection.responseCode
+     connection=conn
+     conn.connect()
+     val status=conn.responseCode
      if(status !in 200..299)throw java.io.IOException("Máy chủ trả về HTTP $status")
      val downloadFile=java.io.File(cacheDir,"music_stream_${System.nanoTime()}.cache")
      cachedFile=downloadFile
      var totalBytes=0L
-     connection.inputStream.use{input->
+     conn.inputStream.use{input->
       downloadFile.outputStream().use{output->
        val buffer=ByteArray(8192)
        while(true){
