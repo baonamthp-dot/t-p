@@ -527,48 +527,158 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showAiTutor(){
   if(destroyed||isFinishing)return
-  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(4),dp(2),dp(4),dp(2))}
-  val chat=TextView(this).apply{
-   text="🤖 BẢO NAM BOT\\nTrợ lý ngoại tuyến • Không cần API key\\n\\nXin chào! Mình có thể giúp bạn học tập, giải thích kiến thức, viết code cơ bản và sử dụng Music App. Mình trả lời bằng quy tắc và kiến thức tích hợp sẵn, nên chưa thể thay thế một mô hình AI lớn."
-   textSize=14f;setTextColor(Color.WHITE);setPadding(dp(12),dp(12),dp(12),dp(12));background=rounded(Color.rgb(10,18,38),16)
+  val navy=Color.rgb(7,16,31)
+  val panel=LinearLayout(this).apply{
+   orientation=LinearLayout.VERTICAL
+   setBackgroundColor(navy)
   }
-  val scroll=ScrollView(this).apply{addView(chat)}
+  val header=LinearLayout(this).apply{
+   orientation=LinearLayout.HORIZONTAL
+   gravity=Gravity.CENTER_VERTICAL
+   setPadding(dp(12),dp(10),dp(12),dp(10))
+   setBackgroundColor(Color.rgb(12,27,49))
+  }
+  val back=button("‹").apply{textSize=34f;background=rounded(Color.TRANSPARENT,24)}
+  header.addView(back,LinearLayout.LayoutParams(dp(42),dp(48)))
+  val avatar=TextView(this).apply{
+   text="🤖";textSize=25f;gravity=Gravity.CENTER
+   background=rounded(Color.rgb(15,105,220),30)
+  }
+  header.addView(avatar,LinearLayout.LayoutParams(dp(48),dp(48)).apply{leftMargin=dp(6);rightMargin=dp(10)})
+  val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  titleBox.addView(TextView(this).apply{
+   text="Bảo Nam Bot";textSize=19f
+   setTypeface(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.BOLD)
+   setTextColor(Color.WHITE)
+  })
+  titleBox.addView(TextView(this).apply{
+   text="● Trợ lý ngoại tuyến • Không cần key";textSize=11f
+   setTextColor(Color.rgb(116,203,171))
+  })
+  header.addView(titleBox,LinearLayout.LayoutParams(0,dp(48),1f))
+  val menu=button("⋮").apply{textSize=25f;background=rounded(Color.TRANSPARENT,24)}
+  header.addView(menu,LinearLayout.LayoutParams(dp(38),dp(48)))
+  panel.addView(header,LinearLayout.LayoutParams(-1,dp(76)))
+  val divider=View(this).apply{setBackgroundColor(Color.rgb(27,48,76))}
+  panel.addView(divider,LinearLayout.LayoutParams(-1,dp(1)))
+  val messages=LinearLayout(this).apply{
+   orientation=LinearLayout.VERTICAL
+   setPadding(dp(12),dp(14),dp(12),dp(14))
+  }
+  val scroll=ScrollView(this).apply{
+   isFillViewport=true
+   addView(messages,ScrollView.LayoutParams(-1,-2))
+   setBackgroundColor(navy)
+  }
   panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
-  val input=EditText(this).apply{
-   hint="Nhắn tin với Bảo Nam Bot...";setSingleLine(false);maxLines=4
-   setTextColor(Color.WHITE);setHintTextColor(Color.GRAY);background=rounded(Color.rgb(16,27,52),16);setPadding(dp(12),dp(8),dp(12),dp(8))
-  }
-  val send=button("Gửi").apply{background=rounded(Color.rgb(36,118,225),18)}
-  val speak=button("🔊").apply{background=rounded(Color.rgb(24,75,110),18)}
-  val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-  row.addView(input,LinearLayout.LayoutParams(0,dp(58),1f))
-  row.addView(send,LinearLayout.LayoutParams(dp(66),dp(58)).apply{leftMargin=dp(6)})
-  row.addView(speak,LinearLayout.LayoutParams(dp(54),dp(58)).apply{leftMargin=dp(6)})
-  panel.addView(row,LinearLayout.LayoutParams(-1,dp(64)).apply{topMargin=dp(7)})
-  val dialog=AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setView(panel).setNegativeButton("Đóng",null).create()
-  var lastAnswer="Xin chào! Mình là Bảo Nam Bot."
-  fun append(role:String,text:String){
-   chat.append("\\n\\n"+(if(role=="user")"👤 Bạn: " else "🤖 Bảo Nam Bot: ")+text)
+  fun addMessage(role:String,text:String){
+   val isUser=role=="user"
+   val line=LinearLayout(this).apply{
+    orientation=LinearLayout.HORIZONTAL
+    gravity=if(isUser)Gravity.END else Gravity.START
+    setPadding(0,dp(4),0,dp(4))
+   }
+   if(!isUser){
+    val icon=TextView(this).apply{
+     text="🤖";textSize=17f;gravity=Gravity.CENTER
+     background=rounded(Color.rgb(15,83,158),24)
+    }
+    line.addView(icon,LinearLayout.LayoutParams(dp(34),dp(34)).apply{rightMargin=dp(7)})
+   }
+   val bubble=TextView(this).apply{
+    this.text=text
+    textSize=15f
+    setTextColor(Color.WHITE)
+    setPadding(dp(13),dp(10),dp(13),dp(10))
+    background=rounded(if(isUser)Color.rgb(16,111,235) else Color.rgb(25,42,66),18)
+    setTextIsSelectable(true)
+   }
+   val maxWidth=(resources.displayMetrics.widthPixels*0.78f).toInt()
+   line.addView(bubble,LinearLayout.LayoutParams(maxWidth,-2))
+   if(isUser){
+    val icon=TextView(this).apply{
+     text="●";textSize=20f;gravity=Gravity.CENTER
+     setTextColor(Color.rgb(170,204,255))
+    }
+    line.addView(icon,LinearLayout.LayoutParams(dp(25),dp(34)).apply{leftMargin=dp(4)})
+   }
+   messages.addView(line,LinearLayout.LayoutParams(-1,-2))
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
+  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\nMình có thể hỗ trợ một số câu hỏi học tập, phép tính cơ bản, kiến thức mẫu và hướng dẫn Music App. Mình hoạt động ngoại tuyến, không cần API key. Vì dùng quy tắc có sẵn nên mình chưa thông minh như ChatGPT và có thể chưa biết câu hỏi phức tạp.")
+  val composer=LinearLayout(this).apply{
+   orientation=LinearLayout.HORIZONTAL
+   gravity=Gravity.CENTER_VERTICAL
+   setPadding(dp(10),dp(9),dp(10),dp(10))
+   setBackgroundColor(Color.rgb(9,21,39))
+  }
+  val plus=button("+").apply{
+   textSize=25f
+   background=rounded(Color.rgb(28,45,70),30)
+  }
+  composer.addView(plus,LinearLayout.LayoutParams(dp(42),dp(46)).apply{rightMargin=dp(7)})
+  val input=EditText(this).apply{
+   hint="Nhắn tin cho Bảo Nam Bot..."
+   setSingleLine(false);maxLines=4;minHeight=dp(46)
+   textSize=15f;setTextColor(Color.WHITE);setHintTextColor(Color.rgb(143,159,184))
+   background=rounded(Color.rgb(24,39,61),22)
+   setPadding(dp(14),dp(8),dp(14),dp(8))
+   imeOptions=android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+  }
+  composer.addView(input,LinearLayout.LayoutParams(0,-2,1f))
+  val send=button("➤").apply{
+   textSize=22f
+   background=rounded(Color.rgb(17,119,247),30)
+  }
+  composer.addView(send,LinearLayout.LayoutParams(dp(48),dp(46)).apply{leftMargin=dp(7)})
+  panel.addView(composer,LinearLayout.LayoutParams(-1,-2))
+  val dialog=android.app.Dialog(this)
+  dialog.setContentView(panel)
+  dialog.setCancelable(true)
   fun ask(){
    val q=input.text.toString().trim()
    if(q.isEmpty())return
    input.setText("")
-   append("user",q)
+   addMessage("user",q)
    send.isEnabled=false
+   send.text="…"
    val answer=offlineBotReply(q)
-   lastAnswer=answer
-   append("assistant",answer)
+   addMessage("assistant",answer)
+   lastAiAnswer=answer
    send.isEnabled=true
-   speakAi(answer)
+   send.text="➤"
+  }
+  back.setOnClickListener{dialog.dismiss()}
+  menu.setOnClickListener{
+   AlertDialog.Builder(this).setTitle("Bảo Nam Bot")
+    .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Xóa cuộc trò chuyện")){_,which->
+     when(which){
+      0->AlertDialog.Builder(this).setTitle("Giới thiệu Bảo Nam Bot")
+       .setMessage("Trợ lý ngoại tuyến dùng quy tắc và kiến thức mẫu tích hợp sẵn. Không cần API key; không tra cứu Internet; câu trả lời có thể chưa đầy đủ.")
+       .setPositiveButton("Đóng",null).show()
+      1->speakAi(lastAiAnswer)
+      2->{messages.removeAllViews();addMessage("assistant","Cuộc trò chuyện đã được xóa. 👋 Bạn muốn hỏi gì?")}
+     }
+    }.show()
+  }
+  plus.setOnClickListener{
+   AlertDialog.Builder(this).setTitle("Bảo Nam Bot")
+    .setItems(arrayOf("Gợi ý câu hỏi","Đọc câu trả lời gần nhất")){_,which->
+     if(which==0){input.setText("Giải thích điệp ngữ là gì?");input.setSelection(input.text.length)}
+     else speakAi(lastAiAnswer)
+    }.show()
   }
   send.setOnClickListener{ask()}
-  speak.setOnClickListener{if(lastAnswer.isNotBlank())speakAi(lastAnswer)}
-  input.setOnEditorActionListener{_,_,_->ask();true}
+  input.setOnEditorActionListener{_,action,_->
+   if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){ask();true}else false
+  }
   dialog.setOnDismissListener{tts?.stop()}
   dialog.show()
+  dialog.window?.setLayout(-1,-1)
+  dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+  dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
  }
+ private var lastAiAnswer="Xin chào! Mình là Bảo Nam Bot."
  private fun offlineBotReply(message:String):String{
   val q=java.text.Normalizer.normalize(message.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD)
    .replace("\\p{Mn}+".toRegex(),"").replace('đ','d').replace("\\s+".toRegex()," ").trim()
