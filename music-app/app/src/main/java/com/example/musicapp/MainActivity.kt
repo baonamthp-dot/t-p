@@ -473,7 +473,7 @@ class MainActivity:AppCompatActivity(){
    when(which){
     0->showCountryPicker()
     1->AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setMessage("Chế độ: TÌM INTERNET + NGOẠI TUYẾN DỰ PHÒNG\n\n• Mặc định thử tìm kết quả web qua DuckDuckGo khi có Internet.\n• Không cần API key.\n• Nếu không có kết quả hoặc mất mạng, Bot dùng câu trả lời ngoại tuyến tích hợp sẵn.\n• Có thể tắt tìm Internet trong menu của khung chat.\n\nLưu ý: kết quả web có thể thiếu hoặc sai; hãy mở nguồn để kiểm tra.").setPositiveButton("Đã hiểu",null).show()
-    2->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Bảo Nam Bot chạy ngoại tuyến và không yêu cầu API key. Nội dung trò chuyện được xử lý trong ứng dụng.\n\nMã chủ/mã mở khóa là lớp bảo vệ cục bộ, không phải hệ thống xác thực cấp máy chủ. Hãy cài ứng dụng từ nguồn bạn tin cậy.").setPositiveButton("Đã hiểu",null).show()
+    2->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Bảo Nam Bot không yêu cầu API key. Khi bật tìm Internet, câu truy vấn được gửi tới DuckDuckGo để tìm kết quả; tắt tính năng này trong menu chat nếu bạn không muốn tìm web. Khi tìm web tắt hoặc tìm kiếm thất bại, Bot dùng câu trả lời ngoại tuyến tích hợp sẵn.\n\nMã chủ/mã mở khóa là lớp bảo vệ cục bộ, không phải hệ thống xác thực cấp máy chủ. Hãy cài ứng dụng từ nguồn bạn tin cậy.").setPositiveButton("Đã hiểu",null).show()
     3->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Phát nhạc tích hợp và tệp từ thiết bị\n♥ Yêu thích, tìm kiếm, phát ngẫu nhiên và lặp bài\n☾ Hẹn giờ ngủ\n🕘 Lịch sử nghe\n🔊 Điều chỉnh âm lượng và EQ\n🤖 Bảo Nam Bot ngoại tuyến, không cần API key\n🗣️ Đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng\n\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
     4->showDiagnostics()
     5->showHistory()
@@ -606,7 +606,7 @@ class MainActivity:AppCompatActivity(){
    messages.addView(line,LinearLayout.LayoutParams(-1,-2))
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
-  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\n🎓 Hỗ trợ học tập và giải thích khái niệm\n🧮 Tính toán số học cơ bản\n💻 Gợi ý lập trình và xử lý lỗi thường gặp\n🎵 Hướng dẫn dùng Music App\n🔊 Có thể đọc câu trả lời thành tiếng\n\n🔒 Mình chạy ngoại tuyến, không cần API key và không gửi câu hỏi lên máy chủ. Mình dùng bộ quy tắc/kiến thức tích hợp sẵn nên chưa có khả năng rộng như ChatGPT; với câu chưa chắc, mình sẽ nói rõ thay vì đoán.")
+  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\n🌐 Mặc định mình thử tìm kết quả web cho câu hỏi cần tra cứu. Khi tìm web bật, nội dung truy vấn sẽ được gửi tới DuckDuckGo để tìm kết quả.\n📴 Nếu Internet không hoạt động, mình sẽ thử trả lời bằng kiến thức tích hợp sẵn.\n\n🎓 Hỗ trợ học tập • 🧮 Toán cơ bản • 💻 Lập trình • 🎵 Music App • 🔊 Đọc câu trả lời\n\nBạn có thể mở menu ⋮ để tắt tìm Internet và chỉ dùng chế độ ngoại tuyến.")
   val composer=LinearLayout(this).apply{
    orientation=LinearLayout.HORIZONTAL
    gravity=Gravity.CENTER_VERTICAL
