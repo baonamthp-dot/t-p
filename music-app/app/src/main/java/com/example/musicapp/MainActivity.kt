@@ -553,7 +553,7 @@ class MainActivity:AppCompatActivity(){
    setTextColor(Color.WHITE)
   })
   titleBox.addView(TextView(this).apply{
-   text="● AI ngoại tuyến • Riêng tư, không cần key";textSize=11f
+   text="● Tìm Internet • Có chế độ ngoại tuyến dự phòng";textSize=11f
    setTextColor(Color.rgb(116,203,171))
   })
   header.addView(titleBox,LinearLayout.LayoutParams(0,dp(48),1f))
@@ -643,19 +643,37 @@ class MainActivity:AppCompatActivity(){
    addMessage("user",q)
    send.isEnabled=false
    send.text="…"
-   val answer=offlineBotReply(q)
-   addMessage("assistant",answer)
-   lastAiAnswer=answer
-   send.isEnabled=true
-   send.text="➤"
+   val useInternet=prefs.getBoolean("ai_internet_search",true)&&shouldSearchInternet(q)
+   if(!useInternet){
+    val answer=offlineBotReply(q)
+    addMessage("assistant",answer)
+    lastAiAnswer=answer
+    send.isEnabled=true
+    send.text="➤"
+   }else{
+    addMessage("assistant","🌐 Đang tìm thông tin trên Internet…")
+    Thread{
+     val online=searchInternet(q)
+     val answer=online ?: ("Mình chưa lấy được kết quả Internet lần này. Mình sẽ thử trả lời bằng chế độ ngoại tuyến.\n\n"+offlineBotReply(q))
+     runOnUiThread{
+      if(!destroyed&&!isFinishing&&dialog.isShowing){
+       if(messages.childCount>0)messages.removeViewAt(messages.childCount-1)
+       addMessage("assistant",answer)
+       lastAiAnswer=answer
+       send.isEnabled=true
+       send.text="➤"
+      }
+     }
+    }.start()
+   }
   }
   back.setOnClickListener{dialog.dismiss()}
   menu.setOnClickListener{
    AlertDialog.Builder(this).setTitle("Bảo Nam Bot")
-    .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Gợi ý câu hỏi","Xóa cuộc trò chuyện")){_,which->
+    .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Gợi ý câu hỏi","Xóa cuộc trò chuyện","Bật/tắt tìm kiếm Internet")){_,which->
      when(which){
       0->AlertDialog.Builder(this).setTitle("Giới thiệu Bảo Nam Bot")
-       .setMessage("Trợ lý ngoại tuyến dùng quy tắc và kiến thức mẫu tích hợp sẵn. Không cần API key; không tra cứu Internet; câu trả lời có thể chưa đầy đủ.")
+       .setMessage("Bảo Nam Bot có thể tìm kết quả web qua DuckDuckGo khi có Internet; nếu tìm kiếm thất bại, Bot dùng bộ trả lời ngoại tuyến dự phòng. Không cần API key. Kết quả web có thể chưa đầy đủ hoặc không chính xác, hãy kiểm tra nguồn.")
        .setPositiveButton("Đóng",null).show()
       1->speakAi(lastAiAnswer)
       2->AlertDialog.Builder(this).setTitle("Gợi ý câu hỏi").setItems(arrayOf("Giải thích điệp ngữ","Tính 125 + 37","Hướng dẫn sửa lỗi Kotlin","Cách dùng Music App")){_,pick->
@@ -663,6 +681,7 @@ class MainActivity:AppCompatActivity(){
        input.setText(suggestions[pick]);input.setSelection(input.text.length)
       }.show()
       3->{messages.removeAllViews();addMessage("assistant","Cuộc trò chuyện đã được xóa. 👋 Bạn muốn hỏi gì?")}
+      4->{val enabled=!prefs.getBoolean("ai_internet_search",true);prefs.edit().putBoolean("ai_internet_search",enabled).apply();Toast.makeText(this,if(enabled)"🌐 Đã bật tìm Internet" else "📴 Đã tắt tìm Internet, dùng chế độ ngoại tuyến",Toast.LENGTH_LONG).show()}
      }
     }.show()
   }
@@ -687,6 +706,58 @@ class MainActivity:AppCompatActivity(){
   dialog.window?.setLayout(-1,-1)
   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
   dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+ }
+ private fun shouldSearchInternet(message:String):Boolean{
+  val q=java.text.Normalizer.normalize(message.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD)
+   .replace("\\p{Mn}+".toRegex(),"").replace('đ','d').trim()
+  if(q.isBlank())return false
+  if(Regex("^\\s*-?\\d+(?:[.,]\\d+)?\\s*[+*/x×-]\\s*-?\\d+(?:[.,]\\d+)?=?\\s*$").matches(q))return false
+  if(listOf("xin chao","chao ban","hello","hi","hey","cam on","thank you","thanks","ban la ai","ten ban","quyen rieng tu","bao mat","api key","offline","ngoai tuyen").any{q.contains(it)})return false
+  return true
+ }
+ private fun searchInternet(query:String):String?{
+  var connection:HttpURLConnection?=null
+  return try{
+   val encoded=java.net.URLEncoder.encode(query,"UTF-8")
+   connection=(URL("https://html.duckduckgo.com/html/?q="+encoded).openConnection() as HttpURLConnection).apply{
+    requestMethod="GET"
+    connectTimeout=7000
+    readTimeout=7000
+    instanceFollowRedirects=true
+    setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
+    setRequestProperty("Accept-Language","vi,en-US;q=0.8,en;q=0.6")
+   }
+   val status=connection.responseCode
+   if(status !in 200..299)return null
+   val html=connection.inputStream.bufferedReader(Charsets.UTF_8).use{it.readText().take(1500000)}
+   val resultPattern=Regex("(?is)<a(?=[^>]*class=[\\"'][^\\"']*result__a)([^>]*)>(.*?)</a>")
+   val matches=resultPattern.findAll(html).take(4).toList()
+   if(matches.isEmpty())return null
+   fun clean(value:String):String{
+    return value.replace(Regex("(?is)<[^>]+>"),"")
+     .replace("&amp;","&").replace("&quot;","\\"").replace("&#x27;","'")
+     .replace("&#39;","'").replace("&lt;","<").replace("&gt;",">")
+     .replace("&nbsp;"," ").replace(Regex("\\s+")," ").trim()
+   }
+   val out=StringBuilder("🌐 Kết quả tìm kiếm Internet cho: \"").append(query).append("\"\\n\\n")
+   var count=0
+   for(match in matches){
+    val attrs=match.groupValues[1]
+    val title=clean(match.groupValues[2])
+    val rawHref=Regex("(?i)href=[\\"']([^\\"']+)[\\"']").find(attrs)?.groupValues?.get(1) ?: continue
+    var href=rawHref.replace("&amp;","&")
+    if(href.startsWith("/l/?")||href.startsWith("https://duckduckgo.com/l/?")){
+     val parsed=Uri.parse(if(href.startsWith("http"))href else "https://duckduckgo.com"+href)
+     href=parsed.getQueryParameter("uddg") ?: href
+    }
+    if(!href.startsWith("https://")&&!href.startsWith("http://"))continue
+    if(title.isBlank())continue
+    count++
+    out.append(count).append(". ").append(title).append("\\n").append(href).append("\\n\\n")
+   }
+   if(count==0)null else out.append("Lưu ý: đây là kết quả tìm kiếm tự động, không phải xác nhận rằng mọi thông tin đều đúng. Hãy mở nguồn để kiểm tra ngày đăng và độ tin cậy.").toString()
+  }catch(_:Exception){null}
+  finally{connection?.disconnect()}
  }
  private var lastAiAnswer="Xin chào! Mình là Bảo Nam Bot."
  private fun offlineBotReply(message:String):String{
