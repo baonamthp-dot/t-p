@@ -472,7 +472,7 @@ class MainActivity:AppCompatActivity(){
   AlertDialog.Builder(this).setTitle("⚙ Cài đặt").setItems(items){_,which->
    when(which){
     0->showCountryPicker()
-    1->AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setMessage("Chế độ: NGOẠI TUYẾN\n\n• Không cần API key hoặc tài khoản AI.\n• Không gửi câu hỏi lên máy chủ.\n• Hỗ trợ một số câu hỏi học tập, phép tính cơ bản và hướng dẫn Music App.\n• Có thể đọc câu trả lời bằng giọng nói nếu thiết bị hỗ trợ.\n\nGiới hạn: Bot dùng quy tắc và kiến thức tích hợp sẵn, không duyệt web và không thông minh tương đương mô hình AI lớn.").setPositiveButton("Đã hiểu",null).show()
+    1->AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setMessage("Chế độ: TÌM INTERNET + NGOẠI TUYẾN DỰ PHÒNG\n\n• Mặc định thử tìm kết quả web qua DuckDuckGo khi có Internet.\n• Không cần API key.\n• Nếu không có kết quả hoặc mất mạng, Bot dùng câu trả lời ngoại tuyến tích hợp sẵn.\n• Có thể tắt tìm Internet trong menu của khung chat.\n\nLưu ý: kết quả web có thể thiếu hoặc sai; hãy mở nguồn để kiểm tra.").setPositiveButton("Đã hiểu",null).show()
     2->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Bảo Nam Bot chạy ngoại tuyến và không yêu cầu API key. Nội dung trò chuyện được xử lý trong ứng dụng.\n\nMã chủ/mã mở khóa là lớp bảo vệ cục bộ, không phải hệ thống xác thực cấp máy chủ. Hãy cài ứng dụng từ nguồn bạn tin cậy.").setPositiveButton("Đã hiểu",null).show()
     3->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Phát nhạc tích hợp và tệp từ thiết bị\n♥ Yêu thích, tìm kiếm, phát ngẫu nhiên và lặp bài\n☾ Hẹn giờ ngủ\n🕘 Lịch sử nghe\n🔊 Điều chỉnh âm lượng và EQ\n🤖 Bảo Nam Bot ngoại tuyến, không cần API key\n🗣️ Đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng\n\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
     4->showDiagnostics()
@@ -730,7 +730,7 @@ class MainActivity:AppCompatActivity(){
    val status=connection.responseCode
    if(status !in 200..299)return null
    val html=connection.inputStream.bufferedReader(Charsets.UTF_8).use{it.readText().take(1500000)}
-   val resultPattern=Regex("""(?is)<a(?=[^>]*class=["\'][^"\']*result__a)([^>]*)>(.*?)</a>""")
+   val resultPattern=Regex("""(?is)<a(?=[^>]*class=["'][^"']*result__a)([^>]*)>(.*?)</a>""")
    val matches=resultPattern.findAll(html).take(4).toList()
    if(matches.isEmpty())return null
    fun clean(value:String):String{
@@ -744,7 +744,7 @@ class MainActivity:AppCompatActivity(){
    for(match in matches){
     val attrs=match.groupValues[1]
     val title=clean(match.groupValues[2])
-    val rawHref=Regex("""(?i)href=["\']([^"\']+)["\']""").find(attrs)?.groupValues?.get(1) ?: continue
+    val rawHref=Regex("""(?i)href=["']([^"']+)["']""").find(attrs)?.groupValues?.get(1) ?: continue
     var href=rawHref.replace("&amp;","&")
     if(href.startsWith("/l/?")||href.startsWith("https://duckduckgo.com/l/?")){
      val parsed=Uri.parse(if(href.startsWith("http"))href else "https://duckduckgo.com"+href)
