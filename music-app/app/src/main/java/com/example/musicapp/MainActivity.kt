@@ -739,13 +739,81 @@ class MainActivity:AppCompatActivity(){
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
   if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";progressBar.isEnabled=false;return}
+  if(t.streamUrl!=null){
+   val requestGeneration=generation.get()
+   nowPlaying.text="Đang tải nhạc trực tuyến: "+t.title
+   Thread{
+    var connection:HttpURLConnection?=null
+    var cachedFile:java.io.File?=null
+    try{
+     connection=(URL(t.streamUrl!!).openConnection() as HttpURLConnection).apply{
+      connectTimeout=15000
+      readTimeout=20000
+      instanceFollowRedirects=true
+      requestMethod="GET"
+      setRequestProperty("User-Agent","MusicApp/1.0 (Android)")
+     }
+     connection.connect()
+     val status=connection.responseCode
+     if(status !in 200..299)throw java.io.IOException("Máy chủ trả về HTTP $status")
+     cachedFile=java.io.File(cacheDir,"music_stream_${System.nanoTime()}.cache")
+     var totalBytes=0L
+     connection.inputStream.use{input->
+      cachedFile.outputStream().use{output->
+       val buffer=ByteArray(8192)
+       while(true){
+        if(requestGeneration!=generation.get())throw java.io.IOException("Đã hủy tải")
+        val count=input.read(buffer)
+        if(count<0)break
+        totalBytes+=count
+        if(totalBytes>80L*1024L*1024L)throw java.io.IOException("Tệp nhạc trực tuyến quá lớn")
+        output.write(buffer,0,count)
+       }
+      }
+     }
+     if(cachedFile.length()<=0L)throw java.io.IOException("Nguồn nhạc trống")
+     val readyFile=cachedFile
+     runOnUiThread{
+      if(destroyed||isFinishing||requestGeneration!=generation.get()){
+       readyFile.delete()
+       return@runOnUiThread
+      }
+      startTrackMedia(t,readyFile,requestGeneration)
+     }
+    }catch(e:Exception){
+     cachedFile?.delete()
+     runOnUiThread{
+      if(!destroyed&&!isFinishing&&requestGeneration==generation.get()){
+       playerPreparing=false
+       progressBar.isEnabled=false
+       playButton.text="▶"
+       nowPlaying.text="Không tải được nguồn nhạc: "+(e.message?:"lỗi kết nối")
+       Toast.makeText(this,"Không tải được bài này. Hãy kiểm tra Internet rồi thử lại.",Toast.LENGTH_LONG).show()
+      }
+     }
+    }finally{connection?.disconnect()}
+   }.start()
+   return
+  }
+  startTrackMedia(t,null,generation.get())
+ }
+ private fun startTrackMedia(t:Track,sourceFile:java.io.File?,expectedGeneration:Int){
+  if(destroyed||isFinishing||expectedGeneration!=generation.get()){
+   sourceFile?.delete()
+   return
+  }
   try{
    val mp=MediaPlayer()
    playerPreparing=true
    mp.setAudioStreamType(AudioManager.STREAM_MUSIC)
-   if(t.streamUrl!=null)mp.setDataSource(t.streamUrl) else mp.setDataSource(this,u!!)
+   if(sourceFile!=null)mp.setDataSource(sourceFile.absolutePath)
+   else mp.setDataSource(this,t.uri!!)
    mp.setOnPreparedListener{prepared->
-    if(player!==prepared||destroyed){try{prepared.release()}catch(_:Exception){};return@setOnPreparedListener}
+    if(player!==prepared||destroyed||expectedGeneration!=generation.get()){
+     try{prepared.release()}catch(_:Exception){}
+     sourceFile?.delete()
+     return@setOnPreparedListener
+    }
     playerPreparing=false
     try{
      if(android.os.Build.VERSION.SDK_INT>=23){
@@ -761,18 +829,22 @@ class MainActivity:AppCompatActivity(){
      applySavedEqualizer(prepared)
     }catch(e:Exception){
      player=null
+     playerPreparing=false
      progressBar.isEnabled=false
      nowPlaying.text="Không thể bắt đầu phát bài này: "+(e.message?:"lỗi thiết bị")
      playButton.text="▶"
-     Toast.makeText(this,"Không phát được bài này. Hãy thử tệp khác hoặc kiểm tra kết nối.",Toast.LENGTH_LONG).show()
+     Toast.makeText(this,"Không phát được bài này. Hãy thử lại.",Toast.LENGTH_LONG).show()
      try{prepared.release()}catch(_:Exception){}
+     sourceFile?.delete()
     }
    }
    mp.setOnCompletionListener{
     if(player===mp){
      player=null
+     playerPreparing=false
      progressBar.isEnabled=false
      try{mp.release()}catch(_:Exception){}
+     sourceFile?.delete()
      if(!destroyed){if(repeatOne)playTrack(t) else next()}
     }
    }
@@ -781,21 +853,23 @@ class MainActivity:AppCompatActivity(){
      player=null
      playerPreparing=false
      progressBar.isEnabled=false
-     nowPlaying.text="Nguồn âm thanh không tương thích hoặc không truy cập được (lỗi $what/$extra)"
+     nowPlaying.text="Không phát được âm thanh (lỗi $what/$extra)"
      playButton.text="▶"
-     Toast.makeText(this,"Không phát được nguồn nhạc (lỗi $what/$extra). Hãy kiểm tra Internet hoặc thử tệp nhạc đã tải về.",Toast.LENGTH_LONG).show()
+     Toast.makeText(this,"Nguồn âm thanh không đọc được (lỗi $what/$extra).",Toast.LENGTH_LONG).show()
      try{mp.release()}catch(_:Exception){}
+     sourceFile?.delete()
     }
     true
    }
    player=mp
    mp.prepareAsync()
-   nowPlaying.text="Đang tải: "+t.title
+   nowPlaying.text="Đang chuẩn bị: "+t.title
   }catch(e:Exception){
    player?.let{try{it.release()}catch(_:Exception){}}
    player=null
    playerPreparing=false
    progressBar.isEnabled=false
+   sourceFile?.delete()
    if(!destroyed){nowPlaying.text="Không thể mở bài này: "+(e.message?:"lỗi");playButton.text="▶"}
   }
  }
