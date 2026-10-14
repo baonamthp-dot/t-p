@@ -721,8 +721,8 @@ class MainActivity:AppCompatActivity(){
    val encoded=java.net.URLEncoder.encode(query,"UTF-8")
    connection=(URL("https://html.duckduckgo.com/html/?q="+encoded).openConnection() as HttpURLConnection).apply{
     requestMethod="GET"
-    connectTimeout=7000
-    readTimeout=7000
+    connectTimeout=10000
+    readTimeout=10000
     instanceFollowRedirects=true
     setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
     setRequestProperty("Accept-Language","vi,en-US;q=0.8,en;q=0.6")
@@ -730,18 +730,21 @@ class MainActivity:AppCompatActivity(){
    val status=connection.responseCode
    if(status !in 200..299)return null
    val html=connection.inputStream.bufferedReader(Charsets.UTF_8).use{it.readText().take(1500000)}
-   val resultPattern=Regex("""(?is)<a(?=[^>]*class=["'][^"']*result__a)([^>]*)>(.*?)</a>""")
-   val matches=resultPattern.findAll(html).take(4).toList()
-   if(matches.isEmpty())return null
+   val resultPattern=Regex("""(?is)<div(?=[^>]*class=["'][^"']*result__body)[^>]*>(.*?)</div>\s*</div>|<a(?=[^>]*class=["'][^"']*result__a)([^>]*)>(.*?)</a>""")
    fun clean(value:String):String{
-    return value.replace(Regex("(?is)<[^>]+>"),"")
-     .replace("&amp;","&").replace("&quot;","\"").replace("&#x27;","\'")
+    return value.replace(Regex("(?is)<script[^>]*>.*?</script>"),"")
+     .replace(Regex("(?is)<[^>]+>"),"")
+     .replace("&amp;","&").replace("&quot;","\"").replace("&#x27;","'")
      .replace("&#39;","'").replace("&lt;","<").replace("&gt;",">")
-     .replace("&nbsp;"," ").replace(Regex("\\s+")," ").trim()
+     .replace("&nbsp;"," ").replace("&#x2F;","/")
+     .replace(Regex("\\s+")," ").trim()
    }
-   val out=StringBuilder("🌐 Kết quả tìm kiếm Internet cho: \"").append(query).append("\"\n\n")
+   val titleMatches=Regex("""(?is)<a(?=[^>]*class=["'][^"']*result__a)([^>]*)>(.*?)</a>""").findAll(html).take(6).toList()
+   val snippetMatches=Regex("""(?is)<(?:a|div|span)[^>]*class=["'][^"']*result__snippet[^"']*["'][^>]*>(.*?)</(?:a|div|span)>""").findAll(html).map{clean(it.groupValues[1])}.filter{it.isNotBlank()}.toList()
+   if(titleMatches.isEmpty())return null
+   val out=StringBuilder("🌐 Mình tìm được thông tin trên Internet về: \"").append(query).append("\"\n\n")
    var count=0
-   for(match in matches){
+   for((index,match) in titleMatches.withIndex()){
     val attrs=match.groupValues[1]
     val title=clean(match.groupValues[2])
     val rawHref=Regex("""(?i)href=["']([^"']+)["']""").find(attrs)?.groupValues?.get(1) ?: continue
@@ -753,9 +756,12 @@ class MainActivity:AppCompatActivity(){
     if(!href.startsWith("https://")&&!href.startsWith("http://"))continue
     if(title.isBlank())continue
     count++
-    out.append(count).append(". ").append(title).append("\n").append(href).append("\n\n")
+    out.append(count).append(". ").append(title).append("\n")
+    val snippet=snippetMatches.getOrNull(index).orEmpty()
+    if(snippet.isNotBlank())out.append("   Tóm tắt: ").append(snippet).append("\n")
+    out.append("   Nguồn: ").append(href).append("\n\n")
    }
-   if(count==0)null else out.append("Lưu ý: đây là kết quả tìm kiếm tự động, không phải xác nhận rằng mọi thông tin đều đúng. Hãy mở nguồn để kiểm tra ngày đăng và độ tin cậy.").toString()
+   if(count==0)null else out.append("Mình đã tóm tắt dựa trên đoạn mô tả của công cụ tìm kiếm, không phải câu trả lời do mô hình AI tạo ra. Đoạn mô tả có thể thiếu ngữ cảnh; hãy mở nguồn để kiểm tra.").toString()
   }catch(_:Exception){null}
   finally{connection?.disconnect()}
  }
