@@ -552,7 +552,7 @@ class MainActivity:AppCompatActivity(){
    setTextColor(Color.WHITE)
   })
   titleBox.addView(TextView(this).apply{
-   text="● Trợ lý ngoại tuyến • Không cần key";textSize=11f
+   text="● AI ngoại tuyến • Riêng tư, không cần key";textSize=11f
    setTextColor(Color.rgb(116,203,171))
   })
   header.addView(titleBox,LinearLayout.LayoutParams(0,dp(48),1f))
@@ -605,7 +605,7 @@ class MainActivity:AppCompatActivity(){
    messages.addView(line,LinearLayout.LayoutParams(-1,-2))
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
-  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\nMình có thể hỗ trợ một số câu hỏi học tập, phép tính cơ bản, kiến thức mẫu và hướng dẫn Music App. Mình hoạt động ngoại tuyến, không cần API key. Vì dùng quy tắc có sẵn nên mình chưa thông minh như ChatGPT và có thể chưa biết câu hỏi phức tạp.")
+  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\n🎓 Hỗ trợ học tập và giải thích khái niệm\n🧮 Tính toán số học cơ bản\n💻 Gợi ý lập trình và xử lý lỗi thường gặp\n🎵 Hướng dẫn dùng Music App\n🔊 Có thể đọc câu trả lời thành tiếng\n\n🔒 Mình chạy ngoại tuyến, không cần API key và không gửi câu hỏi lên máy chủ. Mình dùng bộ quy tắc/kiến thức tích hợp sẵn nên chưa có khả năng rộng như ChatGPT; với câu chưa chắc, mình sẽ nói rõ thay vì đoán.")
   val composer=LinearLayout(this).apply{
    orientation=LinearLayout.HORIZONTAL
    gravity=Gravity.CENTER_VERTICAL
@@ -651,21 +651,30 @@ class MainActivity:AppCompatActivity(){
   back.setOnClickListener{dialog.dismiss()}
   menu.setOnClickListener{
    AlertDialog.Builder(this).setTitle("Bảo Nam Bot")
-    .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Xóa cuộc trò chuyện")){_,which->
+    .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Gợi ý câu hỏi","Xóa cuộc trò chuyện")){_,which->
      when(which){
       0->AlertDialog.Builder(this).setTitle("Giới thiệu Bảo Nam Bot")
        .setMessage("Trợ lý ngoại tuyến dùng quy tắc và kiến thức mẫu tích hợp sẵn. Không cần API key; không tra cứu Internet; câu trả lời có thể chưa đầy đủ.")
        .setPositiveButton("Đóng",null).show()
       1->speakAi(lastAiAnswer)
-      2->{messages.removeAllViews();addMessage("assistant","Cuộc trò chuyện đã được xóa. 👋 Bạn muốn hỏi gì?")}
+      2->AlertDialog.Builder(this).setTitle("Gợi ý câu hỏi").setItems(arrayOf("Giải thích điệp ngữ","Tính 125 + 37","Hướng dẫn sửa lỗi Kotlin","Cách dùng Music App")){_,pick->
+       val suggestions=arrayOf("Giải thích điệp ngữ là gì?","125 + 37","Hướng dẫn sửa lỗi Kotlin Android","Hướng dẫn sử dụng Music App")
+       input.setText(suggestions[pick]);input.setSelection(input.text.length)
+      }.show()
+      3->{messages.removeAllViews();addMessage("assistant","Cuộc trò chuyện đã được xóa. 👋 Bạn muốn hỏi gì?")}
      }
     }.show()
   }
   plus.setOnClickListener{
    AlertDialog.Builder(this).setTitle("Bảo Nam Bot")
-    .setItems(arrayOf("Gợi ý câu hỏi","Đọc câu trả lời gần nhất")){_,which->
-     if(which==0){input.setText("Giải thích điệp ngữ là gì?");input.setSelection(input.text.length)}
-     else speakAi(lastAiAnswer)
+    .setItems(arrayOf("Gợi ý học tập","Gợi ý lập trình","Tính phép tính","Đọc câu trả lời gần nhất")){_,which->
+     val suggestion=when(which){
+      0->"Giải thích điệp ngữ là gì?"
+      1->"Hướng dẫn sửa lỗi Kotlin Android"
+      2->"125 + 37"
+      else->""
+     }
+     if(which==3)speakAi(lastAiAnswer) else {input.setText(suggestion);input.setSelection(input.text.length)}
     }.show()
   }
   send.setOnClickListener{ask()}
@@ -683,32 +692,38 @@ class MainActivity:AppCompatActivity(){
   val q=java.text.Normalizer.normalize(message.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD)
    .replace("\\p{Mn}+".toRegex(),"").replace('đ','d').replace("\\s+".toRegex()," ").trim()
   fun has(vararg words:String)=words.any{q.contains(it)}
-  val math=Regex("^(-?\\d+(?:[.,]\\d+)?)\\s*([+*/-])\\s*(-?\\d+(?:[.,]\\d+)?)=?$").find(q)
+  fun numberText(v:Double)=if(v.isFinite()&&v==v.toLong().toDouble())v.toLong().toString() else v.toString()
+  val math=Regex("^(-?\\d+(?:[.,]\\d+)?)\\s*([+*/x×-])\\s*(-?\\d+(?:[.,]\\d+)?)=?$").find(q)
   if(math!=null){
    val a=math.groupValues[1].replace(',','.').toDoubleOrNull()
    val b=math.groupValues[3].replace(',','.').toDoubleOrNull()
    if(a!=null&&b!=null){
     val op=math.groupValues[2]
-    if(op=="/"&&b==0.0)return "Không thể chia cho 0."
-    val r=when(op){"+"->a+b;"-"->a-b;"*"->a*b;"/"->a/b;else->Double.NaN}
-    if(r.isFinite())return "Kết quả: $a $op $b = "+(if(r==r.toLong().toDouble())r.toLong().toString() else r.toString())+". Hãy kiểm tra lại nếu bài yêu cầu làm tròn."
+    if(op=="/"&&b==0.0)return "Không thể chia cho 0. Hãy nhập một số chia khác 0 nhé."
+    val r=when(op){"+"->a+b;"-"->a-b;"*" ,"x","×"->a*b;"/"->a/b;else->Double.NaN}
+    if(r.isFinite())return "🧮 Kết quả: "+numberText(a)+" "+op+" "+numberText(b)+" = "+numberText(r)+"\n\nHãy kiểm tra dấu phép tính và yêu cầu làm tròn của đề bài."
    }
   }
   return when{
-   has("xin chao","chao ban","hello","hi") -> "Chào bạn! 👋 Mình là Bảo Nam Bot, trợ lý ngoại tuyến trong Music App. Bạn muốn hỏi về học tập, lập trình hay cách sử dụng ứng dụng?"
-   has("ban la ai","ten ban","gioi thieu") -> "Mình là Bảo Nam Bot 🤖. Mình hoạt động bằng quy tắc và kiến thức mẫu tích hợp sẵn, không cần API key hoặc Internet. Khả năng trả lời có giới hạn và chưa thể thay thế một mô hình AI lớn."
-   has("api key","can key","internet","ngoai tuyen","offline") -> "Bảo Nam Bot không cần API key và có thể trả lời ngoại tuyến. Vì không tra cứu Internet và không dùng mô hình AI lớn, mình có thể không biết câu hỏi quá mới hoặc phức tạp."
-   has("cam on","thanks") -> "Không có gì! 😊 Nếu câu trả lời chưa đúng ý, hãy hỏi cụ thể hơn hoặc gửi đầy đủ đề bài."
-   has("ban co the lam gi","chuc nang","huong dan") -> "Mình có thể giải thích một số kiến thức học tập, gợi ý cách làm bài, phân tích lỗi code đơn giản và hướng dẫn tính năng Music App. Mình không tự tìm kiếm trên Internet."
-   has("van hoc","nguoi ke chuyen","ngoi ke","diep ngu","thanh ngu","viet van") -> "Mẹo học Ngữ văn: nêu khái niệm, chỉ ra chi tiết trong văn bản, rồi giải thích tác dụng gắn với nội dung và cảm xúc. Điệp ngữ là lặp lại từ ngữ hoặc cụm từ có chủ ý để nhấn mạnh ý, tạo nhịp điệu hoặc cảm xúc. Gửi đoạn văn cụ thể để mình phân tích sát đề hơn."
-   has("toan","phep tinh","phuong trinh") -> "Mình hỗ trợ được phép tính số học cơ bản. Hãy gửi biểu thức rõ ràng, ví dụ 125 + 37 hoặc 12 * 8. Với bài nhiều bước, mình có thể cần đề đầy đủ."
-   has("sinh hoc","te bao","virus","vat ly","hoa hoc") -> "Mình có thể giải thích kiến thức khoa học cơ bản. Hãy nêu khái niệm cụ thể hoặc gửi câu hỏi đầy đủ để mình trả lời đúng trọng tâm."
-   has("python","kotlin","lap trinh","viet code","loi code","android") -> "Khi lập trình, hãy gửi đoạn code, thông báo lỗi và kết quả mong muốn. Mình có thể phân tích và gợi ý sửa, nhưng câu trả lời ngoại tuyến này không tự biên dịch hay chạy thử code."
-   has("music app","phat nhac","bai hat","ung dung") -> "Trong Music App, chạm tên bài hát để phát; nút ▶/⏸ để phát hoặc tạm dừng; ♡ để lưu yêu thích; “Thêm nhạc” để chọn tệp trên thiết bị. Nhạc trực tuyến cần Internet."
-   has("hoc bai","on thi","bai tap") -> "Hãy gửi đề bài đầy đủ và cho biết bạn muốn đáp án ngắn hay lời giải từng bước. Mình có thể nhầm, nên hãy đối chiếu với sách và hướng dẫn của giáo viên."
-   has("thoi tiet","tin tuc","hom nay","gia vang","ket qua bong da") -> "Mình đang ngoại tuyến nên không thể kiểm tra thông tin mới nhất như thời tiết, tin tức, giá cả hoặc kết quả thể thao. Hãy kiểm tra nguồn cập nhật đáng tin cậy."
-   message.isBlank() -> "Bạn hãy nhập câu hỏi nhé."
-   else -> "Mình chưa có câu trả lời chắc chắn cho câu này trong bộ kiến thức ngoại tuyến. 🤔 Hãy diễn đạt cụ thể hơn hoặc chia câu hỏi thành từng ý nhé. Mình sẽ không đoán bừa khi chưa biết."
+   q.isBlank()->"Bạn hãy nhập câu hỏi nhé. Bạn có thể chọn dấu + cạnh ô nhập để xem gợi ý."
+   has("xin chao","chao ban","hello","hi","hey")->"Chào bạn! 👋 Mình là Bảo Nam Bot. Bạn muốn học bài, tính toán, hỏi về lập trình hay cách dùng Music App?"
+   has("ban la ai","ten ban","gioi thieu")->"Mình là Bảo Nam Bot 🤖, trợ lý tích hợp trong Music App do Bảo Nam phát triển. Mình hoạt động ngoại tuyến, không cần API key và không gửi câu hỏi lên máy chủ. Mình dùng quy tắc và kiến thức tích hợp sẵn nên khả năng có giới hạn."
+   has("api key","can key","ngoai tuyen","offline","bao mat","du lieu ca nhan","quyen rieng tu")->"🔒 Chế độ AI hiện tại là ngoại tuyến: không cần API key, không gọi dịch vụ AI bên ngoài và không gửi nội dung trò chuyện lên máy chủ.\n\nLưu ý: câu trả lời dựa trên bộ quy tắc tích hợp sẵn nên không thể biết mọi chủ đề hoặc tin tức mới."
+   has("cam on","thanks","thank you")->"Không có gì! 😊 Nếu muốn, bạn gửi câu hỏi tiếp theo hoặc đề bài đầy đủ nhé."
+   has("ban co the lam gi","chuc nang","huong dan","goi y cau hoi")->"Mình có thể hỗ trợ:\n• 📚 Giải thích một số khái niệm học tập\n• 🧮 Tính phép cộng, trừ, nhân, chia cơ bản\n• 💻 Gợi ý kiểm tra lỗi lập trình thường gặp\n• 🎵 Hướng dẫn tính năng Music App\n• 🔊 Đọc câu trả lời nếu thiết bị có dữ liệu tiếng Việt.\n\nMình không duyệt web, không chạy code và có thể thiếu kiến thức chuyên sâu."
+   has("diep ngu","phep lap","lap lai tu")->"📚 Điệp ngữ là biện pháp tu từ lặp lại từ ngữ hoặc cụm từ có chủ ý.\n\nTác dụng thường gặp:\n1. Nhấn mạnh hình ảnh, ý tưởng hoặc cảm xúc.\n2. Tạo nhịp điệu và liên kết cho câu thơ, câu văn.\n3. Làm nổi bật tâm trạng hoặc thông điệp.\n\nKhi làm bài, hãy trích đúng từ ngữ được lặp và nêu tác dụng gắn với đoạn văn cụ thể."
+   has("nguoi ke chuyen","ngoi ke","ngoi thu nhat","ngoi thu ba")->"📖 Việc lựa chọn người kể chuyện giúp định hướng cách người đọc tiếp nhận câu chuyện.\n\n• Ngôi thứ nhất: tạo cảm giác gần gũi qua trải nghiệm và cảm xúc của người kể; phạm vi hiểu biết thường giới hạn ở điều người kể biết.\n• Ngôi thứ ba: giúp kể linh hoạt về nhiều nhân vật, sự việc; tùy cách kể có thể tạo cái nhìn bao quát.\n\nHãy xác định dấu hiệu xưng hô trong văn bản trước khi nêu tác dụng cụ thể."
+   has("thanh ngu","so tu","thanh ngu noi ve so")->"📚 Thành ngữ có số từ là cụm từ cố định có chứa từ chỉ số lượng, thường mang nghĩa khái quát hoặc bóng nghĩa. Ví dụ: “một nắng hai sương” nói về sự vất vả; “ba chìm bảy nổi” nói về cuộc đời nhiều thăng trầm; “một mất một còn” chỉ tình thế quyết liệt. Khi làm bài, hãy giải thích nghĩa của cả thành ngữ trong ngữ cảnh."
+   has("ngu van","van hoc","viet van","phan tich tac pham","tac dung")->"📝 Cách trả lời câu hỏi Ngữ văn gọn mà đủ ý:\n1. Nêu khái niệm hoặc nhận xét chính.\n2. Dẫn chi tiết/từ ngữ cụ thể trong văn bản.\n3. Phân tích tác dụng đối với nội dung, hình ảnh, nhịp điệu hoặc cảm xúc.\n4. Kết luận ngắn gắn với chủ đề.\n\nBạn gửi đoạn trích hoặc ảnh đề bài để mình giúp phân tích sát ngữ cảnh."
+   has("phuong trinh","toan hoc","toan","phep tinh","tinh giup","bang bao nhieu")->"🧮 Mình tính được phép cộng, trừ, nhân và chia số học cơ bản. Hãy nhập biểu thức rõ ràng, ví dụ: 125 + 37 hoặc 12 * 8. Với phương trình hoặc bài nhiều bước, hãy gửi nguyên đề để mình hướng dẫn từng bước."
+   has("te bao thuc vat","te bao","virus","sinh hoc")->"🔬 Gợi ý học Sinh học: xác định cấu trúc, chức năng và mối liên hệ giữa các bộ phận. Với tế bào thực vật, những phần thường cần nhớ gồm thành tế bào, màng sinh chất, tế bào chất, nhân, không bào lớn và lục lạp. Không phải mọi tế bào thực vật đều có đủ bào quan giống nhau; hãy theo đúng sơ đồ trong sách giáo khoa."
+   has("vat ly","hoa hoc","phan ung hoa hoc","luc day","dien ap")->"🔬 Mình có thể giúp ôn khoa học cơ bản, nhưng cần biết câu hỏi cụ thể để tránh trả lời sai. Hãy gửi tên khái niệm, dữ kiện và đơn vị trong đề; mình sẽ nêu rõ nếu chưa đủ thông tin."
+   has("python","kotlin","lap trinh","viet code","loi code","android","gradle","apk")->"💻 Để kiểm tra lỗi code hiệu quả, hãy gửi:\n1. Đoạn code liên quan.\n2. Thông báo lỗi đầy đủ và dòng lỗi.\n3. Bạn muốn chương trình hoạt động như thế nào.\n\nMình có thể giải thích và đề xuất cách sửa ngoại tuyến, nhưng không tự biên dịch hoặc chạy thử dự án trong ứng dụng này."
+   has("music app","phat nhac","bai hat","ung dung","yeu thich","hen gio")->"🎵 Mẹo dùng Music App:\n• Chạm bài hát trong danh sách để phát.\n• Dùng ▶/⏸ để phát hoặc tạm dừng.\n• Nút ♥ để quản lý bài yêu thích.\n• “Thêm nhạc” để chọn tệp âm thanh trên thiết bị.\n• Dùng “Hẹn giờ” để đặt thời gian dừng nhạc.\n• Nhạc trực tuyến cần Internet; tệp cá nhân phụ thuộc quyền truy cập của thiết bị."
+   has("hoc bai","on thi","bai tap","dap an","giai bai")->"📘 Bạn gửi đề bài đầy đủ (hoặc ảnh rõ nét) nhé. Mình sẽ cố gắng chia lời giải thành từng bước và nêu lý do, không chỉ đưa đáp án. Với bài ở trường, hãy đối chiếu lại với sách và hướng dẫn của giáo viên."
+   has("thoi tiet","tin tuc","hom nay","gia vang","ket qua bong da","moi nhat")->"🌐 Mình đang ngoại tuyến nên không thể xác minh tin tức, thời tiết, giá cả hoặc kết quả mới nhất. Hãy kiểm tra nguồn cập nhật đáng tin cậy; nếu bạn gửi thông tin đó vào đây, mình có thể giúp giải thích."
+   has("xin loi","sai roi","khong dung","khong phai")->"Cảm ơn bạn đã nhắc! 🙏 Mình có thể hiểu sai vì dùng kiến thức ngoại tuyến. Bạn chỉ rõ phần chưa đúng hoặc gửi thêm ngữ cảnh nhé; mình sẽ thử phân tích lại thay vì khẳng định khi chưa chắc."
+   else->"Mình chưa có câu trả lời đủ chắc chắn cho câu hỏi này trong bộ kiến thức ngoại tuyến. 🤔\n\nBạn thử viết câu hỏi cụ thể hơn, chia câu hỏi dài thành từng ý hoặc gửi nguyên đề bài/đoạn văn liên quan nhé.\n\nMình không tra cứu Internet và sẽ nói rõ giới hạn thay vì đoán bừa."
   }
  }
  private fun openMap(){
