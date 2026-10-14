@@ -468,14 +468,15 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showSettings(){
   if(destroyed||isFinishing)return
-  val items=arrayOf("🌍 Chọn quốc gia","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
+  val items=arrayOf("🌍 Chọn quốc gia","🤖 Bảo Nam Bot ngoại tuyến","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
   AlertDialog.Builder(this).setTitle("⚙ Cài đặt").setItems(items){_,which->
    when(which){
     0->showCountryPicker()
-    1->AlertDialog.Builder(this).setTitle("🔐 Bảo mật").setMessage("AI Bảo Nam không lưu API key vào mã nguồn.\n\nMã chủ và mã AI chỉ là lớp mở khóa cục bộ.").setPositiveButton("OK",null).show()
-    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App").setMessage("Music App 1.2\n\n🎵 Nhạc tích hợp và nhạc từ thiết bị\n♥ Yêu thích, tìm kiếm, phát ngẫu nhiên và lặp bài\n☾ Hẹn giờ ngủ\n🕘 Lịch sử nghe\n🔊 Điều chỉnh âm lượng\n🤖 AI Bảo Nam và đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng").setPositiveButton("OK",null).show()
-    3->showDiagnostics()
-    4->showHistory()
+    1->AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setMessage("Chế độ: NGOẠI TUYẾN\n\n• Không cần API key hoặc tài khoản AI.\n• Không gửi câu hỏi lên máy chủ.\n• Hỗ trợ một số câu hỏi học tập, phép tính cơ bản và hướng dẫn Music App.\n• Có thể đọc câu trả lời bằng giọng nói nếu thiết bị hỗ trợ.\n\nGiới hạn: Bot dùng quy tắc và kiến thức tích hợp sẵn, không duyệt web và không thông minh tương đương mô hình AI lớn.").setPositiveButton("Đã hiểu",null).show()
+    2->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Bảo Nam Bot chạy ngoại tuyến và không yêu cầu API key. Nội dung trò chuyện được xử lý trong ứng dụng.\n\nMã chủ/mã mở khóa là lớp bảo vệ cục bộ, không phải hệ thống xác thực cấp máy chủ. Hãy cài ứng dụng từ nguồn bạn tin cậy.").setPositiveButton("Đã hiểu",null).show()
+    3->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Phát nhạc tích hợp và tệp từ thiết bị\n♥ Yêu thích, tìm kiếm, phát ngẫu nhiên và lặp bài\n☾ Hẹn giờ ngủ\n🕘 Lịch sử nghe\n🔊 Điều chỉnh âm lượng và EQ\n🤖 Bảo Nam Bot ngoại tuyến, không cần API key\n🗣️ Đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng\n\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
+    4->showDiagnostics()
+    5->showHistory()
    }
   }.setNegativeButton("Đóng",null).show()
  }
