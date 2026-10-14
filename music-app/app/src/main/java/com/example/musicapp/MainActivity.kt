@@ -730,7 +730,7 @@ class MainActivity:AppCompatActivity(){
    val status=connection.responseCode
    if(status !in 200..299)return null
    val html=connection.inputStream.bufferedReader(Charsets.UTF_8).use{it.readText().take(1500000)}
-   val resultPattern=Regex("(?is)<a(?=[^>]*class=[\\"'][^\\"']*result__a)([^>]*)>(.*?)</a>")
+   val resultPattern=Regex("""(?is)<a(?=[^>]*class=["\'][^"\']*result__a)([^>]*)>(.*?)</a>""")
    val matches=resultPattern.findAll(html).take(4).toList()
    if(matches.isEmpty())return null
    fun clean(value:String):String{
@@ -744,7 +744,7 @@ class MainActivity:AppCompatActivity(){
    for(match in matches){
     val attrs=match.groupValues[1]
     val title=clean(match.groupValues[2])
-    val rawHref=Regex("(?i)href=[\\"']([^\\"']+)[\\"']").find(attrs)?.groupValues?.get(1) ?: continue
+    val rawHref=Regex("""(?i)href=["\']([^"\']+)["\']""").find(attrs)?.groupValues?.get(1) ?: continue
     var href=rawHref.replace("&amp;","&")
     if(href.startsWith("/l/?")||href.startsWith("https://duckduckgo.com/l/?")){
      val parsed=Uri.parse(if(href.startsWith("http"))href else "https://duckduckgo.com"+href)
