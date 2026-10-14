@@ -559,7 +559,7 @@ class MainActivity:AppCompatActivity(){
   val menu=button("⋮").apply{textSize=25f;background=rounded(Color.TRANSPARENT,24)}
   header.addView(menu,LinearLayout.LayoutParams(dp(38),dp(48)))
   panel.addView(header,LinearLayout.LayoutParams(-1,dp(76)))
-  val divider=View(this).apply{setBackgroundColor(Color.rgb(27,48,76))}
+  val divider=android.view.View(this).apply{setBackgroundColor(Color.rgb(27,48,76))}
   panel.addView(divider,LinearLayout.LayoutParams(-1,dp(1)))
   val messages=LinearLayout(this).apply{
    orientation=LinearLayout.VERTICAL
