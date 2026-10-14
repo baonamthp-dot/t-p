@@ -557,7 +557,7 @@ class MainActivity:AppCompatActivity(){
    input.setText("")
    append("user",q)
    send.isEnabled=false
-   val answer=OfflineAiBot.reply(q)
+   val answer=offlineBotReply(q)
    lastAnswer=answer
    append("assistant",answer)
    send.isEnabled=true
@@ -568,6 +568,38 @@ class MainActivity:AppCompatActivity(){
   input.setOnEditorActionListener{_,_,_->ask();true}
   dialog.setOnDismissListener{tts?.stop()}
   dialog.show()
+ }
+ private fun offlineBotReply(message:String):String{
+  val q=java.text.Normalizer.normalize(message.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD)
+   .replace("\\p{Mn}+".toRegex(),"").replace('đ','d').replace("\\s+".toRegex()," ").trim()
+  fun has(vararg words:String)=words.any{q.contains(it)}
+  val math=Regex("^(-?\\d+(?:[.,]\\d+)?)\\s*([+*/-])\\s*(-?\\d+(?:[.,]\\d+)?)=?$").find(q)
+  if(math!=null){
+   val a=math.groupValues[1].replace(',','.').toDoubleOrNull()
+   val b=math.groupValues[3].replace(',','.').toDoubleOrNull()
+   if(a!=null&&b!=null){
+    val op=math.groupValues[2]
+    if(op=="/"&&b==0.0)return "Không thể chia cho 0."
+    val r=when(op){"+"->a+b;"-"->a-b;"*"->a*b;"/"->a/b;else->Double.NaN}
+    if(r.isFinite())return "Kết quả: $a $op $b = "+(if(r==r.toLong().toDouble())r.toLong().toString() else r.toString())+". Hãy kiểm tra lại nếu bài yêu cầu làm tròn."
+   }
+  }
+  return when{
+   has("xin chao","chao ban","hello","hi") -> "Chào bạn! 👋 Mình là Bảo Nam Bot, trợ lý ngoại tuyến trong Music App. Bạn muốn hỏi về học tập, lập trình hay cách sử dụng ứng dụng?"
+   has("ban la ai","ten ban","gioi thieu") -> "Mình là Bảo Nam Bot 🤖. Mình hoạt động bằng quy tắc và kiến thức mẫu tích hợp sẵn, không cần API key hoặc Internet. Khả năng trả lời có giới hạn và chưa thể thay thế một mô hình AI lớn."
+   has("api key","can key","internet","ngoai tuyen","offline") -> "Bảo Nam Bot không cần API key và có thể trả lời ngoại tuyến. Vì không tra cứu Internet và không dùng mô hình AI lớn, mình có thể không biết câu hỏi quá mới hoặc phức tạp."
+   has("cam on","thanks") -> "Không có gì! 😊 Nếu câu trả lời chưa đúng ý, hãy hỏi cụ thể hơn hoặc gửi đầy đủ đề bài."
+   has("ban co the lam gi","chuc nang","huong dan") -> "Mình có thể giải thích một số kiến thức học tập, gợi ý cách làm bài, phân tích lỗi code đơn giản và hướng dẫn tính năng Music App. Mình không tự tìm kiếm trên Internet."
+   has("van hoc","nguoi ke chuyen","ngoi ke","diep ngu","thanh ngu","viet van") -> "Mẹo học Ngữ văn: nêu khái niệm, chỉ ra chi tiết trong văn bản, rồi giải thích tác dụng gắn với nội dung và cảm xúc. Điệp ngữ là lặp lại từ ngữ hoặc cụm từ có chủ ý để nhấn mạnh ý, tạo nhịp điệu hoặc cảm xúc. Gửi đoạn văn cụ thể để mình phân tích sát đề hơn."
+   has("toan","phep tinh","phuong trinh") -> "Mình hỗ trợ được phép tính số học cơ bản. Hãy gửi biểu thức rõ ràng, ví dụ 125 + 37 hoặc 12 * 8. Với bài nhiều bước, mình có thể cần đề đầy đủ."
+   has("sinh hoc","te bao","virus","vat ly","hoa hoc") -> "Mình có thể giải thích kiến thức khoa học cơ bản. Hãy nêu khái niệm cụ thể hoặc gửi câu hỏi đầy đủ để mình trả lời đúng trọng tâm."
+   has("python","kotlin","lap trinh","viet code","loi code","android") -> "Khi lập trình, hãy gửi đoạn code, thông báo lỗi và kết quả mong muốn. Mình có thể phân tích và gợi ý sửa, nhưng câu trả lời ngoại tuyến này không tự biên dịch hay chạy thử code."
+   has("music app","phat nhac","bai hat","ung dung") -> "Trong Music App, chạm tên bài hát để phát; nút ▶/⏸ để phát hoặc tạm dừng; ♡ để lưu yêu thích; “Thêm nhạc” để chọn tệp trên thiết bị. Nhạc trực tuyến cần Internet."
+   has("hoc bai","on thi","bai tap") -> "Hãy gửi đề bài đầy đủ và cho biết bạn muốn đáp án ngắn hay lời giải từng bước. Mình có thể nhầm, nên hãy đối chiếu với sách và hướng dẫn của giáo viên."
+   has("thoi tiet","tin tuc","hom nay","gia vang","ket qua bong da") -> "Mình đang ngoại tuyến nên không thể kiểm tra thông tin mới nhất như thời tiết, tin tức, giá cả hoặc kết quả thể thao. Hãy kiểm tra nguồn cập nhật đáng tin cậy."
+   message.isBlank() -> "Bạn hãy nhập câu hỏi nhé."
+   else -> "Mình chưa có câu trả lời chắc chắn cho câu này trong bộ kiến thức ngoại tuyến. 🤔 Hãy diễn đạt cụ thể hơn hoặc chia câu hỏi thành từng ý nhé. Mình sẽ không đoán bừa khi chưa biết."
+  }
  }
  private fun openMap(){
   val uri=Uri.parse("geo:0,0?q=bản đồ")
