@@ -739,7 +739,7 @@ class MainActivity:AppCompatActivity(){
      .replace("&#39;","'").replace("&lt;","<").replace("&gt;",">")
      .replace("&nbsp;"," ").replace(Regex("\\s+")," ").trim()
    }
-   val out=StringBuilder("🌐 Kết quả tìm kiếm Internet cho: \"").append(query).append("\"\\n\\n")
+   val out=StringBuilder("🌐 Kết quả tìm kiếm Internet cho: \"").append(query).append("\"\n\n")
    var count=0
    for(match in matches){
     val attrs=match.groupValues[1]
@@ -753,7 +753,7 @@ class MainActivity:AppCompatActivity(){
     if(!href.startsWith("https://")&&!href.startsWith("http://"))continue
     if(title.isBlank())continue
     count++
-    out.append(count).append(". ").append(title).append("\\n").append(href).append("\\n\\n")
+    out.append(count).append(". ").append(title).append("\n").append(href).append("\n\n")
    }
    if(count==0)null else out.append("Lưu ý: đây là kết quả tìm kiếm tự động, không phải xác nhận rằng mọi thông tin đều đúng. Hãy mở nguồn để kiểm tra ngày đăng và độ tin cậy.").toString()
   }catch(_:Exception){null}
