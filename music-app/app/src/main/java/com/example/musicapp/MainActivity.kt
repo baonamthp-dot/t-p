@@ -756,10 +756,11 @@ class MainActivity:AppCompatActivity(){
      connection.connect()
      val status=connection.responseCode
      if(status !in 200..299)throw java.io.IOException("Máy chủ trả về HTTP $status")
-     cachedFile=java.io.File(cacheDir,"music_stream_${System.nanoTime()}.cache")
+     val downloadFile=java.io.File(cacheDir,"music_stream_${System.nanoTime()}.cache")
+     cachedFile=downloadFile
      var totalBytes=0L
      connection.inputStream.use{input->
-      cachedFile.outputStream().use{output->
+      downloadFile.outputStream().use{output->
        val buffer=ByteArray(8192)
        while(true){
         if(requestGeneration!=generation.get())throw java.io.IOException("Đã hủy tải")
@@ -771,8 +772,8 @@ class MainActivity:AppCompatActivity(){
        }
       }
      }
-     if(cachedFile.length()<=0L)throw java.io.IOException("Nguồn nhạc trống")
-     val readyFile=cachedFile
+     if(downloadFile.length()<=0L)throw java.io.IOException("Nguồn nhạc trống")
+     val readyFile=downloadFile
      runOnUiThread{
       if(destroyed||isFinishing||requestGeneration!=generation.get()){
        readyFile.delete()
