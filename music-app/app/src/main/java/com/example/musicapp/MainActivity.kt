@@ -567,7 +567,7 @@ class MainActivity:AppCompatActivity(){
   }
   val scroll=ScrollView(this).apply{
    isFillViewport=true
-   addView(messages,ScrollView.LayoutParams(-1,-2))
+   addView(messages,android.widget.FrameLayout.LayoutParams(-1,-2))
    setBackgroundColor(navy)
   }
   panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
@@ -580,7 +580,7 @@ class MainActivity:AppCompatActivity(){
    }
    if(!isUser){
     val icon=TextView(this).apply{
-     text="🤖";textSize=17f;gravity=Gravity.CENTER
+     this.text="🤖";textSize=17f;gravity=Gravity.CENTER
      background=rounded(Color.rgb(15,83,158),24)
     }
     line.addView(icon,LinearLayout.LayoutParams(dp(34),dp(34)).apply{rightMargin=dp(7)})
@@ -597,7 +597,7 @@ class MainActivity:AppCompatActivity(){
    line.addView(bubble,LinearLayout.LayoutParams(maxWidth,-2))
    if(isUser){
     val icon=TextView(this).apply{
-     text="●";textSize=20f;gravity=Gravity.CENTER
+     this.text="●";textSize=20f;gravity=Gravity.CENTER
      setTextColor(Color.rgb(170,204,255))
     }
     line.addView(icon,LinearLayout.LayoutParams(dp(25),dp(34)).apply{leftMargin=dp(4)})
