@@ -735,7 +735,7 @@ class MainActivity:AppCompatActivity(){
    if(matches.isEmpty())return null
    fun clean(value:String):String{
     return value.replace(Regex("(?is)<[^>]+>"),"")
-     .replace("&amp;","&").replace("&quot;","\\"").replace("&#x27;","'")
+     .replace("&amp;","&").replace("&quot;","\"").replace("&#x27;","\'")
      .replace("&#39;","'").replace("&lt;","<").replace("&gt;",">")
      .replace("&nbsp;"," ").replace(Regex("\\s+")," ").trim()
    }
