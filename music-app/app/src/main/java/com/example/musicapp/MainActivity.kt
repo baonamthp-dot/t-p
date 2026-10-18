@@ -469,17 +469,39 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showSettings(){
   if(destroyed||isFinishing)return
-  val items=arrayOf("🌍 Chọn quốc gia","🤖 Bảo Nam Bot ngoại tuyến","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
+  val items=arrayOf("🌍 Chọn quốc gia","🔑 Cấu hình OpenAI API Key","🤖 Bảo Nam Bot ngoại tuyến","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
   AlertDialog.Builder(this).setTitle("⚙ Cài đặt").setItems(items){_,which->
    when(which){
     0->showCountryPicker()
-    1->AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setMessage("Chế độ: TÌM INTERNET + NGOẠI TUYẾN DỰ PHÒNG\n\n• Mặc định thử tìm kết quả web qua DuckDuckGo khi có Internet.\n• Không cần API key.\n• Nếu không có kết quả hoặc mất mạng, Bot dùng câu trả lời ngoại tuyến tích hợp sẵn.\n• Có thể tắt tìm Internet trong menu của khung chat.\n\nLưu ý: kết quả web có thể thiếu hoặc sai; hãy mở nguồn để kiểm tra.").setPositiveButton("Đã hiểu",null).show()
-    2->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Bảo Nam Bot không yêu cầu API key. Khi bật tìm Internet, câu truy vấn được gửi tới DuckDuckGo để tìm kết quả; tắt tính năng này trong menu chat nếu bạn không muốn tìm web. Khi tìm web tắt hoặc tìm kiếm thất bại, Bot dùng câu trả lời ngoại tuyến tích hợp sẵn.\n\nMã chủ/mã mở khóa là lớp bảo vệ cục bộ, không phải hệ thống xác thực cấp máy chủ. Hãy cài ứng dụng từ nguồn bạn tin cậy.").setPositiveButton("Đã hiểu",null).show()
-    3->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Phát nhạc tích hợp và tệp từ thiết bị\n♥ Yêu thích, tìm kiếm, phát ngẫu nhiên và lặp bài\n☾ Hẹn giờ ngủ\n🕘 Lịch sử nghe\n🔊 Điều chỉnh âm lượng và EQ\n🤖 Bảo Nam Bot ngoại tuyến, không cần API key\n🗣️ Đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng\n\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
-    4->showDiagnostics()
-    5->showHistory()
+    1->showApiKeySettings()
+    2->AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setMessage("Bảo Nam Bot dùng OpenAI API nếu đã cấu hình key hoặc máy chủ. API có thể tính phí riêng.").setPositiveButton("Đã hiểu",null).show()
+    3->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("API Key lưu trên thiết bị có rủi ro nếu thiết bị hoặc ứng dụng bị xâm phạm. An toàn hơn là lưu key trong biến môi trường máy chủ riêng. Không chia sẻ key.").setPositiveButton("Đã hiểu",null).show()
+    4->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Trình phát nhạc cá nhân\n🤖 Bảo Nam AI có thể dùng OpenAI API nếu được cấu hình\n🗣️ Đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng\n\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
+    5->showDiagnostics()
+    6->showHistory()
    }
   }.setNegativeButton("Đóng",null).show()
+ }
+ private fun showApiKeySettings(){
+  val input=EditText(this).apply{
+   hint="sk-..."
+   setSingleLine(true)
+   inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+   setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)
+   setText(prefs.getString("openai_api_key","") ?: "")
+  }
+  val wrap=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(20),dp(8),dp(20),dp(4));addView(input,LinearLayout.LayoutParams(-1,dp(52)))}
+  AlertDialog.Builder(this).setTitle("🔑 OpenAI API Key")
+   .setMessage("Nhập key OpenAI của bạn. API có thể tính phí riêng. Key được lưu trong dữ liệu riêng của ứng dụng trên thiết bị; lưu trên máy chủ riêng sẽ an toàn hơn.")
+   .setView(wrap)
+   .setNeutralButton("Xóa key"){_,_->prefs.edit().remove("openai_api_key").apply();Toast.makeText(this,"Đã xóa API Key khỏi ứng dụng.",Toast.LENGTH_SHORT).show()}
+   .setNegativeButton("Hủy",null)
+   .setPositiveButton("Lưu"){_,_->
+    val key=input.text.toString().trim()
+    if(key.isBlank()){Toast.makeText(this,"Key trống. Hãy nhập key hoặc chọn Xóa key.",Toast.LENGTH_LONG).show()}
+    else if(!key.startsWith("sk-")){Toast.makeText(this,"Key có vẻ không đúng định dạng. Hãy kiểm tra lại trên OpenAI Platform.",Toast.LENGTH_LONG).show()}
+    else {prefs.edit().putString("openai_api_key",key).apply();Toast.makeText(this,"Đã lưu key trên thiết bị.",Toast.LENGTH_LONG).show()}
+   }.show()
  }
  private fun showCountryPicker(){
   val countries=arrayOf("🇻🇳 Việt Nam","🇺🇸 Hoa Kỳ","🇬🇧 Vương quốc Anh","🇯🇵 Nhật Bản","🇰🇷 Hàn Quốc","🇨🇳 Trung Quốc","🇹🇭 Thái Lan","🇫🇷 Pháp","🇩🇪 Đức","🇪🇸 Tây Ban Nha","🇮🇹 Ý","🇷🇺 Nga","🇮🇩 Indonesia","🇲🇾 Malaysia","🇵🇭 Philippines","🇮🇳 Ấn Độ","🇧🇷 Brazil","🇵🇹 Bồ Đào Nha","🇹🇷 Thổ Nhĩ Kỳ","🇸🇦 Ả Rập Xê Út")
@@ -727,25 +749,35 @@ class MainActivity:AppCompatActivity(){
  }
  private fun openAiProxyReply(message:String,history:JSONArray=JSONArray()):String?{
   val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
-  if(configured.isBlank())return null
-  val endpoint=if(configured.endsWith("/api/openai-chat"))configured else configured.trimEnd('/')+"/api/openai-chat"
+  val key=prefs.getString("openai_api_key","")?.trim().orEmpty()
+  val direct=configured.isBlank() && key.isNotBlank()
+  if(configured.isBlank() && !direct)return null
+  val endpoint=if(direct)"https://api.openai.com/v1/chat/completions" else if(configured.endsWith("/api/openai-chat"))configured else configured.trimEnd('/')+"/api/openai-chat"
   var connection:HttpURLConnection?=null
   return try{
    connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{
-    requestMethod="POST"
-    connectTimeout=12000
-    readTimeout=30000
-    doOutput=true
+    requestMethod="POST";connectTimeout=12000;readTimeout=45000;doOutput=true
     setRequestProperty("Content-Type","application/json; charset=utf-8")
     setRequestProperty("Accept","application/json")
+    if(direct)setRequestProperty("Authorization","Bearer "+key)
    }
-   val payload=JSONObject().put("message",message).put("history",history).toString()
+   val payload=if(direct){
+    val msgs=JSONArray().put(JSONObject().put("role","system").put("content","You are Bảo Nam AI, a helpful multilingual assistant. Infer intent from context, answer accurately and clearly, adapt explanations to the subject, show steps for educational problems, verify calculations and code where possible, and admit uncertainty instead of inventing facts."))
+    for(i in 0 until history.length()){
+     val h=history.optJSONObject(i)?:continue
+     val role=h.optString("role")
+     if(role=="user"||role=="assistant")msgs.put(JSONObject().put("role",role).put("content",h.optString("content").take(3000)))
+    }
+    msgs.put(JSONObject().put("role","user").put("content",message.take(4000)))
+    JSONObject().put("model",openAiModel).put("messages",msgs).put("temperature",0.5).put("max_tokens",2400).toString()
+   }else JSONObject().put("message",message).put("history",history).toString()
    connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
    val status=connection.responseCode
    val stream=if(status in 200..299)connection.inputStream else connection.errorStream
    val body=stream?.bufferedReader(Charsets.UTF_8)?.use{it.readText().take(250000)} ?: return null
    if(status !in 200..299)return null
-   val answer=JSONObject(body).optString("answer","").trim()
+   val json=JSONObject(body)
+   val answer=if(direct)json.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content","")?.trim().orEmpty() else json.optString("answer","").trim()
    answer.takeIf{it.isNotBlank()}
   }catch(_:Exception){null}
   finally{connection?.disconnect()}
