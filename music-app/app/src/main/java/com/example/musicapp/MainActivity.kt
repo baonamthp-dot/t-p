@@ -49,6 +49,7 @@ class MainActivity:AppCompatActivity(){
  private val openAiModel="gpt-4.1-mini"
  private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
  private var tts:TextToSpeech?=null
+ private var activeAiInput:EditText?=null
  private val ownerCodeHash="0bc685edb692c7d408cd670c5b73c29a577188b66dd3a7b8f75e357a5b9b00e8"
  private val builtIn=listOf(
   Track(null,"🌙 Ru ngủ - Đêm yên bình",melody=melody(261.63,293.66,329.63,392.0,329.63,293.66,261.63)),
@@ -607,6 +608,8 @@ class MainActivity:AppCompatActivity(){
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
   addMessage("assistant","Xin chào! 👋 Mình là ChatGPT Music AI của Bảo Nam.\n\n🧠 Mình gửi câu hỏi đến máy chủ ChatGPT đã cấu hình.\n🌐 Nếu máy chủ AI chưa sẵn sàng, mình có thể tra cứu web khi cần.\n📴 Nếu không có kết nối, mình sẽ thử trả lời ngoại tuyến.\n\n🎓 Học tập • 🧮 Toán • 💻 Lập trình • 🎵 Âm nhạc • 🔊 Đọc câu trả lời\n\nMở menu ⋮ để tắt tìm Internet.")
+  val conversation=JSONArray()
+  var autoReadAnswer=prefs.getBoolean("ai_auto_speak",true)
   val composer=LinearLayout(this).apply{
    orientation=LinearLayout.HORIZONTAL
    gravity=Gravity.CENTER_VERTICAL
@@ -626,7 +629,10 @@ class MainActivity:AppCompatActivity(){
    setPadding(dp(14),dp(8),dp(14),dp(8))
    imeOptions=android.view.inputmethod.EditorInfo.IME_ACTION_SEND
   }
+  activeAiInput=input
   composer.addView(input,LinearLayout.LayoutParams(0,-2,1f))
+  val mic=button("🎙").apply{textSize=17f;background=rounded(Color.rgb(28,45,70),28);setOnClickListener{try{val intent=Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,"vi-VN");putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,"Hãy nói câu hỏi của bạn")};startActivityForResult(intent,104)}catch(_:Exception){Toast.makeText(this@MainActivity,"Thiết bị chưa hỗ trợ nhập giọng nói. Hãy kiểm tra Google app và quyền micro.",Toast.LENGTH_LONG).show()}}}
+  composer.addView(mic,LinearLayout.LayoutParams(dp(44),dp(46)).apply{leftMargin=dp(6)})
   val send=button("➤").apply{
    textSize=22f
    background=rounded(Color.rgb(17,119,247),30)
@@ -639,13 +645,15 @@ class MainActivity:AppCompatActivity(){
   fun ask(){
    val q=input.text.toString().trim()
    if(q.isEmpty())return
+   val historySnapshot=JSONArray()
+   for(i in 0 until conversation.length())historySnapshot.put(conversation.getJSONObject(i))
    input.setText("")
    addMessage("user",q)
    send.isEnabled=false
    send.text="…"
    addMessage("assistant","🤖 Đang suy nghĩ…")
    Thread{
-    val ai=openAiProxyReply(q)
+    val ai=openAiProxyReply(q,historySnapshot)
     val wantsWeb=prefs.getBoolean("ai_internet_search",true)&&shouldSearchInternet(q)
     val web=if(ai==null&&wantsWeb)searchInternet(q)else null
     val answer=ai ?: web ?: if(wantsWeb){
@@ -657,7 +665,11 @@ class MainActivity:AppCompatActivity(){
      if(!destroyed&&!isFinishing&&dialog.isShowing){
       if(messages.childCount>0)messages.removeViewAt(messages.childCount-1)
       addMessage("assistant",answer)
+      conversation.put(JSONObject().put("role","user").put("content",q))
+      conversation.put(JSONObject().put("role","assistant").put("content",answer))
+      while(conversation.length()>20)conversation.remove(0)
       lastAiAnswer=answer
+      if(autoReadAnswer)speakAi(answer)
       send.isEnabled=true
       send.text="➤"
      }
@@ -667,7 +679,7 @@ class MainActivity:AppCompatActivity(){
   back.setOnClickListener{dialog.dismiss()}
   menu.setOnClickListener{
    AlertDialog.Builder(this).setTitle("Bảo Nam Bot")
-    .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Gợi ý câu hỏi","Xóa cuộc trò chuyện","Bật/tắt tìm kiếm Internet")){_,which->
+    .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Gợi ý câu hỏi","Xóa cuộc trò chuyện","Bật/tắt tìm kiếm Internet",if(autoReadAnswer)"🔊 Tắt tự đọc câu trả lời" else "🔊 Bật tự đọc câu trả lời")){_,which->
      when(which){
       0->AlertDialog.Builder(this).setTitle("Giới thiệu Bảo Nam Bot")
        .setMessage("ChatGPT Music AI gửi câu hỏi đến máy chủ OpenAI đã cấu hình. Nếu AI không khả dụng, ứng dụng có thể tìm kết quả web hoặc dùng câu trả lời ngoại tuyến. API key phải được lưu trên máy chủ, không nhúng trong APK.")
@@ -679,6 +691,7 @@ class MainActivity:AppCompatActivity(){
       }.show()
       3->{messages.removeAllViews();addMessage("assistant","Cuộc trò chuyện đã được xóa. 👋 Bạn muốn hỏi gì?")}
       4->{val enabled=!prefs.getBoolean("ai_internet_search",true);prefs.edit().putBoolean("ai_internet_search",enabled).apply();Toast.makeText(this,if(enabled)"🌐 Đã bật tìm Internet" else "📴 Đã tắt tìm Internet, dùng chế độ ngoại tuyến",Toast.LENGTH_LONG).show()}
+      5->{autoReadAnswer=!autoReadAnswer;prefs.edit().putBoolean("ai_auto_speak",autoReadAnswer).apply();Toast.makeText(this,if(autoReadAnswer)"🔊 AI sẽ tự đọc câu trả lời mới." else "Đã tắt tự đọc câu trả lời.",Toast.LENGTH_LONG).show()}
      }
     }.show()
   }
@@ -698,7 +711,7 @@ class MainActivity:AppCompatActivity(){
   input.setOnEditorActionListener{_,action,_->
    if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){ask();true}else false
   }
-  dialog.setOnDismissListener{tts?.stop()}
+  dialog.setOnDismissListener{tts?.stop();activeAiInput=null}
   dialog.show()
   dialog.window?.setLayout(-1,-1)
   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
@@ -712,7 +725,7 @@ class MainActivity:AppCompatActivity(){
   if(listOf("xin chao","chao ban","hello","hi","hey","cam on","thank you","thanks","ban la ai","ten ban","quyen rieng tu","bao mat","api key","offline","ngoai tuyen").any{q.contains(it)})return false
   return true
  }
- private fun openAiProxyReply(message:String):String?{
+ private fun openAiProxyReply(message:String,history:JSONArray=JSONArray()):String?{
   val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
   if(configured.isBlank())return null
   val endpoint=if(configured.endsWith("/api/openai-chat"))configured else configured.trimEnd('/')+"/api/openai-chat"
@@ -726,7 +739,7 @@ class MainActivity:AppCompatActivity(){
     setRequestProperty("Content-Type","application/json; charset=utf-8")
     setRequestProperty("Accept","application/json")
    }
-   val payload=JSONObject().put("message",message).toString()
+   val payload=JSONObject().put("message",message).put("history",history).toString()
    connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
    val status=connection.responseCode
    val stream=if(status in 200..299)connection.inputStream else connection.errorStream
@@ -834,7 +847,7 @@ class MainActivity:AppCompatActivity(){
  private fun chooseAudio(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addCategory(Intent.CATEGORY_OPENABLE)},100)}
  private fun chooseAudioForTrack(t:Track){pendingYoutubeAudio=t;Toast.makeText(this,"Chọn tệp âm thanh của bài này để phát trực tiếp trong Music App.",Toast.LENGTH_LONG).show();startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},103)}
  private fun audioPreferenceKey(t:Track):String="youtube_audio_"+(Uri.parse(t.youtubeUrl).getQueryParameter("v")?:t.title.hashCode().toString())
- @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r==103){val target=pendingYoutubeAudio;pendingYoutubeAudio=null;if(c==Activity.RESULT_OK&&d?.data!=null&&target!=null){val u=d.data!!;try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};target.uri=u;prefs.edit().putString(audioPreferenceKey(target),u.toString()).apply();renderList(search.text.toString());Toast.makeText(this,"Đã gắn âm thanh vào “"+target.title+"”. Bài sẽ phát trong app, không mở YouTube Music.",Toast.LENGTH_LONG).show();playTrack(target)};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
+ @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==104){if(c==Activity.RESULT_OK){val said=d?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty();if(said.isNotBlank()){activeAiInput?.let{it.setText(said);it.setSelection(it.text.length)};Toast.makeText(this,if(activeAiInput!=null)"Đã nhận giọng nói. Nhấn gửi để hỏi AI." else "Đã nhận: $said. Mở AI để gửi câu hỏi.",Toast.LENGTH_SHORT).show()}};return};if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r==103){val target=pendingYoutubeAudio;pendingYoutubeAudio=null;if(c==Activity.RESULT_OK&&d?.data!=null&&target!=null){val u=d.data!!;try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};target.uri=u;prefs.edit().putString(audioPreferenceKey(target),u.toString()).apply();renderList(search.text.toString());Toast.makeText(this,"Đã gắn âm thanh vào “"+target.title+"”. Bài sẽ phát trong app, không mở YouTube Music.",Toast.LENGTH_LONG).show();playTrack(target)};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
  private fun renderList(qs:String){
   if(destroyed||!::list.isInitialized||!::search.isInitialized)return
