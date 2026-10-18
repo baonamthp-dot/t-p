@@ -39,7 +39,9 @@ jobs:
           test -s app/src/main/res/drawable-nodpi/app_icon.jpg
 
       - name: Build debug APK
-        run: cd music-app && ./gradlew assembleDebug
+        env:
+          GEMINI_BACKEND_URL: ${{ vars.GEMINI_BACKEND_URL }}
+        run: cd music-app && ./gradlew assembleDebug -PGEMINI_BACKEND_URL="$GEMINI_BACKEND_URL"
 
       - name: Verify APK exists
         run: test -s music-app/app/build/outputs/apk/debug/app-debug.apk
