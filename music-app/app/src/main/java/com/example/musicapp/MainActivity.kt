@@ -553,7 +553,7 @@ class MainActivity:AppCompatActivity(){
    setTextColor(Color.WHITE)
   })
   titleBox.addView(TextView(this).apply{
-   text="● Tìm Internet • Có chế độ ngoại tuyến dự phòng";textSize=11f
+   text="● Gemini AI • Tìm web • Ngoại tuyến dự phòng";textSize=11f
    setTextColor(Color.rgb(116,203,171))
   })
   header.addView(titleBox,LinearLayout.LayoutParams(0,dp(48),1f))
@@ -606,7 +606,7 @@ class MainActivity:AppCompatActivity(){
    messages.addView(line,LinearLayout.LayoutParams(-1,-2))
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
-  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\n🌐 Mặc định mình thử tìm kết quả web cho câu hỏi cần tra cứu. Khi tìm web bật, nội dung truy vấn sẽ được gửi tới DuckDuckGo để tìm kết quả.\n📴 Nếu Internet không hoạt động, mình sẽ thử trả lời bằng kiến thức tích hợp sẵn.\n\n🎓 Hỗ trợ học tập • 🧮 Toán cơ bản • 💻 Lập trình • 🎵 Music App • 🔊 Đọc câu trả lời\n\nBạn có thể mở menu ⋮ để tắt tìm Internet và chỉ dùng chế độ ngoại tuyến.")
+  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\n🧠 Mình sẽ thử Gemini AI qua máy chủ trung gian nếu đã cấu hình.\n🌐 Nếu AI không sẵn sàng, mình có thể tra cứu web khi cần.\n📴 Nếu cả hai không hoạt động, mình dùng câu trả lời ngoại tuyến dự phòng.\n\n🎓 Hỗ trợ học tập • 🧮 Toán cơ bản • 💻 Lập trình • 🎵 Music App • 🔊 Đọc câu trả lời\n\nBạn có thể mở menu ⋮ để tắt tìm Internet và chỉ dùng chế độ ngoại tuyến.")
   val composer=LinearLayout(this).apply{
    orientation=LinearLayout.HORIZONTAL
    gravity=Gravity.CENTER_VERTICAL
@@ -643,29 +643,26 @@ class MainActivity:AppCompatActivity(){
    addMessage("user",q)
    send.isEnabled=false
    send.text="…"
-   val useInternet=prefs.getBoolean("ai_internet_search",true)&&shouldSearchInternet(q)
-   if(!useInternet){
-    val answer=offlineBotReply(q)
-    addMessage("assistant",answer)
-    lastAiAnswer=answer
-    send.isEnabled=true
-    send.text="➤"
-   }else{
-    addMessage("assistant","🌐 Đang tìm thông tin trên Internet…")
-    Thread{
-     val online=searchInternet(q)
-     val answer=online ?: ("Mình chưa lấy được kết quả Internet lần này. Mình sẽ thử trả lời bằng chế độ ngoại tuyến.\n\n"+offlineBotReply(q))
-     runOnUiThread{
-      if(!destroyed&&!isFinishing&&dialog.isShowing){
-       if(messages.childCount>0)messages.removeViewAt(messages.childCount-1)
-       addMessage("assistant",answer)
-       lastAiAnswer=answer
-       send.isEnabled=true
-       send.text="➤"
-      }
+   addMessage("assistant","🤖 Đang suy nghĩ…")
+   Thread{
+    val ai=geminiProxyReply(q)
+    val wantsWeb=prefs.getBoolean("ai_internet_search",true)&&shouldSearchInternet(q)
+    val web=if(ai==null&&wantsWeb)searchInternet(q)else null
+    val answer=ai ?: web ?: if(wantsWeb){
+     "Mình chưa kết nối được AI hoặc lấy kết quả web lần này. Mình sẽ thử trả lời ngoại tuyến.\n\n"+offlineBotReply(q)
+    }else{
+     offlineBotReply(q)
+    }
+    runOnUiThread{
+     if(!destroyed&&!isFinishing&&dialog.isShowing){
+      if(messages.childCount>0)messages.removeViewAt(messages.childCount-1)
+      addMessage("assistant",answer)
+      lastAiAnswer=answer
+      send.isEnabled=true
+      send.text="➤"
      }
-    }.start()
-   }
+    }
+   }.start()
   }
   back.setOnClickListener{dialog.dismiss()}
   menu.setOnClickListener{
@@ -673,7 +670,7 @@ class MainActivity:AppCompatActivity(){
     .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Gợi ý câu hỏi","Xóa cuộc trò chuyện","Bật/tắt tìm kiếm Internet")){_,which->
      when(which){
       0->AlertDialog.Builder(this).setTitle("Giới thiệu Bảo Nam Bot")
-       .setMessage("Bảo Nam Bot có thể tìm kết quả web qua DuckDuckGo khi có Internet; nếu tìm kiếm thất bại, Bot dùng bộ trả lời ngoại tuyến dự phòng. Không cần API key. Kết quả web có thể chưa đầy đủ hoặc không chính xác, hãy kiểm tra nguồn.")
+       .setMessage("Bảo Nam Bot ưu tiên Gemini AI qua máy chủ trung gian được cấu hình. Nếu AI không khả dụng, Bot có thể tìm kết quả web qua DuckDuckGo hoặc dùng câu trả lời ngoại tuyến. API key chỉ được lưu trên máy chủ, không nhúng trong APK.")
        .setPositiveButton("Đóng",null).show()
       1->speakAi(lastAiAnswer)
       2->AlertDialog.Builder(this).setTitle("Gợi ý câu hỏi").setItems(arrayOf("Giải thích điệp ngữ","Tính 125 + 37","Hướng dẫn sửa lỗi Kotlin","Cách dùng Music App")){_,pick->
@@ -714,6 +711,30 @@ class MainActivity:AppCompatActivity(){
   if(Regex("^\\s*-?\\d+(?:[.,]\\d+)?\\s*[+*/x×-]\\s*-?\\d+(?:[.,]\\d+)?=?\\s*$").matches(q))return false
   if(listOf("xin chao","chao ban","hello","hi","hey","cam on","thank you","thanks","ban la ai","ten ban","quyen rieng tu","bao mat","api key","offline","ngoai tuyen").any{q.contains(it)})return false
   return true
+ }
+ private fun geminiProxyReply(message:String):String?{
+  val endpoint=BuildConfig.GEMINI_BACKEND_URL.trim()
+  if(endpoint.isBlank())return null
+  var connection:HttpURLConnection?=null
+  return try{
+   connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{
+    requestMethod="POST"
+    connectTimeout=12000
+    readTimeout=30000
+    doOutput=true
+    setRequestProperty("Content-Type","application/json; charset=utf-8")
+    setRequestProperty("Accept","application/json")
+   }
+   val payload=JSONObject().put("message",message).toString()
+   connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
+   val status=connection.responseCode
+   val stream=if(status in 200..299)connection.inputStream else connection.errorStream
+   val body=stream?.bufferedReader(Charsets.UTF_8)?.use{it.readText().take(250000)} ?: return null
+   if(status !in 200..299)return null
+   val answer=JSONObject(body).optString("answer","").trim()
+   answer.takeIf{it.isNotBlank()}
+  }catch(_:Exception){null}
+  finally{connection?.disconnect()}
  }
  private fun searchInternet(query:String):String?{
   var connection:HttpURLConnection?=null
