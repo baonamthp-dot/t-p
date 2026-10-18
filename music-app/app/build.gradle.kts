@@ -5,12 +5,12 @@ plugins {
 android {
     namespace = "com.example.musicapp"
     compileSdk = 35
-    defaultConfig {
-        applicationId = "com.example.musicapp"
+    buildFeatures {\n        buildConfig = true\n    }\n    defaultConfig {
+        val geminiBackendUrl = (project.findProperty("GEMINI_BACKEND_URL") as String?) ?: System.getenv("GEMINI_BACKEND_URL") ?: ""\n        buildConfigField("String", "GEMINI_BACKEND_URL", "\\\"${geminiBackendUrl.replace("\\\\", "\\\\\\\\").replace("\\\"", "\\\\\\\"")}\\\"")\n        applicationId = "com.example.musicapp"
         minSdk = 23
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
