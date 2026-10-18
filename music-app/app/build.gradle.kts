@@ -28,8 +28,10 @@ android {
     }
     buildTypes {
         debug {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Keep debug APK builds reliable while diagnosing CI failures.
+            // Release builds can enable R8/resource shrinking once keep rules are tested.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
