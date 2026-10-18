@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
 val geminiBackendUrl = (project.findProperty("GEMINI_BACKEND_URL") as String?) ?: System.getenv("GEMINI_BACKEND_URL") ?: ""
 
 android {
@@ -11,9 +12,8 @@ android {
         buildConfig = true
     }
     defaultConfig {
-        buildConfigField("String", "GEMINI_BACKEND_URL", "\"$geminiBackendUrl\"")
-
         applicationId = "com.example.musicapp"
+        buildConfigField("String", "GEMINI_BACKEND_URL", "\"$geminiBackendUrl\"")
         minSdk = 23
         targetSdk = 35
         versionCode = 6
