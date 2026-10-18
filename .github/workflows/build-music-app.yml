@@ -50,6 +50,9 @@ jobs:
           OPENAI_BACKEND_URL: ${{ vars.OPENAI_BACKEND_URL }}
         run: gradle assembleDebug -POPENAI_BACKEND_URL="$OPENAI_BACKEND_URL"
 
+      - name: Identify build target
+        run: echo "Building ChatGPT Music AI Android debug APK from branch $GITHUB_REF_NAME"
+
       - name: Verify APK exists
         working-directory: music-app
         run: |
