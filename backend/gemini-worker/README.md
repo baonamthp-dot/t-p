@@ -1,46 +1,47 @@
-# Gemini Music AI — Cấu hình an toàn
+# Gemini Music AI — triển khai không cần Cloudflare
 
-Gemini Music AI là trợ lý trong Music App của Bảo Nam: hỗ trợ câu hỏi phổ thông, học tập, lập trình và các ý tưởng/gợi ý âm nhạc. AI có thể gợi ý playlist theo tâm trạng, giải thích nhịp độ và nhạc cụ, hỗ trợ sáng tác ý tưởng mới. AI **không tự phát nhạc hoặc điều khiển thư viện nhạc** nếu ứng dụng chưa có chức năng tương ứng.
+Repository đã có API backend dành cho Vercel tại `api/chat.js`. API gọi Gemini ở phía máy chủ để khóa API không nằm trong APK.
 
-**Không có API key nào được tạo sẵn trong repository này.** Bạn cần tự tạo key trong tài khoản Google AI Studio. Đừng gửi key trong chat, đừng commit key lên GitHub và đừng nhập key vào APK.
+## 1. Chuẩn bị Gemini API key
 
-## 1. Tạo Gemini API key
+Tạo key trong [Google AI Studio](https://aistudio.google.com/apikey). Giữ key riêng tư; không gửi key vào chat, không commit lên GitHub và không đưa key vào ứng dụng Android.
 
-Mở [Google AI Studio — API keys](https://aistudio.google.com/apikey), đăng nhập và tạo key cho dự án của bạn. Hãy giữ key riêng tư và theo dõi hạn mức sử dụng.
+## 2. Triển khai API bằng Vercel
 
-## 2. Chỗ nhập key (ở máy chủ, không phải ứng dụng)
+1. Mở [Vercel](https://vercel.com/) và đăng nhập. Nếu có lựa chọn, bạn có thể dùng tài khoản GitHub để kết nối repository.
+2. Chọn **Add New → Project**, rồi import repository `baonamthp-dot/t-p`.
+3. Giữ **Root Directory** ở thư mục gốc của repository. Không chọn `music-app`, vì API nằm trong `api/chat.js`.
+4. Trước khi deploy, mở **Environment Variables** và thêm:
+   - **Name:** `GEMINI_API_KEY`
+   - **Value:** dán Gemini API key của bạn
+   - Chọn môi trường **Production** (có thể chọn Preview nếu muốn thử bản xem trước).
+5. Nhấn **Deploy** và chờ Vercel hoàn tất.
+6. Sau khi triển khai thành công, lấy domain dự án, ví dụ `https://ten-du-an.vercel.app`. Endpoint chat sẽ là `https://ten-du-an.vercel.app/api/chat`.
 
-Trên máy tính, cài Node.js/npm và mở terminal trong thư mục này. Đăng nhập Cloudflare rồi nhập lệnh:
+Không đưa giá trị của `GEMINI_API_KEY` vào GitHub Variables, mã Android, file Gradle hoặc APK. Nếu lỡ công khai key, hãy thu hồi key đó và tạo key mới.
 
-```sh
-npx wrangler login
-npx wrangler secret put GEMINI_API_KEY
-```
-
-Terminal sẽ yêu cầu nhập giá trị secret. **Dán key vào lời nhắc bảo mật của terminal**, không dán vào mã nguồn, GitHub Issues, chat hay tệp cấu hình thường. Đây là nơi lưu key an toàn cho Worker.
-
-Sau đó triển khai Worker:
-
-```sh
-npx wrangler deploy
-```
-
-Cloudflare sẽ cung cấp URL dạng `https://bao-nam-bot-gemini.<tai-khoan>.workers.dev`. URL ứng dụng cần dùng là URL đó cộng thêm `/chat`.
-
-## 3. Kết nối ứng dụng Android
+## 3. Kết nối APK qua GitHub
 
 Trong repository GitHub, mở:
 
 **Settings → Secrets and variables → Actions → Variables → New repository variable**
 
-Tạo biến tên `GEMINI_BACKEND_URL` và đặt giá trị là URL Worker đầy đủ, kết thúc bằng `/chat`. Đây chỉ là URL, **không phải API key**.
+Tạo biến:
+- **Name:** `GEMINI_BACKEND_URL`
+- **Value:** URL endpoint Vercel đầy đủ, kết thúc bằng `/api/chat` (đây là URL công khai, không phải API key).
 
-Sau đó mở tab Actions và chạy workflow **Build Music App APK**. Workflow sẽ đưa URL máy chủ vào bản build. Nếu URL chưa được cấu hình hoặc Gemini không phản hồi, ứng dụng sẽ thử tìm kiếm web rồi dùng câu trả lời ngoại tuyến.
+Sau đó vào **Actions → Build Music App APK → Run workflow** để build APK mới. Workflow hiện có đọc biến `GEMINI_BACKEND_URL` và đưa URL vào bản build.
 
-## Lưu ý bảo mật
+## 4. Kiểm tra và xử lý lỗi
 
-- Chỉ lưu `GEMINI_API_KEY` dưới dạng Cloudflare Worker secret.
-- Không thêm API key vào APK, mã Android, Gradle, GitHub Variables hoặc commit.
-- Trước khi chia sẻ ứng dụng rộng rãi, hãy cấu hình giới hạn tần suất (rate limiting) và theo dõi mức sử dụng/quota để tránh người khác lạm dụng endpoint công khai.
-- Worker giới hạn mỗi tin nhắn 4.000 ký tự và không lưu lịch sử hội thoại.
-- Hạn mức, tính khả dụng và chi phí phụ thuộc vào cài đặt dự án Google của bạn.
+- Nếu ứng dụng báo AI chưa được cấu hình: kiểm tra biến `GEMINI_API_KEY` trong Vercel và redeploy.
+- Nếu ứng dụng không kết nối được: kiểm tra `GEMINI_BACKEND_URL` có đúng domain và kết thúc bằng `/api/chat` không.
+- Nếu Gemini trả lỗi hạn mức: chờ rồi thử lại, đồng thời kiểm tra quota của dự án Google.
+- Nếu thay đổi Environment Variables trên Vercel, hãy redeploy để áp dụng.
+- Backend giới hạn tin nhắn 4.000 ký tự và không lưu lịch sử hội thoại. Endpoint hiện cho phép gọi công khai; trước khi chia sẻ APK rộng rãi, nên bổ sung xác thực và giới hạn tần suất để ngăn lạm dụng.
+
+## Tính năng của Gemini Music AI
+
+Trợ lý được hướng dẫn hỗ trợ âm nhạc, gợi ý playlist, giải thích BPM/nhạc cụ, học tập và lập trình. Nó không tự phát nhạc hay tìm kiếm web trực tiếp trừ khi ứng dụng được tích hợp công cụ tương ứng.
+
+Cloudflare Worker cũ vẫn nằm trong `backend/gemini-worker/`, nhưng bạn không cần triển khai nó khi sử dụng cấu hình Vercel này.
