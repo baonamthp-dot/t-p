@@ -47,8 +47,8 @@ jobs:
       - name: Build debug APK
         working-directory: music-app
         env:
-          GEMINI_BACKEND_URL: ${{ vars.GEMINI_BACKEND_URL }}
-        run: gradle assembleDebug -PGEMINI_BACKEND_URL="$GEMINI_BACKEND_URL"
+          OPENAI_BACKEND_URL: ${{ vars.OPENAI_BACKEND_URL }}
+        run: gradle assembleDebug -POPENAI_BACKEND_URL="$OPENAI_BACKEND_URL"
 
       - name: Verify APK exists
         working-directory: music-app
