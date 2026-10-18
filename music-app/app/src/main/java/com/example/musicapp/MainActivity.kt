@@ -561,7 +561,7 @@ class MainActivity:AppCompatActivity(){
    val content=LinearLayout(this).apply{
     orientation=LinearLayout.VERTICAL
     setPadding(dp(20),dp(8),dp(20),dp(4))
-    addView(TextView(this).apply{
+    addView(TextView(this@MainActivity).apply{
      text="Nhập OpenAI API Key để dùng AI trực tiếp, hoặc chọn Dùng AI không key để tiếp tục chế độ dự phòng. API có thể tính phí riêng."
      setTextColor(Color.LTGRAY);textSize=14f
     },LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=dp(12)})
