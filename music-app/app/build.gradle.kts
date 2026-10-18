@@ -3,7 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val geminiBackendUrl = (project.findProperty("GEMINI_BACKEND_URL") as String?) ?: System.getenv("GEMINI_BACKEND_URL") ?: ""
+val openAiBackendUrl = (project.findProperty("OPENAI_BACKEND_URL") as String?) ?: System.getenv("OPENAI_BACKEND_URL") ?: ""
 
 android {
     namespace = "com.example.musicapp"
@@ -13,7 +13,7 @@ android {
     }
     defaultConfig {
         applicationId = "com.example.musicapp"
-        buildConfigField("String", "GEMINI_BACKEND_URL", "\"$geminiBackendUrl\"")
+        buildConfigField("String", "OPENAI_BACKEND_URL", "\"$openAiBackendUrl\"")
         minSdk = 23
         targetSdk = 35
         versionCode = 6
