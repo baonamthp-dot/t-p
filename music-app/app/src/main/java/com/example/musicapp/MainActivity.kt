@@ -551,6 +551,42 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showAiTutor(){
   if(destroyed||isFinishing)return
+  if((prefs.getString("openai_api_key","") ?: "").isBlank()){
+   val keyInput=EditText(this).apply{
+    hint="sk-..."
+    setSingleLine(true)
+    inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+    setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)
+   }
+   val content=LinearLayout(this).apply{
+    orientation=LinearLayout.VERTICAL
+    setPadding(dp(20),dp(8),dp(20),dp(4))
+    addView(TextView(this).apply{
+     text="Nhập OpenAI API Key để dùng AI trực tiếp, hoặc chọn Dùng AI không key để tiếp tục chế độ dự phòng. API có thể tính phí riêng."
+     setTextColor(Color.LTGRAY);textSize=14f
+    },LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=dp(12)})
+    addView(keyInput,LinearLayout.LayoutParams(-1,dp(52)))
+   }
+   AlertDialog.Builder(this).setTitle("🤖 Kết nối Bảo Nam AI")
+    .setView(content)
+    .setPositiveButton("Lưu key và mở AI"){_,_->
+     val key=keyInput.text.toString().trim()
+     if(key.startsWith("sk-")){
+      prefs.edit().putString("openai_api_key",key).apply()
+      showAiTutor()
+     }else{
+      Toast.makeText(this,"Key chưa đúng định dạng. Mở AI không key.",Toast.LENGTH_LONG).show()
+      showAiTutorWithoutKey()
+     }
+    }
+    .setNegativeButton("Dùng AI không key"){_,_->showAiTutorWithoutKey()}
+    .setNeutralButton("Hủy",null)
+    .show()
+   return
+  }
+  showAiTutorWithoutKey()
+ }
+ private fun showAiTutorWithoutKey(){
   val navy=Color.rgb(7,16,31)
   val panel=LinearLayout(this).apply{
    orientation=LinearLayout.VERTICAL
