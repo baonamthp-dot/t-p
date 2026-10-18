@@ -9,9 +9,11 @@ android {
     compileSdk = 35
     buildFeatures {
         buildConfig = true
-    }\n    defaultConfig {
+    }
+    defaultConfig {
         buildConfigField("String", "GEMINI_BACKEND_URL", "\"$geminiBackendUrl\"")
-\n        applicationId = "com.example.musicapp"
+
+        applicationId = "com.example.musicapp"
         minSdk = 23
         targetSdk = 35
         versionCode = 6
