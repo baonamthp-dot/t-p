@@ -1,29 +1,44 @@
-# Bảo Nam Bot — Gemini backend
+# Bảo Nam Bot — Cấu hình Gemini an toàn
 
-This Worker keeps the Gemini API key on the server. The Android APK must never contain the Gemini key.
+**Không có API key nào được tạo sẵn trong repository này.** Bạn cần tự tạo key trong tài khoản Google AI Studio. Đừng gửi key trong chat, đừng commit key lên GitHub và đừng nhập key vào APK.
 
-## Deploy (Cloudflare Workers)
+## 1. Tạo Gemini API key
 
-1. Create a Cloudflare account and install Node.js/npm on a computer.
-2. In this folder, run `npx wrangler login`.
-3. Set the secret without putting it in Git:
-   `npx wrangler secret put GEMINI_API_KEY`
-   Paste the key from your Google AI Studio project into the terminal prompt. Do not commit it or send it in chat.
-4. Deploy:
-   `npx wrangler deploy`
-5. Cloudflare prints a URL like `https://bao-nam-bot-gemini.<your-account>.workers.dev`. The Android app expects the full URL ending in `/chat`.
+Mở [Google AI Studio — API keys](https://aistudio.google.com/apikey), đăng nhập và tạo key cho dự án của bạn. Hãy giữ key riêng tư và theo dõi hạn mức sử dụng.
 
-## Connect the APK
+## 2. Chỗ nhập key (ở máy chủ, không phải ứng dụng)
 
-In the GitHub repository settings, add a repository **variable** named `GEMINI_BACKEND_URL` (not the API key) with the full Worker URL ending in `/chat`:
+Trên máy tính, cài Node.js/npm và mở terminal trong thư mục này. Đăng nhập Cloudflare rồi nhập lệnh:
 
-Settings → Secrets and variables → Actions → Variables → New repository variable.
+```sh
+npx wrangler login
+npx wrangler secret put GEMINI_API_KEY
+```
 
-Then run the **Build Music App APK** workflow again. The workflow passes that URL to Gradle as a build property. If the variable is empty or the Worker is unavailable, the app falls back to web search and then offline answers.
+Terminal sẽ yêu cầu nhập giá trị secret. **Dán key vào lời nhắc bảo mật của terminal**, không dán vào mã nguồn, GitHub Issues, chat hay tệp cấu hình thường. Đây là nơi lưu key an toàn cho Worker.
 
-## Important security notes
+Sau đó triển khai Worker:
 
-- Keep `GEMINI_API_KEY` as a Cloudflare Worker secret only. Never put it in Android code, Gradle files, GitHub variables, or the APK.
-- A public mobile app endpoint can be abused. Configure Cloudflare rate limiting for the Worker route, monitor Gemini usage, and set quota/budget alerts where available before sharing the APK widely.
-- This endpoint limits each message to 4,000 characters. It does not persist chat history.
-- API usage, model availability, and charges depend on the Google AI Studio / Google Cloud project settings.
+```sh
+npx wrangler deploy
+```
+
+Cloudflare sẽ cung cấp URL dạng `https://bao-nam-bot-gemini.<tai-khoan>.workers.dev`. URL ứng dụng cần dùng là URL đó cộng thêm `/chat`.
+
+## 3. Kết nối ứng dụng Android
+
+Trong repository GitHub, mở:
+
+**Settings → Secrets and variables → Actions → Variables → New repository variable**
+
+Tạo biến tên `GEMINI_BACKEND_URL` và đặt giá trị là URL Worker đầy đủ, kết thúc bằng `/chat`. Đây chỉ là URL, **không phải API key**.
+
+Sau đó mở tab Actions và chạy workflow **Build Music App APK**. Workflow sẽ đưa URL máy chủ vào bản build. Nếu URL chưa được cấu hình hoặc Gemini không phản hồi, ứng dụng sẽ thử tìm kiếm web rồi dùng câu trả lời ngoại tuyến.
+
+## Lưu ý bảo mật
+
+- Chỉ lưu `GEMINI_API_KEY` dưới dạng Cloudflare Worker secret.
+- Không thêm API key vào APK, mã Android, Gradle, GitHub Variables hoặc commit.
+- Trước khi chia sẻ ứng dụng rộng rãi, hãy cấu hình giới hạn tần suất (rate limiting) và theo dõi mức sử dụng/quota để tránh người khác lạm dụng endpoint công khai.
+- Worker giới hạn mỗi tin nhắn 4.000 ký tự và không lưu lịch sử hội thoại.
+- Hạn mức, tính khả dụng và chi phí phụ thuộc vào cài đặt dự án Google của bạn.
