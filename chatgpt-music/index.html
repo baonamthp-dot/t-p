@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10101a"><title>ChatGPT Music AI — Bảo Nam</title>
+<style>
+:root{color-scheme:dark;--bg:#10101a;--panel:#1a1a29;--line:#33334a;--text:#f5f5ff;--muted:#aaaac2;--accent:#a78bfa}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#27204a 0,#10101a 55%);color:var(--text);font:16px system-ui,-apple-system,sans-serif;min-height:100vh}
+main{max-width:900px;margin:auto;padding:20px;display:flex;flex-direction:column;gap:16px;min-height:100vh}
+header,.panel{background:#1a1a29eF;border:1px solid var(--line);border-radius:18px;padding:16px}
+header{display:flex;align-items:center;gap:12px} .logo{font-size:28px}h1{font-size:20px;margin:0}p{margin:4px 0;color:var(--muted);font-size:13px}
+.panel h2{font-size:16px;margin:0 0 10px}.chat{height:43vh;min-height:250px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px}
+.msg{white-space:pre-wrap;line-height:1.5;max-width:92%;padding:12px 14px;border-radius:15px;background:#29293c;align-self:flex-start;overflow-wrap:anywhere}.msg.user{background:#514080;align-self:flex-end}
+form{display:flex;gap:8px;margin-top:10px}textarea,input[type=text]{font:inherit;color:var(--text);background:#11111c;border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0;width:100%}textarea{resize:vertical;min-height:48px;max-height:140px}
+button,.filebtn{background:var(--accent);color:#171323;border:0;border-radius:12px;padding:11px 15px;font-weight:700;cursor:pointer}button:disabled{opacity:.55}.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.tools button{background:#34334a;color:var(--text)}.status{color:var(--muted);font-size:13px;min-height:18px}
+audio{width:100%;margin-top:10px}input[type=file]{max-width:100%}.hint{font-size:12px;color:var(--muted);line-height:1.5}
+</style></head>
+<body><main>
+<header><div class="logo">🎧</div><div><h1>ChatGPT Music AI</h1><p>Phiên bản của Bảo Nam · Trò chuyện, đọc câu trả lời và nghe nhạc</p></div></header>
+<section class="panel"><h2>💬 Trò chuyện với AI</h2><div id="chat" class="chat"><div class="msg">Chào bạn! Mình là ChatGPT Music AI. Bạn muốn gợi ý nhạc, học tập hay lập trình hôm nay?</div></div>
+<form id="form"><textarea id="message" placeholder="Nhập câu hỏi..." required maxlength="4000"></textarea><button id="send">Gửi</button></form><div class="tools"><button id="speak" type="button">🔊 Đọc câu trả lời</button><button id="stop" type="button">⏹ Dừng đọc</button><button id="clear" type="button">🧹 Xóa hội thoại</button></div><div class="status" id="status" aria-live="polite"></div><p class="hint">Cần triển khai máy chủ và đặt OPENAI_API_KEY trong Environment Variables. Không nhập khóa bí mật vào trang này.</p></section>
+<section class="panel"><h2>🎵 Trình phát nhạc của bạn</h2><p>Chọn tệp âm thanh hợp pháp từ thiết bị để phát tại đây.</p><input id="audiofile" type="file" accept="audio/*"><audio id="player" controls></audio><p class="hint">Tệp được phát ngay trên thiết bị; trang không tải tệp nhạc của bạn lên máy chủ.</p></section>
+</main><script>
+const chat=document.querySelector('#chat'),form=document.querySelector('#form'),input=document.querySelector('#message'),send=document.querySelector('#send'),status=document.querySelector('#status');
+let history=[],lastAnswer='',busy=false;
+function bubble(text,role='assistant'){const el=document.createElement('div');el.className='msg '+(role==='user'?'user':'');el.textContent=text;chat.appendChild(el);chat.scrollTop=chat.scrollHeight;return el}
+form.addEventListener('submit',async e=>{e.preventDefault();const message=input.value.trim();if(!message||busy)return;busy=true;send.disabled=true;input.value='';bubble(message,'user');const wait=bubble('Đang suy nghĩ…');status.textContent='';
+try{const r=await fetch('/api/openai-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,history})});const d=await r.json();wait.remove();if(!r.ok)throw new Error(d.error||'Có lỗi xảy ra');lastAnswer=d.answer;bubble(lastAnswer);history.push({role:'user',content:message},{role:'assistant',content:lastAnswer});history=history.slice(-10);}
+catch(err){wait.textContent='Chưa kết nối được AI: '+err.message;status.textContent='Kiểm tra việc triển khai và biến OPENAI_API_KEY trên máy chủ.'}
+finally{busy=false;send.disabled=false;input.focus()}});
+document.querySelector('#speak').onclick=()=>{if(!lastAnswer){status.textContent='Chưa có câu trả lời để đọc.';return}if(!('speechSynthesis'in window)){status.textContent='Trình duyệt này không hỗ trợ đọc văn bản.';return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(lastAnswer);u.lang='vi-VN';speechSynthesis.speak(u)};
+document.querySelector('#stop').onclick=()=>speechSynthesis?.cancel();
+document.querySelector('#clear').onclick=()=>{chat.replaceChildren();history=[];lastAnswer='';status.textContent='Đã xóa hội thoại trên trang này.'};
+document.querySelector('#audiofile').addEventListener('change',e=>{const f=e.target.files?.[0];if(!f)return;const player=document.querySelector('#player');if(player.dataset.url)URL.revokeObjectURL(player.dataset.url);const url=URL.createObjectURL(f);player.dataset.url=url;player.src=url;player.play().catch(()=>{})});
+</script></body></html>
