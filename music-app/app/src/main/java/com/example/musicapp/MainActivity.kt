@@ -553,7 +553,7 @@ class MainActivity:AppCompatActivity(){
    setTextColor(Color.WHITE)
   })
   titleBox.addView(TextView(this).apply{
-   text="● Gemini AI • Tìm web • Ngoại tuyến dự phòng";textSize=11f
+   text="● ChatGPT AI • Tìm web • Đọc câu trả lời";textSize=11f
    setTextColor(Color.rgb(116,203,171))
   })
   header.addView(titleBox,LinearLayout.LayoutParams(0,dp(48),1f))
@@ -606,7 +606,7 @@ class MainActivity:AppCompatActivity(){
    messages.addView(line,LinearLayout.LayoutParams(-1,-2))
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
-  addMessage("assistant","Xin chào! 👋 Mình là Bảo Nam Bot.\n\n🧠 Mình sẽ thử Gemini AI qua máy chủ trung gian nếu đã cấu hình.\n🌐 Nếu AI không sẵn sàng, mình có thể tra cứu web khi cần.\n📴 Nếu cả hai không hoạt động, mình dùng câu trả lời ngoại tuyến dự phòng.\n\n🎓 Hỗ trợ học tập • 🧮 Toán cơ bản • 💻 Lập trình • 🎵 Music App • 🔊 Đọc câu trả lời\n\nBạn có thể mở menu ⋮ để tắt tìm Internet và chỉ dùng chế độ ngoại tuyến.")
+  addMessage("assistant","Xin chào! 👋 Mình là ChatGPT Music AI của Bảo Nam.\n\n🧠 Mình gửi câu hỏi đến máy chủ ChatGPT đã cấu hình.\n🌐 Nếu máy chủ AI chưa sẵn sàng, mình có thể tra cứu web khi cần.\n📴 Nếu không có kết nối, mình sẽ thử trả lời ngoại tuyến.\n\n🎓 Học tập • 🧮 Toán • 💻 Lập trình • 🎵 Âm nhạc • 🔊 Đọc câu trả lời\n\nMở menu ⋮ để tắt tìm Internet.")
   val composer=LinearLayout(this).apply{
    orientation=LinearLayout.HORIZONTAL
    gravity=Gravity.CENTER_VERTICAL
@@ -645,7 +645,7 @@ class MainActivity:AppCompatActivity(){
    send.text="…"
    addMessage("assistant","🤖 Đang suy nghĩ…")
    Thread{
-    val ai=geminiProxyReply(q)
+    val ai=openAiProxyReply(q)
     val wantsWeb=prefs.getBoolean("ai_internet_search",true)&&shouldSearchInternet(q)
     val web=if(ai==null&&wantsWeb)searchInternet(q)else null
     val answer=ai ?: web ?: if(wantsWeb){
@@ -670,7 +670,7 @@ class MainActivity:AppCompatActivity(){
     .setItems(arrayOf("Giới thiệu","Đọc câu trả lời gần nhất","Gợi ý câu hỏi","Xóa cuộc trò chuyện","Bật/tắt tìm kiếm Internet")){_,which->
      when(which){
       0->AlertDialog.Builder(this).setTitle("Giới thiệu Bảo Nam Bot")
-       .setMessage("Bảo Nam Bot ưu tiên Gemini AI qua máy chủ trung gian được cấu hình. Nếu AI không khả dụng, Bot có thể tìm kết quả web qua DuckDuckGo hoặc dùng câu trả lời ngoại tuyến. API key chỉ được lưu trên máy chủ, không nhúng trong APK.")
+       .setMessage("ChatGPT Music AI gửi câu hỏi đến máy chủ OpenAI đã cấu hình. Nếu AI không khả dụng, ứng dụng có thể tìm kết quả web hoặc dùng câu trả lời ngoại tuyến. API key phải được lưu trên máy chủ, không nhúng trong APK.")
        .setPositiveButton("Đóng",null).show()
       1->speakAi(lastAiAnswer)
       2->AlertDialog.Builder(this).setTitle("Gợi ý câu hỏi").setItems(arrayOf("Giải thích điệp ngữ","Tính 125 + 37","Hướng dẫn sửa lỗi Kotlin","Cách dùng Music App")){_,pick->
@@ -712,9 +712,10 @@ class MainActivity:AppCompatActivity(){
   if(listOf("xin chao","chao ban","hello","hi","hey","cam on","thank you","thanks","ban la ai","ten ban","quyen rieng tu","bao mat","api key","offline","ngoai tuyen").any{q.contains(it)})return false
   return true
  }
- private fun geminiProxyReply(message:String):String?{
-  val endpoint=BuildConfig.GEMINI_BACKEND_URL.trim()
-  if(endpoint.isBlank())return null
+ private fun openAiProxyReply(message:String):String?{
+  val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
+  if(configured.isBlank())return null
+  val endpoint=if(configured.endsWith("/api/openai-chat"))configured else configured.trimEnd('/')+"/api/openai-chat"
   var connection:HttpURLConnection?=null
   return try{
    connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{
