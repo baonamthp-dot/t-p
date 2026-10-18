@@ -1,4 +1,6 @@
-# Bảo Nam Bot — Cấu hình Gemini an toàn
+# Gemini Music AI — Cấu hình an toàn
+
+Gemini Music AI là trợ lý trong Music App của Bảo Nam: hỗ trợ câu hỏi phổ thông, học tập, lập trình và các ý tưởng/gợi ý âm nhạc. AI có thể gợi ý playlist theo tâm trạng, giải thích nhịp độ và nhạc cụ, hỗ trợ sáng tác ý tưởng mới. AI **không tự phát nhạc hoặc điều khiển thư viện nhạc** nếu ứng dụng chưa có chức năng tương ứng.
 
 **Không có API key nào được tạo sẵn trong repository này.** Bạn cần tự tạo key trong tài khoản Google AI Studio. Đừng gửi key trong chat, đừng commit key lên GitHub và đừng nhập key vào APK.
 
