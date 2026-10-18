@@ -18,4 +18,4 @@ The Android app calls the server endpoint `/api/openai-chat`. It does not contai
 4. In GitHub, open **Settings → Secrets and variables → Actions → Variables** and add a repository variable named `OPENAI_BACKEND_URL` with the base URL of the deployed Vercel site, for example `https://your-project.vercel.app` (replace this example with the actual URL).
 5. Run **Actions → Build Music App APK → Run workflow** again, then download `MusicApp-debug-apk`.
 
-If `OPENAI_BACKEND_URL` is empty, the APK will still build but the in-app ChatGPT service will not connect. The server must have `OPENAI_API_KEY` configured for real AI replies.
+If `OPENAI_BACKEND_URL` is empty, the APK will still build but the in-app ChatGPT service will not connect. The server must have `OPENAI_API_KEY` configured for real AI replies. The backend now uses `OPENAI_MODEL` if you set it in Vercel; otherwise it defaults to `gpt-4o-mini`. Choose only a model available to your API project, then redeploy. The upgraded AI prompt improves structured explanations and uncertainty handling, but no AI can guarantee it knows everything.
