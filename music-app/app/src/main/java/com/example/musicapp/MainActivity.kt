@@ -103,7 +103,6 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("AI Bảo Nam","🤖"){showAiAssistantGate()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
@@ -447,8 +446,7 @@ class MainActivity:AppCompatActivity(){
    "• Bài hát trong thư viện: ${tracks.size}\\n"+
    "• Bài yêu thích: ${tracks.count{it.favorite}}\\n"+
    "• Trạng thái phát: ${if(player!=null||audioTrack!=null)"Có thiết bị phát" else "Đang chờ / phát ngoài ứng dụng"}\\n"+
-   "• Giọng nói: ${if(tts!=null)"Đã khởi tạo" else "Chưa sẵn sàng"}\\n"+
-    "• Mạng: cần Internet để dùng AI/YouTube\\n\\n"+
+   "• Mạng: cần Internet để phát nhạc trực tuyến\\n\\n"+
    "Nếu ứng dụng tự thoát, hãy gửi ảnh lỗi hoặc log để xác định nguyên nhân."
   AlertDialog.Builder(this).setTitle("🛠️ Chẩn đoán ứng dụng").setMessage(details).setPositiveButton("OK",null).show()
  }
@@ -469,16 +467,14 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showSettings(){
   if(destroyed||isFinishing)return
-  val items=arrayOf("🌍 Chọn quốc gia","🔑 Cấu hình OpenAI API Key","🤖 Bảo Nam Bot ngoại tuyến","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
+  val items=arrayOf("🌍 Chọn quốc gia","🔐 Bảo mật","ℹ️ Thông tin ứng dụng","🛠️ Chẩn đoán ứng dụng","🕘 Lịch sử nghe")
   AlertDialog.Builder(this).setTitle("⚙ Cài đặt").setItems(items){_,which->
    when(which){
     0->showCountryPicker()
-    1->showApiKeySettings()
-    2->AlertDialog.Builder(this).setTitle("🤖 Bảo Nam Bot").setMessage("Bảo Nam Bot dùng OpenAI API nếu đã cấu hình key hoặc máy chủ. API có thể tính phí riêng.").setPositiveButton("Đã hiểu",null).show()
-    3->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("API Key lưu trên thiết bị có rủi ro nếu thiết bị hoặc ứng dụng bị xâm phạm. An toàn hơn là lưu key trong biến môi trường máy chủ riêng. Không chia sẻ key.").setPositiveButton("Đã hiểu",null).show()
-    4->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Trình phát nhạc cá nhân\n🤖 Bảo Nam AI có thể dùng OpenAI API nếu được cấu hình\n🗣️ Đọc câu trả lời\n🌍 Tùy chọn quốc gia\n🛠️ Chẩn đoán ứng dụng\n\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
-    5->showDiagnostics()
-    6->showHistory()
+    1->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Music App không cần API key để phát nhạc. Không chia sẻ dữ liệu cá nhân hoặc tệp riêng tư khi không cần thiết.").setPositiveButton("Đã hiểu",null).show()
+    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Trình phát nhạc cá nhân\\n🌍 Tùy chọn quốc gia\\n🛠️ Chẩn đoán ứng dụng\\n🕘 Lịch sử nghe\\n\\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
+    3->showDiagnostics()
+    4->showHistory()
    }
   }.setNegativeButton("Đóng",null).show()
  }
