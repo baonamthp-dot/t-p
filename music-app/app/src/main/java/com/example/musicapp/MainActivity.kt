@@ -104,6 +104,7 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Trợ lý app","🤖"){showAppAssistant()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -148,6 +149,80 @@ class MainActivity:AppCompatActivity(){
   root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?) {}})
   setContentView(root)
+ }
+ private fun showAppAssistant(){
+  if(destroyed||isFinishing)return
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(4))}
+  val messages=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(4),dp(4),dp(4),dp(4))}
+  val scroll=ScrollView(this).apply{isFillViewport=false;addView(messages)}
+  fun addBubble(who:String,text:String){
+   val bubble=TextView(this).apply{
+    this.text=(if(who=="Bạn")"🧑 Bạn\\n" else "🤖 Trợ lý Music App\\n")+text
+    textSize=14f;setTextColor(Color.WHITE);setPadding(dp(12),dp(9),dp(12),dp(9))
+    background=rounded(if(who=="Bạn")Color.rgb(28,67,120) else Color.rgb(25,34,55),14)
+   }
+   messages.addView(bubble,LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=dp(8)})
+   scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
+  }
+  addBubble("AI","Chào bạn! Mình là Trợ lý Music App. Mình chỉ hỗ trợ cách sử dụng ứng dụng này như phát nhạc, thêm nhạc, yêu thích, hẹn giờ, danh sách phát, cài đặt và sửa lỗi. Mình không phải AI hỏi đáp mọi chủ đề.")
+  val input=EditText(this).apply{hint="Hỏi về cách dùng Music App…";setSingleLine(false);maxLines=3;textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);background=rounded(Color.rgb(16,25,45),12);setPadding(dp(10),dp(8),dp(10),dp(8))}
+  val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
+  row.addView(input,LinearLayout.LayoutParams(0,dp(52),1f))
+  val send=button("Gửi")
+  row.addView(send,LinearLayout.LayoutParams(dp(70),dp(48)).apply{leftMargin=dp(8)})
+  panel.addView(scroll,LinearLayout.LayoutParams(-1,dp(300)))
+  panel.addView(row,LinearLayout.LayoutParams(-1,dp(58)).apply{topMargin=dp(6)})
+  val dialog=AlertDialog.Builder(this).setTitle("🤖 Trợ lý Music App").setView(panel).setPositiveButton("Đóng",null).create()
+  val sendMessage={
+   val question=input.text.toString().trim()
+   if(question.isNotBlank()){
+    addBubble("Bạn",question)
+    addBubble("AI",appHelpReply(question))
+    input.setText("")
+   }
+  }
+  send.setOnClickListener{sendMessage()}
+  input.setOnEditorActionListener{_,actionId,_->
+   if(actionId==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){sendMessage();true}else false
+  }
+  dialog.show()
+ }
+ private fun appHelpReply(question:String):String{
+  val q=question.lowercase(Locale.ROOT)
+  return when{
+   listOf("phát nhạc","mở bài","nghe nhạc","play","bài hát").any{q.contains(it)} ->
+    "Để phát nhạc, chạm vào tên bài trong danh sách. Dùng ▶/⏸ để phát hoặc tạm dừng, ⏮ và ⏭ để chuyển bài. Nhạc trực tuyến cần Internet."
+   listOf("thêm nhạc","nhập nhạc","nhạc của tôi","tệp nhạc","file nhạc").any{q.contains(it)} ->
+    "Ở màn hình chính, chạm “♫ Thêm nhạc”, chọn tệp âm thanh trên thiết bị rồi xác nhận. Chỉ chọn tệp bạn có quyền sử dụng."
+   listOf("yêu thích","trái tim","♥","fav").any{q.contains(it)} ->
+    "Chạm biểu tượng ♥ cạnh bài hát để thêm hoặc bỏ yêu thích. Nút “Yêu thích” trên màn hình chính giúp lọc danh sách chỉ còn các bài đã đánh dấu."
+   listOf("hẹn giờ","tắt nhạc","ngủ","timer").any{q.contains(it)} ->
+    "Chạm “Hẹn giờ” ở màn hình chính, sau đó chọn khoảng thời gian như 15, 30, 60 hoặc 90 phút. Chọn “Tắt hẹn giờ” nếu muốn hủy."
+   listOf("tìm","tìm kiếm","search").any{q.contains(it)} ->
+    "Nhập tên bài hát vào ô “Tìm bài hát” phía trên danh sách. Xóa nội dung tìm kiếm để xem lại các bài."
+   listOf("danh sách phát","playlist").any{q.contains(it)} ->
+    "Mở “Tiện ích” → “🎵 Danh sách phát riêng”. Chọn tạo mới, đặt tên, đánh dấu các bài muốn thêm rồi lưu."
+   listOf("quốc gia","ngôn ngữ","country").any{q.contains(it)} ->
+    "Mở biểu tượng ⚙ → “🌍 Chọn quốc gia”, rồi chạm vào quốc gia bạn muốn. Tùy chọn này chưa chắc dịch toàn bộ mọi nội dung trong ứng dụng."
+   listOf("cài đặt","bảo mật","riêng tư","settings").any{q.contains(it)} ->
+    "Chạm biểu tượng ⚙ ở góc trên màn hình để mở Cài đặt. Tại đó có lựa chọn quốc gia, thông tin ứng dụng, bảo mật, chẩn đoán và lịch sử nghe."
+   listOf("lỗi","không phát","không nghe","không chạy","mất tiếng","không mở","đơ","crash").any{q.contains(it)} ->
+    "Bạn thử kiểm tra âm lượng thiết bị và Internet nếu đang nghe nhạc trực tuyến; chọn bài khác để thử. Mở “⚙ → Chẩn đoán ứng dụng” để xem thông tin cơ bản. Nếu vẫn lỗi, hãy gửi ảnh thông báo lỗi."
+   listOf("âm lượng","to nhỏ","volume").any{q.contains(it)} ->
+    "Mở “Tiện ích” → “🔊 Âm lượng” để điều chỉnh âm lượng phát nhạc của thiết bị."
+   listOf("lịch sử","nghe gần đây").any{q.contains(it)} ->
+    "Mở “Tiện ích” → “🕘 Lịch sử nghe” để xem bài nghe gần đây. Trong cửa sổ lịch sử, bạn cũng có thể xóa dữ liệu lịch sử."
+   listOf("eq","equalizer","chỉnh âm","âm thanh").any{q.contains(it)} ->
+    "Mở “Tiện ích” → “🎚️ Bộ chỉnh âm (EQ)”. Tính năng này phụ thuộc vào khả năng hỗ trợ hiệu ứng âm thanh của thiết bị."
+   listOf("ngẫu nhiên","shuffle","lặp bài","repeat","chuyển bài").any{q.contains(it)} ->
+    "Dùng nút 🔀 để bật/tắt phát ngẫu nhiên và 🔁 để bật/tắt lặp bài. ⏮ và ⏭ dùng để chuyển bài trước hoặc tiếp theo."
+   listOf("bản đồ","map").any{q.contains(it)} ->
+    "Nếu phiên bản của bạn có mục Bản đồ, hãy mở mục đó từ phần tiện ích để xem bản đồ. Bản đồ cần kết nối Internet."
+   listOf("ai là bạn","bạn là ai","làm được gì","chức năng").any{q.contains(it)} ->
+    "Mình là trợ lý hướng dẫn sử dụng Music App, không phải trợ lý đa năng. Mình có thể giúp về phát nhạc, thêm nhạc, yêu thích, tìm kiếm, hẹn giờ, playlist, cài đặt và xử lý lỗi cơ bản."
+   else ->
+    "Mình chỉ trả lời về cách dùng Music App nên chưa hỗ trợ câu hỏi này. Bạn có thể hỏi: “Làm sao thêm nhạc?”, “Cách hẹn giờ tắt nhạc?”, “Tạo danh sách phát thế nào?” hoặc “Sửa lỗi không có tiếng ra sao?”"
+  }
  }
  private fun showToolsPanel(){
   val items=arrayOf(
