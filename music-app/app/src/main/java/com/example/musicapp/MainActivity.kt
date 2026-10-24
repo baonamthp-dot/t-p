@@ -104,7 +104,7 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("Trợ lý app","🤖"){showAppAssistant()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("AI Music","🤖"){showAppAssistant()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -164,7 +164,7 @@ class MainActivity:AppCompatActivity(){
    messages.addView(bubble,LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=dp(8)})
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
-  addBubble("AI","Chào bạn! Mình là Trợ lý Music App. Mình chỉ hỗ trợ cách sử dụng ứng dụng này như phát nhạc, thêm nhạc, yêu thích, hẹn giờ, danh sách phát, cài đặt và sửa lỗi. Mình không phải AI hỏi đáp mọi chủ đề.")
+  addBubble("AI","Chào bạn! Mình là AI Music 🎵. Bạn có thể ra lệnh bằng chữ như “phát bài tiếp theo”, “tạm dừng”, “tìm nhạc ngủ”, “bật phát ngẫu nhiên”, “mở cài đặt” hoặc “hẹn giờ tắt nhạc”. Mình chỉ điều khiển các chức năng có sẵn trong Music App.")
   val input=EditText(this).apply{hint="Hỏi về cách dùng Music App…";setSingleLine(false);maxLines=3;textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);background=rounded(Color.rgb(16,25,45),12);setPadding(dp(10),dp(8),dp(10),dp(8))}
   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
   row.addView(input,LinearLayout.LayoutParams(0,dp(52),1f))
@@ -172,12 +172,12 @@ class MainActivity:AppCompatActivity(){
   row.addView(send,LinearLayout.LayoutParams(dp(70),dp(48)).apply{leftMargin=dp(8)})
   panel.addView(scroll,LinearLayout.LayoutParams(-1,dp(300)))
   panel.addView(row,LinearLayout.LayoutParams(-1,dp(58)).apply{topMargin=dp(6)})
-  val dialog=AlertDialog.Builder(this).setTitle("🤖 Trợ lý Music App").setView(panel).setPositiveButton("Đóng",null).create()
+  val dialog=AlertDialog.Builder(this).setTitle("🤖 AI Music — Điều khiển ứng dụng").setView(panel).setPositiveButton("Đóng",null).create()
   val sendMessage={
    val question=input.text.toString().trim()
    if(question.isNotBlank()){
     addBubble("Bạn",question)
-    addBubble("AI",appHelpReply(question))
+    addBubble("AI",appAiHandleCommand(question) ?: appHelpReply(question))
     input.setText("")
    }
   }
@@ -186,6 +186,51 @@ class MainActivity:AppCompatActivity(){
    if(actionId==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){sendMessage();true}else false
   }
   dialog.show()
+ }
+ private fun appAiHandleCommand(question:String):String?{
+  val q=question.lowercase(Locale.ROOT).trim()
+  fun has(vararg words:String)=words.any{q.contains(it)}
+  if(has("phát bài tiếp theo","bài tiếp theo","bài kế tiếp","chuyển bài tiếp","next")){next();return "Đã yêu cầu phát bài tiếp theo. 🎵"}
+  if(has("bài trước","phát bài trước","quay lại bài","previous")){previous();return "Đã yêu cầu phát bài trước. 🎵"}
+  if(has("tạm dừng","dừng nhạc","pause")){
+   val playing=try{player?.isPlaying==true}catch(_:Exception){false} || try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false}
+   if(playing){togglePlay();return "Đã tạm dừng phát nhạc. ⏸"}
+   return "Hiện tại mình không thấy bài nào đang phát. Bạn có thể ra lệnh “phát bài tiếp theo” hoặc chọn một bài trong danh sách."
+  }
+  if(has("tiếp tục","phát tiếp","resume","bật nhạc lại")){
+   val paused=(player!=null&&!playerPreparing)||(audioTrack!=null)
+   val playing=try{player?.isPlaying==true}catch(_:Exception){false} || try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false}
+   if(paused&&!playing){togglePlay();return "Đã yêu cầu tiếp tục phát nhạc. ▶"}
+   return "Chưa có bài đang tạm dừng. Hãy chọn một bài hoặc ra lệnh “phát bài tiếp theo”."
+  }
+  if(has("bật ngẫu nhiên","bật phát ngẫu nhiên","bật shuffle")){shuffle=true;return "Đã bật phát ngẫu nhiên. 🔀"}
+  if(has("tắt ngẫu nhiên","tắt phát ngẫu nhiên","tắt shuffle")){shuffle=false;return "Đã tắt phát ngẫu nhiên."}
+  if(has("bật lặp bài","bật lặp","bật repeat")){repeatOne=true;return "Đã bật lặp bài hiện tại. 🔁"}
+  if(has("tắt lặp bài","tắt lặp","tắt repeat")){repeatOne=false;return "Đã tắt lặp bài hiện tại."}
+  if(has("mở cài đặt","vào cài đặt","mở settings")){showSettings();return "Đã mở Cài đặt của Music App. ⚙️"}
+  if(has("mở tiện ích","mở bảng tiện ích","vào tiện ích")){showToolsPanel();return "Đã mở bảng Tiện ích. ⚙️"}
+  if(has("hẹn giờ","hẹn giờ tắt","tắt nhạc sau","timer")){showSleepTimerDialog();return "Đã mở bảng hẹn giờ. Chọn thời gian trong bảng để đặt giờ tắt nhạc. 🌙"}
+  if(has("điều chỉnh âm lượng","mở âm lượng","chỉnh âm lượng")){showVolume();return "Đã mở bảng điều chỉnh âm lượng. 🔊"}
+  if(has("xem lịch sử","mở lịch sử","lịch sử nghe")){showHistory();return "Đã mở lịch sử nghe."}
+  if(has("chẩn đoán","kiểm tra ứng dụng","kiểm tra lỗi")){showDiagnostics();return "Đã mở phần chẩn đoán ứng dụng."}
+  if(has("phát bài ","mở bài ","nghe bài ","phát nhạc ")){
+   val cleaned=question.trim().replace(Regex("(?i)^(hãy\\s+)?(phát|mở|nghe)(\\s+nhạc)?(\\s+bài)?\\s*"),"").trim().trim('"','“','”','\'')
+   val target=tracks.firstOrNull{it.title.equals(cleaned,true)}?:tracks.firstOrNull{it.title.contains(cleaned,true)&&cleaned.length>=2}?:tracks.firstOrNull{cleaned.length>=2&&cleaned.contains(it.title,true)}
+   if(target!=null){playTrack(target);return "Đã tìm thấy “\${target.title}” và gửi lệnh phát trong Music App. 🎵"}
+   return "Mình chưa tìm thấy bài “$cleaned” trong thư viện. Bạn thử nhập một phần tên bài hát hoặc thêm nhạc trước nhé."
+  }
+  if(has("tìm nhạc ","tìm bài ","tìm kiếm ")){
+   val term=question.trim().replace(Regex("(?i)^(hãy\\s+)?(tìm nhạc|tìm bài|tìm kiếm)\\s*"),"").trim()
+   if(term.isNotBlank()){search.setText(term);return "Đã lọc danh sách theo từ khóa “$term”. 🔎"}
+  }
+  if(has("thích bài ","yêu thích bài ","đánh dấu yêu thích ")){
+   val term=question.trim().replace(Regex("(?i)^(hãy\\s+)?(thích bài|yêu thích bài|đánh dấu yêu thích)\\s*"),"").trim().trim('"','“','”','\'')
+   val target=tracks.firstOrNull{it.title.equals(term,true)}?:tracks.firstOrNull{term.length>=2&&it.title.contains(term,true)}
+   if(target!=null){target.favorite=!target.favorite;saveFavorite(target);renderList(search.text.toString());return (if(target.favorite)"Đã thêm" else "Đã bỏ")+ " “\${target.title}” "+(if(target.favorite)"vào" else "khỏi")+" danh sách yêu thích. ♥"}
+   return "Mình chưa tìm thấy bài phù hợp để đổi trạng thái yêu thích."
+  }
+  if(has("bỏ lọc","hiện tất cả bài","xóa tìm kiếm")){search.setText("");favoritesOnly=false;renderList("");return "Đã xóa từ khóa tìm kiếm và hiển thị lại thư viện. 🔎"}
+  return null
  }
  private fun appHelpReply(question:String):String{
   val q=question.lowercase(Locale.ROOT)
