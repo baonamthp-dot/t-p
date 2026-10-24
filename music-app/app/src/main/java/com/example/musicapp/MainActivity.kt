@@ -690,39 +690,9 @@ class MainActivity:AppCompatActivity(){
  }
  private fun showAiTutor(){
   if(destroyed||isFinishing)return
-  if((prefs.getString("openai_api_key","") ?: "").isBlank()){
-   val keyInput=EditText(this).apply{
-    hint="sk-..."
-    setSingleLine(true)
-    inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-    setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)
-   }
-   val content=LinearLayout(this).apply{
-    orientation=LinearLayout.VERTICAL
-    setPadding(dp(20),dp(8),dp(20),dp(4))
-    addView(TextView(this@MainActivity).apply{
-     text="Nhập OpenAI API Key để dùng AI trực tiếp, hoặc chọn Dùng AI không key để tiếp tục chế độ dự phòng. API có thể tính phí riêng."
-     setTextColor(Color.LTGRAY);textSize=14f
-    },LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=dp(12)})
-    addView(keyInput,LinearLayout.LayoutParams(-1,dp(52)))
-   }
-   AlertDialog.Builder(this).setTitle("🤖 Kết nối Bảo Nam AI")
-    .setView(content)
-    .setPositiveButton("Lưu key và mở AI"){_,_->
-     val key=keyInput.text.toString().trim()
-     if(key.startsWith("sk-")){
-      prefs.edit().putString("openai_api_key",key).apply()
-      showAiTutor()
-     }else{
-      Toast.makeText(this,"Key chưa đúng định dạng. Mở AI không key.",Toast.LENGTH_LONG).show()
-      showAiTutorWithoutKey()
-     }
-    }
-    .setNegativeButton("Dùng AI không key"){_,_->showAiTutorWithoutKey()}
-    .setNeutralButton("Hủy",null)
-    .show()
-   return
-  }
+  // API credentials must never be entered into or stored by the Android client.
+  // The app talks only to the configured HTTPS backend, which keeps OPENAI_API_KEY server-side.
+  prefs.edit().remove("openai_api_key").apply()
   showAiTutorWithoutKey()
  }
  private fun showAiTutorWithoutKey(){
@@ -924,36 +894,32 @@ class MainActivity:AppCompatActivity(){
  }
  private fun openAiProxyReply(message:String,history:JSONArray=JSONArray()):String?{
   val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
-  val key=prefs.getString("openai_api_key","")?.trim().orEmpty()
-  val direct=configured.isBlank() && key.isNotBlank()
-  if(configured.isBlank() && !direct)return null
-  val endpoint=if(direct)"https://api.openai.com/v1/chat/completions" else if(configured.endsWith("/api/openai-chat"))configured else configured.trimEnd('/')+"/api/openai-chat"
+  // Never send API keys from the app. A backend URL must be supplied at build time.
+  if(configured.isBlank())return null
+  val endpoint=if(configured.endsWith("/api/openai-chat"))configured else configured.trimEnd('/')+"/api/openai-chat"
+  if(!endpoint.startsWith("https://",ignoreCase=true))return null
   var connection:HttpURLConnection?=null
   return try{
    connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{
     requestMethod="POST";connectTimeout=12000;readTimeout=45000;doOutput=true
     setRequestProperty("Content-Type","application/json; charset=utf-8")
     setRequestProperty("Accept","application/json")
-    if(direct)setRequestProperty("Authorization","Bearer "+key)
    }
-   val payload=if(direct){
-    val msgs=JSONArray().put(JSONObject().put("role","system").put("content","You are Bảo Nam AI, a helpful multilingual assistant. Infer intent from context, answer accurately and clearly, adapt explanations to the subject, show steps for educational problems, verify calculations and code where possible, and admit uncertainty instead of inventing facts."))
-    for(i in 0 until history.length()){
-     val h=history.optJSONObject(i)?:continue
-     val role=h.optString("role")
-     if(role=="user"||role=="assistant")msgs.put(JSONObject().put("role",role).put("content",h.optString("content").take(3000)))
+   val safeHistory=JSONArray()
+   for(i in (history.length()-10).coerceAtLeast(0) until history.length()){
+    val item=history.optJSONObject(i)?:continue
+    val role=item.optString("role")
+    if((role=="user"||role=="assistant")&&item.optString("content").isNotBlank()){
+     safeHistory.put(JSONObject().put("role",role).put("content",item.optString("content").take(3000)))
     }
-    msgs.put(JSONObject().put("role","user").put("content",message.take(4000)))
-    JSONObject().put("model",openAiModel).put("messages",msgs).put("temperature",0.5).put("max_tokens",2400).toString()
-   }else JSONObject().put("message",message).put("history",history).toString()
+   }
+   val payload=JSONObject().put("message",message.take(4000)).put("history",safeHistory).toString()
    connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
    val status=connection.responseCode
    val stream=if(status in 200..299)connection.inputStream else connection.errorStream
    val body=stream?.bufferedReader(Charsets.UTF_8)?.use{it.readText().take(250000)} ?: return null
    if(status !in 200..299)return null
-   val json=JSONObject(body)
-   val answer=if(direct)json.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content","")?.trim().orEmpty() else json.optString("answer","").trim()
-   answer.takeIf{it.isNotBlank()}
+   JSONObject(body).optString("answer","").trim().takeIf{it.isNotBlank()}
   }catch(_:Exception){null}
   finally{connection?.disconnect()}
  }
