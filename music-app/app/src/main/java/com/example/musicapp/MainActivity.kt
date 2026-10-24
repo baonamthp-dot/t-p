@@ -17,6 +17,10 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.view.Gravity
 import android.widget.*
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.speech.tts.TextToSpeech
 import androidx.appcompat.app.AppCompatActivity
 import java.security.MessageDigest
@@ -41,6 +45,8 @@ class MainActivity:AppCompatActivity(){
  private var repeatOne=false
  private var pendingExportText=""
  private var pendingYoutubeAudio:Track?=null
+ private var youtubeDialog:AlertDialog?=null
+ private var youtubeWebView:WebView?=null
  private var sleepTimer: android.os.CountDownTimer?=null
  private val prefs by lazy{getSharedPreferences("music_app",MODE_PRIVATE)}
  private var isOwner=false
@@ -1044,7 +1050,7 @@ class MainActivity:AppCompatActivity(){
     tracks.add(0,Track(null,title,youtubeUrl=url))
     saveYoutubeTracks()
     renderList(search.text.toString())
-    Toast.makeText(this,"Đã thêm mix “"+title+"”. Chạm bài để mở kết quả YouTube.",Toast.LENGTH_LONG).show()
+    Toast.makeText(this,"Đã thêm mix “"+title+"” vào thư viện.",Toast.LENGTH_SHORT).show()
     playTrack(tracks.first())
    }
   }.setNegativeButton("Đóng",null).show()
@@ -1158,7 +1164,7 @@ class MainActivity:AppCompatActivity(){
    row.addView(icon,LinearLayout.LayoutParams(dp(50),dp(50)).apply{rightMargin=dp(9)});icon.setOnClickListener{playTrack(tr)}
    val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
    box.addView(TextView(this).apply{text=tr.title;textSize=14f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
-   box.addView(TextView(this).apply{text=when{tr.streamUrl!=null->"Nhạc tiếng Việt • Phát trực tuyến miễn phí";tr.youtubeUrl!=null&&tr.uri!=null->"Âm thanh từ thiết bị • Phát trong app";tr.youtubeUrl!=null->"YouTube • Chạm để mở bài hát bên ngoài app";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
+   box.addView(TextView(this).apply{text=when{tr.streamUrl!=null->"Nhạc tiếng Việt • Phát trực tuyến miễn phí";tr.youtubeUrl!=null&&tr.uri!=null->"Âm thanh từ thiết bị • Phát trong app";tr.youtubeUrl!=null->"YouTube • Chạm để mở ngay trong Music App";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
    row.addView(box);box.setOnClickListener{playTrack(tr)};box.setOnLongClickListener{if(tr.youtubeUrl!=null)showYoutubeTrackMenu(tr) else showTrackDetails(tr);true}
    val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;saveFavorite(tr);renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
@@ -1197,22 +1203,60 @@ class MainActivity:AppCompatActivity(){
   AlertDialog.Builder(this).setTitle("✦ Chi tiết sâu hơn").setMessage(message).setPositiveButton("▶ Nghe ngay"){_,_->playTrack(t)}.setNegativeButton("Đóng",null).show()
  }
  private fun openYoutube(url:String){
-  val parsed=Uri.parse(url)
-  val host=parsed.host?.lowercase(Locale.ROOT)
-  val safeHost=host=="music.youtube.com"||host=="youtube.com"||host=="www.youtube.com"||host=="youtu.be"
-  if(parsed.scheme!="https"||!safeHost){nowPlaying.text="Liên kết YouTube không an toàn";return}
-  try{
-   val appIntent=Intent(Intent.ACTION_VIEW,parsed).apply{setPackage("com.google.android.apps.youtube.music")}
-   startActivity(appIntent)
-   nowPlaying.text="🎧 Đang mở YouTube Music: "+(parsed.getQueryParameter("v")?:"bài hát")
-  }catch(_:Exception){
-   try{
-    startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW,parsed),"Mở bằng"))
-    nowPlaying.text="🎧 Đang mở YouTube Music"
-   }catch(_:Exception){
-    nowPlaying.text="Không tìm thấy ứng dụng mở YouTube"
+  val parsed=try{Uri.parse(url)}catch(_:Exception){null}
+  val host=parsed?.host?.lowercase(Locale.ROOT)
+  val allowed=host in setOf("music.youtube.com","youtube.com","www.youtube.com","m.youtube.com","youtu.be")
+  if(parsed==null||parsed.scheme!="https"||!allowed){
+   nowPlaying.text="Liên kết YouTube không an toàn"
+   Toast.makeText(this,"Chỉ hỗ trợ liên kết HTTPS chính thức của YouTube.",Toast.LENGTH_LONG).show()
+   return
+  }
+  // Keep YouTube browsing inside Music instead of handing the link to another app.
+  youtubeDialog?.dismiss()
+  val web=WebView(this)
+  youtubeWebView=web
+  web.settings.javaScriptEnabled=true
+  web.settings.domStorageEnabled=true
+  web.settings.mediaPlaybackRequiresUserGesture=false
+  web.settings.loadsImagesAutomatically=true
+  web.settings.javaScriptCanOpenWindowsAutomatically=false
+  web.settings.setSupportMultipleWindows(false)
+  web.settings.allowFileAccess=false
+  web.settings.allowContentAccess=false
+  web.webChromeClient=WebChromeClient()
+  web.webViewClient=object:WebViewClient(){
+   override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean{
+    val next=request.url
+    val nextHost=next.host?.lowercase(Locale.ROOT)
+    val youtubeHost=nextHost in setOf("music.youtube.com","youtube.com","www.youtube.com","m.youtube.com","youtu.be","youtube-nocookie.com","www.youtube-nocookie.com")
+    if(next.scheme=="https"&&youtubeHost)return false
+    Toast.makeText(this@MainActivity,"Đã chặn chuyển sang trang ngoài YouTube.",Toast.LENGTH_SHORT).show()
+    return true
+   }
+   override fun onPageFinished(view:WebView,url:String){
+    if(youtubeWebView===view&&!destroyed){
+     nowPlaying.text="🎧 YouTube trong Music App"
+     playButton.text="▶"
+    }
    }
   }
+  val bar=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(4),dp(8),dp(4))}
+  val back=button("‹ Quay lại").apply{setOnClickListener{if(web.canGoBack())web.goBack()else Toast.makeText(this@MainActivity,"Đang ở trang đầu của YouTube.",Toast.LENGTH_SHORT).show()}}
+  val reload=button("↻ Tải lại").apply{setOnClickListener{web.reload()}}
+  bar.addView(back,LinearLayout.LayoutParams(0,dp(42),1f).apply{rightMargin=dp(6)})
+  bar.addView(reload,LinearLayout.LayoutParams(0,dp(42),1f))
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(8,14,28));addView(bar,LinearLayout.LayoutParams(-1,dp(50)));addView(web,LinearLayout.LayoutParams(-1,dp(520)))}
+  val dialog=AlertDialog.Builder(this).setTitle("♫ YouTube Mix • Music").setView(panel).setPositiveButton("Đóng",null).create()
+  youtubeDialog=dialog
+  dialog.setOnDismissListener{
+   if(youtubeWebView===web)youtubeWebView=null
+   try{web.stopLoading();web.loadUrl("about:blank");web.clearHistory();web.removeAllViews();web.destroy()}catch(_:Exception){}
+   if(youtubeDialog===dialog)youtubeDialog=null
+  }
+  dialog.show()
+  dialog.window?.setLayout((resources.displayMetrics.widthPixels*0.96).toInt(),(resources.displayMetrics.heightPixels*0.88).toInt())
+  web.loadUrl(url)
+  nowPlaying.text="🎧 Đang mở YouTube trong Music App: "+(parsed.getQueryParameter("v")?:"Mix")
  }
  private fun formatTime(ms:Int):String{
   val total=(ms.coerceAtLeast(0)/1000)
@@ -1249,7 +1293,7 @@ class MainActivity:AppCompatActivity(){
   elapsedLabel.text="00:00"
   durationLabel.text="00:00"
   progressBar.isEnabled=false
-  if(t.youtubeUrl!=null&&t.uri==null){nowPlaying.text="🎧 Đang mở YouTube: "+t.title;playButton.text="▶";progressBar.isEnabled=false;openYoutube(t.youtubeUrl);return}
+  if(t.youtubeUrl!=null&&t.uri==null){nowPlaying.text="🎧 Đang mở YouTube trong Music App: "+t.title;playButton.text="▶";progressBar.isEnabled=false;openYoutube(t.youtubeUrl);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
   if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";progressBar.isEnabled=false;return}
