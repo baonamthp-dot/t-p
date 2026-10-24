@@ -28,10 +28,11 @@ android {
     }
     buildTypes {
         debug {
-            // Keep debug APK builds reliable while diagnosing CI failures.
-            // Release builds can enable R8/resource shrinking once keep rules are tested.
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // Shrink bytecode and unused resources to reduce the installable APK size.
+            // R8 keeps manifest-declared Android components and optimizes the remaining code.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
     }
 }
