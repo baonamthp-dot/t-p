@@ -216,7 +216,7 @@ class MainActivity:AppCompatActivity(){
   if(has("phát bài ","mở bài ","nghe bài ","phát nhạc ")){
    val cleaned=question.trim().replace(Regex("(?i)^(hãy\\s+)?(phát|mở|nghe)(\\s+nhạc)?(\\s+bài)?\\s*"),"").trim().trim('"','“','”','\'')
    val target=tracks.firstOrNull{it.title.equals(cleaned,true)}?:tracks.firstOrNull{it.title.contains(cleaned,true)&&cleaned.length>=2}?:tracks.firstOrNull{cleaned.length>=2&&cleaned.contains(it.title,true)}
-   if(target!=null){playTrack(target);return "Đã tìm thấy “\${target.title}” và gửi lệnh phát trong Music App. 🎵"}
+   if(target!=null){playTrack(target);return "Đã tìm thấy “${target.title}” và gửi lệnh phát trong Music App. 🎵"}
    return "Mình chưa tìm thấy bài “$cleaned” trong thư viện. Bạn thử nhập một phần tên bài hát hoặc thêm nhạc trước nhé."
   }
   if(has("tìm nhạc ","tìm bài ","tìm kiếm ")){
@@ -226,7 +226,7 @@ class MainActivity:AppCompatActivity(){
   if(has("thích bài ","yêu thích bài ","đánh dấu yêu thích ")){
    val term=question.trim().replace(Regex("(?i)^(hãy\\s+)?(thích bài|yêu thích bài|đánh dấu yêu thích)\\s*"),"").trim().trim('"','“','”','\'')
    val target=tracks.firstOrNull{it.title.equals(term,true)}?:tracks.firstOrNull{term.length>=2&&it.title.contains(term,true)}
-   if(target!=null){target.favorite=!target.favorite;saveFavorite(target);renderList(search.text.toString());return (if(target.favorite)"Đã thêm" else "Đã bỏ")+ " “\${target.title}” "+(if(target.favorite)"vào" else "khỏi")+" danh sách yêu thích. ♥"}
+   if(target!=null){target.favorite=!target.favorite;saveFavorite(target);renderList(search.text.toString());return (if(target.favorite)"Đã thêm" else "Đã bỏ")+ " “${target.title}” "+(if(target.favorite)"vào" else "khỏi")+" danh sách yêu thích. ♥"}
    return "Mình chưa tìm thấy bài phù hợp để đổi trạng thái yêu thích."
   }
   if(has("bỏ lọc","hiện tất cả bài","xóa tìm kiếm")){search.setText("");favoritesOnly=false;renderList("");return "Đã xóa từ khóa tìm kiếm và hiển thị lại thư viện. 🔎"}
