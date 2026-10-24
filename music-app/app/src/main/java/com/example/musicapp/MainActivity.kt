@@ -102,6 +102,7 @@ class MainActivity:AppCompatActivity(){
   fun action(label:String,icon:String,click:()->Unit)=TextView(this).apply{text="$icon\n$label";textSize=12f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(13,27,57),20);setPadding(0,dp(6),0,dp(4));setOnClickListener{click()}}
   actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
   actions.addView(action("YouTube","▶"){addYoutubeMusic()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("YouTube Mix","♫"){showYoutubeMix()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
@@ -1018,6 +1019,32 @@ class MainActivity:AppCompatActivity(){
   val uri=Uri.parse("geo:0,0?q=bản đồ")
   try{startActivity(Intent(Intent.ACTION_VIEW,uri))}
   catch(_:Exception){try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps")))}catch(_:Exception){nowPlaying.text="Không mở được Bản đồ"}}
+ }
+ private fun showYoutubeMix(){
+  val moods=arrayOf(
+   "🌙 Nhạc ngủ nhẹ nhàng" to "nhạc ngủ sâu thư giãn nhẹ nhàng",
+   "🌧️ Nhạc mưa chill" to "rain sounds chill music",
+   "📚 Nhạc tập trung học bài" to "lofi study music no lyrics",
+   "🎹 Piano thư giãn" to "relaxing piano music",
+   "🎧 Lofi Việt Nam" to "lofi Việt Nam chill",
+   "⚡ Nhạc năng lượng" to "nhạc upbeat tạo động lực"
+  )
+  AlertDialog.Builder(this).setTitle("♫ YouTube Mix").setItems(moods.map{it.first}.toTypedArray()){_,which->
+   val selected=moods[which]
+   val url="https://music.youtube.com/search?q="+Uri.encode(selected.second)
+   val title=selected.first
+   val existing=tracks.firstOrNull{it.youtubeUrl==url}
+   if(existing!=null){
+    Toast.makeText(this,"Mix này đã có trong danh sách.",Toast.LENGTH_SHORT).show()
+    playTrack(existing)
+   }else{
+    tracks.add(0,Track(null,title,youtubeUrl=url))
+    saveYoutubeTracks()
+    renderList(search.text.toString())
+    Toast.makeText(this,"Đã thêm mix “"+title+"”. Chạm bài để mở kết quả YouTube.",Toast.LENGTH_LONG).show()
+    playTrack(tracks.first())
+   }
+  }.setNegativeButton("Đóng",null).show()
  }
  private fun addYoutubeMusic(){
   val field=EditText(this).apply{hint="Tên bài hát hoặc dán liên kết YouTube";setSingleLine(false);maxLines=3;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);setPadding(dp(12),dp(10),dp(12),dp(10));background=rounded(Color.rgb(16,25,45),12)}
