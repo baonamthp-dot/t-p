@@ -8,6 +8,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.content.res.ColorStateList
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
@@ -76,7 +78,8 @@ class MainActivity:AppCompatActivity(){
  private fun melody(vararg n:Double)=n.map{it to 650}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
- private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
+ private fun ripple(c:Int,pressed:Int,r:Int=18)=RippleDrawable(ColorStateList.valueOf(pressed),rounded(c,r),null)
+ private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=ripple(Color.rgb(38,44,58),Color.rgb(70,105,150),16)}
  override fun onCreate(b:Bundle?){super.onCreate(b);progressHandler.post(progressUpdate);tracks.addAll(builtIn.map{it.copy()});loadSavedYoutubeTracks();tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background);clipChildren=true;clipToPadding=true}
@@ -1069,12 +1072,12 @@ class MainActivity:AppCompatActivity(){
   bannerText.addView(TextView(this).apply{text="24 tuyển tập • Chạm để chọn thể loại";textSize=11f;setTextColor(Color.rgb(190,200,225));setPadding(0,dp(4),0,0)})
   banner.addView(bannerText)
   panel.addView(banner,LinearLayout.LayoutParams(-1,dp(82)).apply{bottomMargin=dp(8)})
-  val addAll=button("＋ Thêm cả 24 tuyển tập vào thư viện").apply{background=rounded(Color.rgb(30,95,175),16)}
+  val addAll=button("＋ Thêm cả 24 tuyển tập vào thư viện").apply{background=ripple(Color.rgb(30,95,175),Color.rgb(60,135,215),16)}
   panel.addView(addAll,LinearLayout.LayoutParams(-1,dp(44)).apply{bottomMargin=dp(8)})
   val scroll=ScrollView(this)
   val choices=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
   moods.forEachIndexed{index,item->
-   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(9),dp(7),dp(9),dp(7));background=rounded(Color.rgb(13,25,48),14)}
+   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(9),dp(7),dp(9),dp(7));background=ripple(Color.rgb(13,25,48),Color.rgb(38,65,105),14)}
    val art=TextView(this).apply{text="▶";textSize=21f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(205,25,48),Color.rgb(45,15,48))).apply{cornerRadius=dp(12).toFloat()}}
    row.addView(art,LinearLayout.LayoutParams(dp(48),dp(48)).apply{rightMargin=dp(10)})
    val textBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
@@ -1214,7 +1217,7 @@ class MainActivity:AppCompatActivity(){
   list.removeAllViews();val q=qs.trim().lowercase(Locale.getDefault());val filtered=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.lowercase(Locale.getDefault()).contains(q)};val visible=if(sortAlphabetically)filtered.sortedBy{it.title.lowercase(Locale.getDefault())}else filtered
   if(visible.isEmpty()){list.addView(TextView(this).apply{text="🌙\n\nChưa có bài phù hợp";textSize=15f;gravity=Gravity.CENTER;setTextColor(Color.rgb(125,145,180));setPadding(0,dp(28),0,dp(28))});return}
   visible.forEach{tr->
-   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(6),dp(7),dp(6));background=rounded(Color.rgb(13,22,41),18)}
+   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(6),dp(7),dp(6));background=ripple(Color.rgb(13,22,41),Color.rgb(30,55,85),18)}
    val icon=TextView(this).apply{text=when{tr.title.startsWith("🌙")->"🌕";tr.title.startsWith("☁️")->"☁";tr.streamUrl!=null->"🎤";tr.youtubeUrl!=null->"▶";else->"♫"};textSize=23f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(22,36,66),15)}
    row.addView(icon,LinearLayout.LayoutParams(dp(50),dp(50)).apply{rightMargin=dp(9)});icon.setOnClickListener{playTrack(tr)}
    val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
