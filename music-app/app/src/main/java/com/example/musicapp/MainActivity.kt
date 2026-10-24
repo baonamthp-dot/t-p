@@ -157,7 +157,7 @@ class MainActivity:AppCompatActivity(){
   val scroll=ScrollView(this).apply{isFillViewport=false;addView(messages)}
   fun addBubble(who:String,text:String){
    val bubble=TextView(this).apply{
-    this.text=(if(who=="Bạn")"🧑 Bạn\\n" else "🤖 Trợ lý Music App\\n")+text
+    this.text=(if(who=="Bạn")"🧑 Bạn\\n" else "🤖 AI Music\\n")+text
     textSize=14f;setTextColor(Color.WHITE);setPadding(dp(12),dp(9),dp(12),dp(9))
     background=rounded(if(who=="Bạn")Color.rgb(28,67,120) else Color.rgb(25,34,55),14)
    }
@@ -165,13 +165,31 @@ class MainActivity:AppCompatActivity(){
    scroll.post{scroll.fullScroll(ScrollView.FOCUS_DOWN)}
   }
   addBubble("AI","Chào bạn! Mình là AI Music 🎵. Bạn có thể ra lệnh bằng chữ như “phát bài tiếp theo”, “tạm dừng”, “tìm nhạc ngủ”, “bật phát ngẫu nhiên”, “mở cài đặt” hoặc “hẹn giờ tắt nhạc”. Mình chỉ điều khiển các chức năng có sẵn trong Music App.")
-  val input=EditText(this).apply{hint="Hỏi về cách dùng Music App…";setSingleLine(false);maxLines=3;textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);background=rounded(Color.rgb(16,25,45),12);setPadding(dp(10),dp(8),dp(10),dp(8))}
+  val input=EditText(this).apply{hint="Nhập lệnh hoặc hỏi AI Music…";setSingleLine(false);maxLines=3;imeOptions=android.view.inputmethod.EditorInfo.IME_ACTION_SEND;textSize=14f;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);background=rounded(Color.rgb(16,25,45),12);setPadding(dp(10),dp(8),dp(10),dp(8))}
+  val quick=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
+  val quickScroll=HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(quick)}
+  listOf("▶ Bài tiếp","⏸ Tạm dừng","🔀 Ngẫu nhiên","🌙 Hẹn giờ").forEach{label->
+   val chip=button(label).apply{textSize=11f;background=rounded(Color.rgb(24,42,70),20)}
+   quick.addView(chip,LinearLayout.LayoutParams(-2,dp(38)).apply{rightMargin=dp(7)})
+   chip.setOnClickListener{
+    val command=when(label){"▶ Bài tiếp"->"phát bài tiếp theo";"⏸ Tạm dừng"->"tạm dừng nhạc";"🔀 Ngẫu nhiên"->"bật phát ngẫu nhiên";else->"hẹn giờ tắt nhạc"}
+    addBubble("Bạn",command);addBubble("AI",appAiHandleCommand(command)?:appHelpReply(command))
+   }
+  }
   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
   row.addView(input,LinearLayout.LayoutParams(0,dp(52),1f))
+  val mic=button("🎙").apply{textSize=17f;background=rounded(Color.rgb(28,45,70),24);setOnClickListener{
+   activeAiInput=input
+   try{startActivityForResult(Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,"vi-VN");putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,"Nói lệnh cho AI Music")},104)}
+   catch(_:Exception){Toast.makeText(this@MainActivity,"Thiết bị chưa hỗ trợ nhập giọng nói.",Toast.LENGTH_SHORT).show()}
+  }}
+  row.addView(mic,LinearLayout.LayoutParams(dp(48),dp(48)).apply{rightMargin=dp(5)})
   val send=button("Gửi")
-  row.addView(send,LinearLayout.LayoutParams(dp(70),dp(48)).apply{leftMargin=dp(8)})
-  panel.addView(scroll,LinearLayout.LayoutParams(-1,dp(300)))
-  panel.addView(row,LinearLayout.LayoutParams(-1,dp(58)).apply{topMargin=dp(6)})
+  row.addView(send,LinearLayout.LayoutParams(dp(64),dp(48)))
+  panel.addView(scroll,LinearLayout.LayoutParams(-1,dp(270)))
+  panel.addView(quickScroll,LinearLayout.LayoutParams(-1,dp(42)).apply{topMargin=dp(5)})
+  panel.addView(row,LinearLayout.LayoutParams(-1,dp(58)).apply{topMargin=dp(4)})
+  activeAiInput=input
   val dialog=AlertDialog.Builder(this).setTitle("🤖 AI Music — Điều khiển ứng dụng").setView(panel).setPositiveButton("Đóng",null).create()
   val sendMessage={
    val question=input.text.toString().trim()
@@ -185,6 +203,7 @@ class MainActivity:AppCompatActivity(){
   input.setOnEditorActionListener{_,actionId,_->
    if(actionId==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){sendMessage();true}else false
   }
+  dialog.setOnDismissListener{activeAiInput=null}
   dialog.show()
  }
  private fun appAiHandleCommand(question:String):String?{
@@ -209,11 +228,15 @@ class MainActivity:AppCompatActivity(){
   if(has("tắt lặp bài","tắt lặp","tắt repeat")){repeatOne=false;return "Đã tắt lặp bài hiện tại."}
   if(has("mở cài đặt","vào cài đặt","mở settings")){showSettings();return "Đã mở Cài đặt của Music App. ⚙️"}
   if(has("mở tiện ích","mở bảng tiện ích","vào tiện ích")){showToolsPanel();return "Đã mở bảng Tiện ích. ⚙️"}
+  if(has("mở bản đồ","đi đến bản đồ","open map")){openMap();return "Đã yêu cầu mở bản đồ trên thiết bị. 🗺️"}
+  if(has("hiện yêu thích","lọc yêu thích","chỉ bài yêu thích","mở yêu thích")){favoritesOnly=true;renderList(search.text.toString());return "Đã lọc thư viện để chỉ hiện bài yêu thích. ♥"}
+  if(has("hiện tất cả bài","bỏ lọc yêu thích","tắt lọc yêu thích")){favoritesOnly=false;renderList(search.text.toString());return "Đã hiển thị lại tất cả bài hát phù hợp với từ khóa tìm kiếm."}
+  if(has("phát bài yêu thích","phát nhạc yêu thích","nghe bài yêu thích")){val target=tracks.firstOrNull{it.favorite};if(target!=null){playTrack(target);return "Đang yêu cầu phát bài yêu thích: “${target.title}”. 🎵"};return "Bạn chưa có bài hát nào được đánh dấu yêu thích."}
   if(has("hẹn giờ","hẹn giờ tắt","tắt nhạc sau","timer")){showSleepTimerDialog();return "Đã mở bảng hẹn giờ. Chọn thời gian trong bảng để đặt giờ tắt nhạc. 🌙"}
   if(has("điều chỉnh âm lượng","mở âm lượng","chỉnh âm lượng")){showVolume();return "Đã mở bảng điều chỉnh âm lượng. 🔊"}
   if(has("xem lịch sử","mở lịch sử","lịch sử nghe")){showHistory();return "Đã mở lịch sử nghe."}
   if(has("chẩn đoán","kiểm tra ứng dụng","kiểm tra lỗi")){showDiagnostics();return "Đã mở phần chẩn đoán ứng dụng."}
-  if(has("phát bài ","mở bài ","nghe bài ","phát nhạc ")){
+  if(has("phát bài ","mở bài ","nghe bài ","phát nhạc ","nghe ","mở ")){
    val cleaned=question.trim().replace(Regex("(?i)^(hãy\\s+)?(phát|mở|nghe)(\\s+nhạc)?(\\s+bài)?\\s*"),"").trim().trim('"','“','”','\'')
    val target=tracks.firstOrNull{it.title.equals(cleaned,true)}?:tracks.firstOrNull{it.title.contains(cleaned,true)&&cleaned.length>=2}?:tracks.firstOrNull{cleaned.length>=2&&cleaned.contains(it.title,true)}
    if(target!=null){playTrack(target);return "Đã tìm thấy “${target.title}” và gửi lệnh phát trong Music App. 🎵"}
