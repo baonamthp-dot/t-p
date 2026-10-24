@@ -1036,24 +1036,77 @@ class MainActivity:AppCompatActivity(){
    "📚 Nhạc tập trung học bài" to "lofi study music no lyrics",
    "🎹 Piano thư giãn" to "relaxing piano music",
    "🎧 Lofi Việt Nam" to "lofi Việt Nam chill",
-   "⚡ Nhạc năng lượng" to "nhạc upbeat tạo động lực"
+   "⚡ Nhạc năng lượng" to "nhạc upbeat tạo động lực",
+   "💗 Nhạc tình cảm" to "nhạc tình yêu nhẹ nhàng Việt Nam",
+   "🎤 Nhạc Việt hot" to "nhạc Việt mới nhất playlist",
+   "🎮 Nhạc game" to "gaming music mix",
+   "🌊 Sóng biển thư giãn" to "ocean waves relaxing music",
+   "🎸 Guitar acoustic" to "acoustic guitar relaxing playlist",
+   "🎼 Nhạc không lời" to "nhạc không lời hay nhất",
+   "☕ Nhạc quán cà phê" to "cafe jazz chill playlist",
+   "🏃 Nhạc tập luyện" to "workout motivation music mix",
+   "🎬 Nhạc phim" to "nhạc phim soundtrack playlist",
+   "🎷 Jazz nhẹ nhàng" to "smooth jazz relaxing music",
+   "🎻 Nhạc cổ điển" to "classical music relaxing playlist",
+   "🌌 Nhạc vũ trụ" to "space ambient music",
+   "🇰🇷 K-pop" to "K-pop hits playlist",
+   "🇯🇵 J-pop" to "J-pop playlist",
+   "🎶 Remix Việt" to "V-pop remix playlist",
+   "🧘 Thiền và yoga" to "meditation yoga relaxing music",
+   "🎹 Piano học tập" to "study piano instrumental",
+   "🎵 Nhạc thịnh hành" to "popular music playlist"
   )
-  AlertDialog.Builder(this).setTitle("♫ YouTube Mix").setItems(moods.map{it.first}.toTypedArray()){_,which->
-   val selected=moods[which]
-   val url="https://music.youtube.com/search?q="+Uri.encode(selected.second)
-   val title=selected.first
-   val existing=tracks.firstOrNull{it.youtubeUrl==url}
-   if(existing!=null){
-    Toast.makeText(this,"Mix này đã có trong danh sách.",Toast.LENGTH_SHORT).show()
-    playTrack(existing)
-   }else{
-    tracks.add(0,Track(null,title,youtubeUrl=url))
-    saveYoutubeTracks()
-    renderList(search.text.toString())
-    Toast.makeText(this,"Đã thêm mix “"+title+"” vào thư viện.",Toast.LENGTH_SHORT).show()
-    playTrack(tracks.first())
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(6),dp(12),dp(4))}
+  val banner=LinearLayout(this).apply{
+   orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(12),dp(12),dp(12),dp(12))
+   background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(45,10,25),Color.rgb(12,24,55))).apply{cornerRadius=dp(18).toFloat();setStroke(dp(1),Color.rgb(210,35,55))}
+  }
+  banner.addView(TextView(this).apply{text="▶";textSize=32f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(225,25,45),14)},LinearLayout.LayoutParams(dp(56),dp(56)).apply{rightMargin=dp(12)})
+  val bannerText=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  bannerText.addView(TextView(this).apply{text="YouTube Music";textSize=19f;setTypeface(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.BOLD);setTextColor(Color.WHITE)})
+  bannerText.addView(TextView(this).apply{text="24 tuyển tập • Chạm để chọn thể loại";textSize=11f;setTextColor(Color.rgb(190,200,225));setPadding(0,dp(4),0,0)})
+  banner.addView(bannerText)
+  panel.addView(banner,LinearLayout.LayoutParams(-1,dp(82)).apply{bottomMargin=dp(8)})
+  val addAll=button("＋ Thêm cả 24 tuyển tập vào thư viện").apply{background=rounded(Color.rgb(30,95,175),16)}
+  panel.addView(addAll,LinearLayout.LayoutParams(-1,dp(44)).apply{bottomMargin=dp(8)})
+  val scroll=ScrollView(this)
+  val choices=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  moods.forEachIndexed{index,item->
+   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(9),dp(7),dp(9),dp(7));background=rounded(Color.rgb(13,25,48),14)}
+   val art=TextView(this).apply{text="▶";textSize=21f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(Color.rgb(205,25,48),Color.rgb(45,15,48))).apply{cornerRadius=dp(12).toFloat()}}
+   row.addView(art,LinearLayout.LayoutParams(dp(48),dp(48)).apply{rightMargin=dp(10)})
+   val textBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+   textBox.addView(TextView(this).apply{text=item.first;textSize=14f;setTypeface(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);maxLines=1})
+   textBox.addView(TextView(this).apply{text="YouTube Music • Tuyển tập " + (index+1);textSize=10f;setTextColor(Color.rgb(125,165,220));setPadding(0,dp(3),0,0)})
+   row.addView(textBox,LinearLayout.LayoutParams(0,dp(52),1f))
+   row.addView(TextView(this).apply{text="＋";textSize=24f;setTextColor(Color.rgb(115,190,255));gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(34),dp(48)))
+   row.setOnClickListener{addYoutubeMixTrack(item.first,item.second)}
+   choices.addView(row,LinearLayout.LayoutParams(-1,dp(64)).apply{bottomMargin=dp(6)})
+  }
+  scroll.addView(choices)
+  panel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+  val dialog=AlertDialog.Builder(this).setTitle("♫ Chọn nhạc YouTube").setView(panel).setNegativeButton("Đóng",null).create()
+  addAll.setOnClickListener{
+   var added=0
+   moods.forEach{item->
+    val url="https://music.youtube.com/search?q="+Uri.encode(item.second)
+    if(tracks.none{it.youtubeUrl==url}){tracks.add(0,Track(null,item.first,youtubeUrl=url));added++}
    }
-  }.setNegativeButton("Đóng",null).show()
+   saveYoutubeTracks();renderList(search.text.toString())
+   Toast.makeText(this,"Đã thêm $added tuyển tập mới vào thư viện.",Toast.LENGTH_LONG).show()
+   dialog.dismiss()
+  }
+  dialog.show()
+  dialog.window?.setLayout((resources.displayMetrics.widthPixels*0.94).toInt(),(resources.displayMetrics.heightPixels*0.86).toInt())
+ }
+ private fun addYoutubeMixTrack(title:String,query:String){
+  val url="https://music.youtube.com/search?q="+Uri.encode(query)
+  val existing=tracks.firstOrNull{it.youtubeUrl==url}
+  if(existing!=null){Toast.makeText(this,"Tuyển tập đã có trong thư viện, đang mở.",Toast.LENGTH_SHORT).show();playTrack(existing);return}
+  val track=Track(null,title,youtubeUrl=url)
+  tracks.add(0,track);saveYoutubeTracks();renderList(search.text.toString())
+  Toast.makeText(this,"Đã thêm “$title” vào thư viện.",Toast.LENGTH_SHORT).show()
+  playTrack(track)
  }
  private fun addYoutubeMusic(){
   val field=EditText(this).apply{hint="Tên bài hát hoặc dán liên kết YouTube";setSingleLine(false);maxLines=3;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);setPadding(dp(12),dp(10),dp(12),dp(10));background=rounded(Color.rgb(16,25,45),12)}
