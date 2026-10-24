@@ -77,7 +77,7 @@ class MainActivity:AppCompatActivity(){
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
  override fun onCreate(b:Bundle?){super.onCreate(b);progressHandler.post(progressUpdate);tracks.addAll(builtIn.map{it.copy()});loadSavedYoutubeTracks();tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
-  val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background)}
+  val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background);clipChildren=true;clipToPadding=true}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
   top.addView(TextView(this@MainActivity).apply{text="♫";textSize=28f;setTextColor(Color.rgb(90,190,255));gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(48),dp(48)))
   val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(52),1f)}
@@ -157,7 +157,7 @@ class MainActivity:AppCompatActivity(){
   root.addView(controls)
   root.addView(TextView(this).apply{text="BÀI HÁT";textSize=12f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.rgb(120,150,195));setPadding(dp(4),dp(6),0,dp(6))})
   list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
-  root.addView(ScrollView(this).apply{isFillViewport=true;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
+  root.addView(ScrollView(this).apply{isFillViewport=true;clipToPadding=true;clipChildren=true;overScrollMode=View.OVER_SCROLL_NEVER;addView(list)},LinearLayout.LayoutParams(-1,0,1f))
   search.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,a:Int,c:Int,d:Int){};override fun onTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){renderList(s?.toString().orEmpty())};override fun afterTextChanged(e:android.text.Editable?) {}})
   setContentView(root)
  }
