@@ -101,6 +101,7 @@ class MainActivity:AppCompatActivity(){
   val actions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
   fun action(label:String,icon:String,click:()->Unit)=TextView(this).apply{text="$icon\n$label";textSize=12f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(13,27,57),20);setPadding(0,dp(6),0,dp(4));setOnClickListener{click()}}
   actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
+  actions.addView(action("YouTube","▶"){addYoutubeMusic()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
@@ -1018,6 +1019,35 @@ class MainActivity:AppCompatActivity(){
   try{startActivity(Intent(Intent.ACTION_VIEW,uri))}
   catch(_:Exception){try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.google.com/maps")))}catch(_:Exception){nowPlaying.text="Không mở được Bản đồ"}}
  }
+ private fun addYoutubeMusic(){
+  val field=EditText(this).apply{hint="Tên bài hát hoặc dán liên kết YouTube";setSingleLine(false);maxLines=3;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);setPadding(dp(12),dp(10),dp(12),dp(10));background=rounded(Color.rgb(16,25,45),12)}
+  AlertDialog.Builder(this).setTitle("▶ Thêm nhạc từ YouTube").setMessage("Nhập tên bài hát để tìm trên YouTube, hoặc dán liên kết YouTube. Bài sẽ được lưu vào danh sách và mở bằng ứng dụng YouTube/YouTube Music; ứng dụng không tải hay trích xuất âm thanh từ YouTube.").setView(field).setPositiveButton("Thêm"){_,_->
+   val value=field.text.toString().trim()
+   if(value.isBlank()){Toast.makeText(this,"Hãy nhập tên bài hát hoặc liên kết.",Toast.LENGTH_SHORT).show();return@setPositiveButton}
+   val looksLikeUrl=value.startsWith("https://",true)||value.startsWith("http://",true)
+   val url:String
+   val title:String
+   if(looksLikeUrl){
+    val parsed=try{Uri.parse(value)}catch(_:Exception){null}
+    val host=parsed?.host?.lowercase(Locale.ROOT)
+    if(parsed==null||parsed.scheme!="https"||host !in setOf("youtube.com","www.youtube.com","music.youtube.com","youtu.be")){
+     Toast.makeText(this,"Liên kết chưa hợp lệ. Hãy dùng liên kết HTTPS từ youtube.com, music.youtube.com hoặc youtu.be.",Toast.LENGTH_LONG).show();return@setPositiveButton
+    }
+    url=value
+    title=parsed.getQueryParameter("v")?.let{ "YouTube • "+it } ?: "YouTube • "+(parsed.lastPathSegment?.takeIf{it.isNotBlank()}?: "Bài đã thêm")
+   }else{
+    url="https://music.youtube.com/search?q="+Uri.encode(value)
+    title="▶ "+value
+   }
+   if(tracks.any{it.youtubeUrl==url||it.title.equals(title,true)}){
+    Toast.makeText(this,"Bài này đã có trong danh sách.",Toast.LENGTH_SHORT).show()
+   }else{
+    tracks.add(0,Track(null,title,youtubeUrl=url))
+    renderList(search.text.toString())
+    Toast.makeText(this,"Đã thêm “"+title+"” vào danh sách. Chạm bài để mở YouTube.",Toast.LENGTH_LONG).show()
+   }
+  }.setNegativeButton("Hủy",null).show()
+ }
  private fun chooseAudio(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addCategory(Intent.CATEGORY_OPENABLE)},100)}
  private fun chooseAudioForTrack(t:Track){pendingYoutubeAudio=t;Toast.makeText(this,"Chọn tệp âm thanh của bài này để phát trực tiếp trong Music App.",Toast.LENGTH_LONG).show();startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},103)}
  private fun audioPreferenceKey(t:Track):String="youtube_audio_"+(Uri.parse(t.youtubeUrl).getQueryParameter("v")?:t.title.hashCode().toString())
@@ -1033,7 +1063,7 @@ class MainActivity:AppCompatActivity(){
    row.addView(icon,LinearLayout.LayoutParams(dp(50),dp(50)).apply{rightMargin=dp(9)});icon.setOnClickListener{playTrack(tr)}
    val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
    box.addView(TextView(this).apply{text=tr.title;textSize=14f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
-   box.addView(TextView(this).apply{text=when{tr.streamUrl!=null->"Nhạc tiếng Việt • Phát trực tuyến miễn phí";tr.youtubeUrl!=null&&tr.uri!=null->"Âm thanh từ thiết bị • Phát trong app";tr.youtubeUrl!=null->"Chọn tệp âm thanh để nghe trong app";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
+   box.addView(TextView(this).apply{text=when{tr.streamUrl!=null->"Nhạc tiếng Việt • Phát trực tuyến miễn phí";tr.youtubeUrl!=null&&tr.uri!=null->"Âm thanh từ thiết bị • Phát trong app";tr.youtubeUrl!=null->"YouTube • Chạm để mở bài hát bên ngoài app";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
    row.addView(box);box.setOnClickListener{playTrack(tr)};box.setOnLongClickListener{showTrackDetails(tr);true}
    val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;saveFavorite(tr);renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
@@ -1074,7 +1104,7 @@ class MainActivity:AppCompatActivity(){
  private fun openYoutube(url:String){
   val parsed=Uri.parse(url)
   val host=parsed.host?.lowercase(Locale.ROOT)
-  val safeHost=host=="music.youtube.com"
+  val safeHost=host=="music.youtube.com"||host=="youtube.com"||host=="www.youtube.com"||host=="youtu.be"
   if(parsed.scheme!="https"||!safeHost){nowPlaying.text="Liên kết YouTube không an toàn";return}
   try{
    val appIntent=Intent(Intent.ACTION_VIEW,parsed).apply{setPackage("com.google.android.apps.youtube.music")}
@@ -1124,7 +1154,7 @@ class MainActivity:AppCompatActivity(){
   elapsedLabel.text="00:00"
   durationLabel.text="00:00"
   progressBar.isEnabled=false
-  if(t.youtubeUrl!=null&&t.uri==null){chooseAudioForTrack(t);return}
+  if(t.youtubeUrl!=null&&t.uri==null){nowPlaying.text="🎧 Đang mở YouTube: "+t.title;playButton.text="▶";progressBar.isEnabled=false;openYoutube(t.youtubeUrl);return}
   if(t.melody!=null){playBuiltin(t);return}
   val u=t.uri
   if(u==null&&t.streamUrl==null){nowPlaying.text="Bài này chưa có tệp âm thanh.";playButton.text="▶";progressBar.isEnabled=false;return}
