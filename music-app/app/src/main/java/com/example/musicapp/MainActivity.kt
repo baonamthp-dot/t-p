@@ -36,7 +36,7 @@ class MainActivity:AppCompatActivity(){
  private val generation=AtomicInteger(0);private val audioLock=Any();@Volatile private var stopBuiltin=false
  @Volatile private var builtinPaused=false
  @Volatile private var destroyed=false
- private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var coverIcon:TextView;private lateinit var playButton:Button;private lateinit var progressBar:SeekBar;private lateinit var elapsedLabel:TextView;private lateinit var durationLabel:TextView;private val progressHandler=android.os.Handler(android.os.Looper.getMainLooper());private lateinit var search:EditText;private var favoritesOnly=false
+ private lateinit var list:LinearLayout;private lateinit var nowPlaying:TextView;private lateinit var coverIcon:TextView;private lateinit var playButton:Button;private lateinit var progressBar:SeekBar;private lateinit var elapsedLabel:TextView;private lateinit var durationLabel:TextView;private val progressHandler=android.os.Handler(android.os.Looper.getMainLooper());private lateinit var search:EditText;private var favoritesOnly=false;private var sortAlphabetically=false
  private var shuffle=false
  private var repeatOne=false
  private var pendingExportText=""
@@ -103,6 +103,8 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
   actions.addView(action("YouTube","▶"){addYoutubeMusic()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("YouTube Mix","♫"){showYoutubeMix()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Ngẫu nhiên","🎲"){playRandomTrack()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action(if(sortAlphabetically)"Tên A–Z" else "Mới thêm","↕"){sortAlphabetically=!sortAlphabetically;renderList(search.text.toString());Toast.makeText(this,if(sortAlphabetically)"Sắp xếp theo tên A–Z" else "Trở về thứ tự thư viện",Toast.LENGTH_SHORT).show()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
@@ -1115,9 +1117,17 @@ class MainActivity:AppCompatActivity(){
  private fun audioPreferenceKey(t:Track):String="youtube_audio_"+(Uri.parse(t.youtubeUrl).getQueryParameter("v")?:t.title.hashCode().toString())
  @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==104){if(c==Activity.RESULT_OK){val said=d?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty();if(said.isNotBlank()){activeAiInput?.let{it.setText(said);it.setSelection(it.text.length)};Toast.makeText(this,if(activeAiInput!=null)"Đã nhận giọng nói. Nhấn gửi để hỏi AI." else "Đã nhận: $said. Mở AI để gửi câu hỏi.",Toast.LENGTH_SHORT).show()}};return};if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r==103){val target=pendingYoutubeAudio;pendingYoutubeAudio=null;if(c==Activity.RESULT_OK&&d?.data!=null&&target!=null){val u=d.data!!;try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};target.uri=u;prefs.edit().putString(audioPreferenceKey(target),u.toString()).apply();renderList(search.text.toString());Toast.makeText(this,"Đã gắn âm thanh vào “"+target.title+"”. Bài sẽ phát trong app, không mở YouTube Music.",Toast.LENGTH_LONG).show();playTrack(target)};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
- private fun renderList(qs:String){
+ private fun playRandomTrack(){
+   val q=search.text.toString().trim()
+   val candidates=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.contains(q,ignoreCase=true)}
+   if(candidates.isEmpty()){Toast.makeText(this,"Chưa có bài hát phù hợp để phát.",Toast.LENGTH_SHORT).show();return}
+   val chosen=candidates[kotlin.random.Random.nextInt(candidates.size)]
+   Toast.makeText(this,"🎲 Phát ngẫu nhiên: "+chosen.title,Toast.LENGTH_SHORT).show()
+   playTrack(chosen)
+  }
+  private fun renderList(qs:String){
   if(destroyed||!::list.isInitialized||!::search.isInitialized)return
-  list.removeAllViews();val q=qs.trim().lowercase(Locale.getDefault());val visible=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.lowercase(Locale.getDefault()).contains(q)}
+  list.removeAllViews();val q=qs.trim().lowercase(Locale.getDefault());val filtered=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.lowercase(Locale.getDefault()).contains(q)};val visible=if(sortAlphabetically)filtered.sortedBy{it.title.lowercase(Locale.getDefault())}else filtered
   if(visible.isEmpty()){list.addView(TextView(this).apply{text="🌙\n\nChưa có bài phù hợp";textSize=15f;gravity=Gravity.CENTER;setTextColor(Color.rgb(125,145,180));setPadding(0,dp(28),0,dp(28))});return}
   visible.forEach{tr->
    val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(6),dp(7),dp(6));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(Color.rgb(11,22,43),Color.rgb(17,17,36))).apply{cornerRadius=dp(18).toFloat();setStroke(dp(1),Color.rgb(25,52,90))}}
