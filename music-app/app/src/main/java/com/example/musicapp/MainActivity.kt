@@ -104,6 +104,7 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("YouTube","▶"){addYoutubeMusic()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("YouTube Mix","♫"){showYoutubeMix()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Ngẫu nhiên","🎲"){playRandomTrack()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Hàng đợi","☷"){showQueueDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action(if(sortAlphabetically)"Tên A–Z" else "Mới thêm","↕"){sortAlphabetically=!sortAlphabetically;renderList(search.text.toString());Toast.makeText(this,if(sortAlphabetically)"Sắp xếp theo tên A–Z" else "Trở về thứ tự thư viện",Toast.LENGTH_SHORT).show()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
@@ -1124,6 +1125,28 @@ class MainActivity:AppCompatActivity(){
    val chosen=candidates[kotlin.random.Random.nextInt(candidates.size)]
    Toast.makeText(this,"🎲 Phát ngẫu nhiên: "+chosen.title,Toast.LENGTH_SHORT).show()
    playTrack(chosen)
+  }
+  private fun showQueueDialog(){
+   val queue=(activePlaylist?:tracks.toList()).toList()
+   if(queue.isEmpty()){Toast.makeText(this,"Thư viện chưa có bài hát.",Toast.LENGTH_SHORT).show();return}
+   val labels=queue.mapIndexed{i,t->(if(t==tracks.getOrNull(currentIndex))"▶ " else "")+(if(t.favorite)"♥ " else "")+t.title}.toTypedArray()
+   AlertDialog.Builder(this).setTitle("☷ Hàng đợi phát • ${queue.size} bài").setItems(labels){_,which->
+    activePlaylist=queue
+    playlistPosition=which
+    playTrack(queue[which])
+    Toast.makeText(this,"Đang phát từ hàng đợi: "+queue[which].title,Toast.LENGTH_SHORT).show()
+   }.setPositiveButton("🔀 Trộn hàng đợi"){_,_->
+    val shuffled=queue.shuffled()
+    activePlaylist=shuffled
+    playlistPosition=0
+    playTrack(shuffled.first())
+    Toast.makeText(this,"Đã trộn hàng đợi phát.",Toast.LENGTH_SHORT).show()
+   }.setNeutralButton("Toàn bộ thư viện"){_,_->
+    activePlaylist=tracks.toList()
+    playlistPosition=0
+    if(tracks.isNotEmpty())playTrack(tracks.first())
+    Toast.makeText(this,"Đang phát theo hàng đợi toàn thư viện.",Toast.LENGTH_SHORT).show()
+   }.setNegativeButton("Đóng",null).show()
   }
   private fun renderList(qs:String){
   if(destroyed||!::list.isInitialized||!::search.isInitialized)return
