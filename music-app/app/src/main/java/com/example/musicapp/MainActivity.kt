@@ -69,7 +69,7 @@ class MainActivity:AppCompatActivity(){
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=rounded(Color.rgb(38,44,58),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);progressHandler.post(progressUpdate);tracks.addAll(builtIn.map{it.copy()});tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);progressHandler.post(progressUpdate);tracks.addAll(builtIn.map{it.copy()});loadSavedYoutubeTracks();tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background)}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -1043,6 +1043,7 @@ class MainActivity:AppCompatActivity(){
     Toast.makeText(this,"Bài này đã có trong danh sách.",Toast.LENGTH_SHORT).show()
    }else{
     tracks.add(0,Track(null,title,youtubeUrl=url))
+    saveYoutubeTracks()
     renderList(search.text.toString())
     Toast.makeText(this,"Đã thêm “"+title+"” vào danh sách. Chạm bài để mở YouTube.",Toast.LENGTH_LONG).show()
    }
@@ -1050,6 +1051,40 @@ class MainActivity:AppCompatActivity(){
  }
  private fun chooseAudio(){startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);addCategory(Intent.CATEGORY_OPENABLE)},100)}
  private fun chooseAudioForTrack(t:Track){pendingYoutubeAudio=t;Toast.makeText(this,"Chọn tệp âm thanh của bài này để phát trực tiếp trong Music App.",Toast.LENGTH_LONG).show();startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},103)}
+ private fun loadSavedYoutubeTracks(){
+  val saved=try{JSONArray(prefs.getString("saved_youtube_tracks","[]").orEmpty())}catch(_:Exception){JSONArray()}
+  for(i in 0 until saved.length()){
+   val item=saved.optJSONObject(i)?:continue
+   val title=item.optString("title").trim()
+   val url=item.optString("url").trim()
+   val parsed=try{Uri.parse(url)}catch(_:Exception){null}
+   val host=parsed?.host?.lowercase(Locale.ROOT)
+   if(title.isBlank()||parsed?.scheme!="https"||host !in setOf("youtube.com","www.youtube.com","music.youtube.com","youtu.be"))continue
+   if(tracks.none{it.youtubeUrl==url})tracks.add(Track(null,title,youtubeUrl=url))
+  }
+ }
+ private fun saveYoutubeTracks(){
+  val saved=JSONArray()
+  tracks.filter{it.youtubeUrl!=null}.forEach{t->saved.put(JSONObject().put("title",t.title).put("url",t.youtubeUrl))}
+  prefs.edit().putString("saved_youtube_tracks",saved.toString()).apply()
+ }
+ private fun showYoutubeTrackMenu(t:Track){
+  val options=arrayOf("▶ Mở trên YouTube","✦ Chi tiết bài hát","🗑 Xóa khỏi danh sách")
+  AlertDialog.Builder(this).setTitle(t.title).setItems(options){_,which->
+   when(which){
+    0->playTrack(t)
+    1->showTrackDetails(t)
+    2->AlertDialog.Builder(this).setTitle("Xóa bài hát?").setMessage("Xóa “"+t.title+"” khỏi danh sách YouTube trong ứng dụng?").setNegativeButton("Hủy",null).setPositiveButton("Xóa"){_,_->
+     tracks.remove(t)
+     if(currentIndex>=tracks.size)currentIndex=tracks.lastIndex
+     prefs.edit().remove(audioPreferenceKey(t)).remove("fav_"+t.title).apply()
+     saveYoutubeTracks()
+     renderList(search.text.toString())
+     Toast.makeText(this,"Đã xóa bài YouTube khỏi danh sách.",Toast.LENGTH_SHORT).show()
+    }.show()
+   }
+  }.show()
+ }
  private fun audioPreferenceKey(t:Track):String="youtube_audio_"+(Uri.parse(t.youtubeUrl).getQueryParameter("v")?:t.title.hashCode().toString())
  @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==104){if(c==Activity.RESULT_OK){val said=d?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty();if(said.isNotBlank()){activeAiInput?.let{it.setText(said);it.setSelection(it.text.length)};Toast.makeText(this,if(activeAiInput!=null)"Đã nhận giọng nói. Nhấn gửi để hỏi AI." else "Đã nhận: $said. Mở AI để gửi câu hỏi.",Toast.LENGTH_SHORT).show()}};return};if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r==103){val target=pendingYoutubeAudio;pendingYoutubeAudio=null;if(c==Activity.RESULT_OK&&d?.data!=null&&target!=null){val u=d.data!!;try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};target.uri=u;prefs.edit().putString(audioPreferenceKey(target),u.toString()).apply();renderList(search.text.toString());Toast.makeText(this,"Đã gắn âm thanh vào “"+target.title+"”. Bài sẽ phát trong app, không mở YouTube Music.",Toast.LENGTH_LONG).show();playTrack(target)};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
@@ -1064,7 +1099,7 @@ class MainActivity:AppCompatActivity(){
    val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
    box.addView(TextView(this).apply{text=tr.title;textSize=14f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);maxLines=1;ellipsize=android.text.TextUtils.TruncateAt.END})
    box.addView(TextView(this).apply{text=when{tr.streamUrl!=null->"Nhạc tiếng Việt • Phát trực tuyến miễn phí";tr.youtubeUrl!=null&&tr.uri!=null->"Âm thanh từ thiết bị • Phát trong app";tr.youtubeUrl!=null->"YouTube • Chạm để mở bài hát bên ngoài app";tr.melody!=null->"Nhạc ngủ / Chill • Tích hợp";else->"Từ thiết bị"};textSize=10f;setTextColor(Color.rgb(110,145,190));setPadding(0,dp(3),0,0)})
-   row.addView(box);box.setOnClickListener{playTrack(tr)};box.setOnLongClickListener{showTrackDetails(tr);true}
+   row.addView(box);box.setOnClickListener{playTrack(tr)};box.setOnLongClickListener{if(tr.youtubeUrl!=null)showYoutubeTrackMenu(tr) else showTrackDetails(tr);true}
    val f=button(if(tr.favorite)"♥" else "♡");f.textSize=19f;f.background=rounded(Color.rgb(18,30,56),18);f.setOnClickListener{tr.favorite=!tr.favorite;saveFavorite(tr);renderList(search.text.toString())};row.addView(f,LinearLayout.LayoutParams(dp(46),dp(50)))
    list.addView(row,LinearLayout.LayoutParams(-1,dp(66)).apply{bottomMargin=dp(7)})
   }
