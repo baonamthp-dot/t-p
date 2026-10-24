@@ -1212,7 +1212,7 @@ class MainActivity:AppCompatActivity(){
   list.removeAllViews();val q=qs.trim().lowercase(Locale.getDefault());val filtered=tracks.filter{(!favoritesOnly||it.favorite)&&it.title.lowercase(Locale.getDefault()).contains(q)};val visible=if(sortAlphabetically)filtered.sortedBy{it.title.lowercase(Locale.getDefault())}else filtered
   if(visible.isEmpty()){list.addView(TextView(this).apply{text="🌙\n\nChưa có bài phù hợp";textSize=15f;gravity=Gravity.CENTER;setTextColor(Color.rgb(125,145,180));setPadding(0,dp(28),0,dp(28))});return}
   visible.forEach{tr->
-   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(6),dp(7),dp(6));background=GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(Color.rgb(11,22,43),Color.rgb(17,17,36))).apply{cornerRadius=dp(18).toFloat();setStroke(dp(1),Color.rgb(25,52,90))}}
+   val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(6),dp(7),dp(6));background=rounded(Color.rgb(13,22,41),18)}
    val icon=TextView(this).apply{text=when{tr.title.startsWith("🌙")->"🌕";tr.title.startsWith("☁️")->"☁";tr.streamUrl!=null->"🎤";tr.youtubeUrl!=null->"▶";else->"♫"};textSize=23f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(22,36,66),15)}
    row.addView(icon,LinearLayout.LayoutParams(dp(50),dp(50)).apply{rightMargin=dp(9)});icon.setOnClickListener{playTrack(tr)}
    val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(62),1f)}
@@ -1228,7 +1228,7 @@ class MainActivity:AppCompatActivity(){
   val expectedTitle=t.title
   Thread{
    var retriever:android.media.MediaMetadataRetriever?=null
-   val bitmap=try{retriever=android.media.MediaMetadataRetriever();retriever!!.setDataSource(this,uri);val bytes=retriever!!.embeddedPicture;if(bytes!=null)BitmapFactory.decodeByteArray(bytes,0,bytes.size)else null}catch(_:Exception){null}finally{try{retriever?.release()}catch(_:Exception){}}
+   val bitmap=try{retriever=android.media.MediaMetadataRetriever();retriever!!.setDataSource(this,uri);val bytes=retriever!!.embeddedPicture;if(bytes!=null){val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds);var sample=1;while(bounds.outWidth/sample>512||bounds.outHeight/sample>512)sample*=2;val opts=BitmapFactory.Options().apply{inSampleSize=sample;inPreferredConfig=Bitmap.Config.RGB_565};BitmapFactory.decodeByteArray(bytes,0,bytes.size,opts)}else null}catch(_:Exception){null}finally{try{retriever?.release()}catch(_:Exception){}}
    runOnUiThread{
     if(!destroyed&&currentIndex in tracks.indices&&tracks[currentIndex].title==expectedTitle&&bitmap!=null){coverIcon.text="";coverIcon.background=BitmapDrawable(resources,bitmap).apply{gravity=Gravity.FILL}
     }
