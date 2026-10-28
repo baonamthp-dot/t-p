@@ -229,32 +229,33 @@ class MainActivity:AppCompatActivity(){
   fun normalize(value:String)=java.text.Normalizer.normalize(value.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d').replace("\\s+".toRegex()," ").trim()
   val q=normalize(question)
   fun has(vararg words:String)=words.any{q.contains(normalize(it))}
-  if(has("phát bài tiếp theo","bài tiếp theo","bài kế tiếp","bài sau","chuyển bài tiếp","chuyển sang bài sau","qua bài khác","nghe bài tiếp","bỏ qua bài này","skip","next")){next();return "Đã yêu cầu phát bài tiếp theo. 🎵"}
-  if(has("bài trước","phát bài trước","quay lại bài","lùi bài","bài vừa rồi","nghe lại bài trước","previous")){previous();return "Đã yêu cầu phát bài trước. 🎵"}
-  if(has("tạm dừng","dừng nhạc","dừng phát","ngừng nhạc","ngắt nhạc","im nhạc","pause","pause music")){
+  fun all(vararg words:String)=words.all{q.contains(normalize(it))}
+  if(has("phát bài tiếp theo","bài tiếp theo","bài kế tiếp","bài sau","chuyển bài tiếp","chuyển sang bài sau","qua bài khác","nghe bài tiếp","bỏ qua bài này","skip","next") || all("bai","tiep") || all("chuyen","bai") || all("qua","bai") || all("sang","bai")){next();return "Đã yêu cầu phát bài tiếp theo. 🎵"}
+  if(has("bài trước","phát bài trước","quay lại bài","lùi bài","bài vừa rồi","nghe lại bài trước","previous") || all("bai","truoc") || all("lui","bai") || all("quay","lai","bai")){previous();return "Đã yêu cầu phát bài trước. 🎵"}
+  if(has("tạm dừng","dừng nhạc","dừng phát","ngừng nhạc","ngắt nhạc","im nhạc","pause","pause music") || all("dung","nhac") || all("ngung","nhac") || all("im","nhac") || all("tam","dung")){
    val playing=try{player?.isPlaying==true}catch(_:Exception){false} || try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false}
    if(playing){togglePlay();return "Đã tạm dừng phát nhạc. ⏸"}
    return "Hiện tại mình không thấy bài nào đang phát. Bạn có thể ra lệnh “phát bài tiếp theo” hoặc chọn một bài trong danh sách."
   }
-  if(has("tiếp tục","phát tiếp","tiếp tục phát","bật nhạc lại","mở nhạc lại","chơi tiếp","resume","resume music","tiếp tục nghe")){
+  if(has("tiếp tục","phát tiếp","tiếp tục phát","bật nhạc lại","mở nhạc lại","chơi tiếp","resume","resume music","tiếp tục nghe") || all("tiep","tuc") || all("phat","tiep") || all("nhac","lai")){
    val paused=(player!=null&&!playerPreparing)||(audioTrack!=null)
    val playing=try{player?.isPlaying==true}catch(_:Exception){false} || try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false}
    if(paused&&!playing){togglePlay();return "Đã yêu cầu tiếp tục phát nhạc. ▶"}
    return "Chưa có bài đang tạm dừng. Hãy chọn một bài hoặc ra lệnh “phát bài tiếp theo”."
   }
-  if(has("bật ngẫu nhiên","bật phát ngẫu nhiên","phát ngẫu nhiên","xáo trộn bài","trộn bài","bật shuffle","shuffle")){shuffle=true;return "Đã bật phát ngẫu nhiên. 🔀"}
+  if(has("bật ngẫu nhiên","bật phát ngẫu nhiên","phát ngẫu nhiên","xáo trộn bài","trộn bài","bật shuffle","shuffle") || all("tron","bai") || all("ngau","nhien")){shuffle=true;return "Đã bật phát ngẫu nhiên. 🔀"}
   if(has("tắt ngẫu nhiên","tắt phát ngẫu nhiên","ngừng trộn bài","tắt shuffle")){shuffle=false;return "Đã tắt phát ngẫu nhiên."}
   if(has("bật lặp bài","bật lặp","lặp lại bài này","phát lặp lại","bật repeat","repeat")){repeatOne=true;return "Đã bật lặp bài hiện tại. 🔁"}
   if(has("tắt lặp bài","tắt lặp","không lặp nữa","tắt repeat")){repeatOne=false;return "Đã tắt lặp bài hiện tại."}
-  if(has("mở cài đặt","vào cài đặt","đi tới cài đặt","mở settings","settings")){showSettings();return "Đã mở Cài đặt của Music App. ⚙️"}
-  if(has("mở tiện ích","mở bảng tiện ích","vào tiện ích","mở công cụ","mở tools")){showToolsPanel();return "Đã mở bảng Tiện ích. ⚙️"}
-  if(has("mở bản đồ","đi đến bản đồ","mở map","open map")){openMap();return "Đã yêu cầu mở bản đồ trên thiết bị. 🗺️"}
-  if(has("hiện yêu thích","lọc yêu thích","chỉ bài yêu thích","mở yêu thích","mở danh sách yêu thích","xem bài đã thích")){favoritesOnly=true;renderList(search.text.toString());return "Đã lọc thư viện để chỉ hiện bài yêu thích. ♥"}
+  if(has("mở cài đặt","vào cài đặt","đi tới cài đặt","mở settings","settings") || all("cai","dat")){showSettings();return "Đã mở Cài đặt của Music App. ⚙️"}
+  if(has("mở tiện ích","mở bảng tiện ích","vào tiện ích","mở công cụ","mở tools") || all("tien","ich") || all("cong","cu")){showToolsPanel();return "Đã mở bảng Tiện ích. ⚙️"}
+  if(has("mở bản đồ","đi đến bản đồ","mở map","open map") || all("ban","do")){openMap();return "Đã yêu cầu mở bản đồ trên thiết bị. 🗺️"}
+  if(has("hiện yêu thích","lọc yêu thích","chỉ bài yêu thích","mở yêu thích","mở danh sách yêu thích","xem bài đã thích") || all("danh","sach","yeu","thich") || all("bai","da","thich")){favoritesOnly=true;renderList(search.text.toString());return "Đã lọc thư viện để chỉ hiện bài yêu thích. ♥"}
   if(has("hiện tất cả bài","bỏ lọc yêu thích","tắt lọc yêu thích")){favoritesOnly=false;renderList(search.text.toString());return "Đã hiển thị lại tất cả bài hát phù hợp với từ khóa tìm kiếm."}
-  if(has("phát bài yêu thích","phát nhạc yêu thích","nghe bài yêu thích","phát bài đã thích","bật nhạc yêu thích")){val target=tracks.firstOrNull{it.favorite};if(target!=null){playTrack(target);return "Đang yêu cầu phát bài yêu thích: “${target.title}”. 🎵"};return "Bạn chưa có bài hát nào được đánh dấu yêu thích."}
-  if(has("hẹn giờ","hẹn giờ tắt","tắt nhạc sau","đặt giờ tắt nhạc","hẹn giờ ngủ","timer")){showSleepTimerDialog();return "Đã mở bảng hẹn giờ. Chọn thời gian trong bảng để đặt giờ tắt nhạc. 🌙"}
-  if(has("điều chỉnh âm lượng","mở âm lượng","chỉnh âm lượng","tăng giảm âm lượng","volume","âm lượng")){showVolume();return "Đã mở bảng điều chỉnh âm lượng. 🔊"}
-  if(has("xem lịch sử","mở lịch sử","lịch sử nghe","bài đã nghe","nghe gần đây","recent history")){showHistory();return "Đã mở lịch sử nghe."}
+  if(has("phát bài yêu thích","phát nhạc yêu thích","nghe bài yêu thích","phát bài đã thích","bật nhạc yêu thích") || all("phat","bai","yeu","thich") || all("nhac","yeu","thich")){val target=tracks.firstOrNull{it.favorite};if(target!=null){playTrack(target);return "Đang yêu cầu phát bài yêu thích: “${target.title}”. 🎵"};return "Bạn chưa có bài hát nào được đánh dấu yêu thích."}
+  if(has("hẹn giờ","hẹn giờ tắt","tắt nhạc sau","đặt giờ tắt nhạc","hẹn giờ ngủ","timer") || all("hen","gio") || all("gio","tat","nhac")){showSleepTimerDialog();return "Đã mở bảng hẹn giờ. Chọn thời gian trong bảng để đặt giờ tắt nhạc. 🌙"}
+  if(has("điều chỉnh âm lượng","mở âm lượng","chỉnh âm lượng","tăng giảm âm lượng","volume","âm lượng") || all("am","luong") || all("to","nho","tieng")){showVolume();return "Đã mở bảng điều chỉnh âm lượng. 🔊"}
+  if(has("xem lịch sử","mở lịch sử","lịch sử nghe","bài đã nghe","nghe gần đây","recent history") || all("lich","su") || all("da","nghe","roi")){showHistory();return "Đã mở lịch sử nghe."}
   if(has("chẩn đoán","kiểm tra ứng dụng","kiểm tra lỗi","tìm lỗi ứng dụng","diagnostics")){showDiagnostics();return "Đã mở phần chẩn đoán ứng dụng."}
   if(has("phát bài ","mở bài ","nghe bài ","phát nhạc ","bật bài ","bật nhạc ","mở bài hát ","nghe nhạc ","nghe ","mở ")){
    val cleaned=question.trim().replace(Regex("(?i)^(hãy\\s+)?(phát|mở|nghe)(\\s+nhạc)?(\\s+bài)?\\s*"),"").trim().trim('"','“','”','\'')
