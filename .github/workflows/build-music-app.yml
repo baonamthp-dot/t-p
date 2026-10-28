@@ -44,6 +44,10 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
 
+      - name: Android lint checks
+        working-directory: music-app
+        run: gradle lintDebug
+
       - name: Build debug APK
         working-directory: music-app
         env:
