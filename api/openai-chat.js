@@ -1,3 +1,7 @@
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const RATE_MAX_REQUESTS = 20;
+const requestBuckets = new Map();
+
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -5,10 +9,34 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST /api/openai-chat." });
 
+  const contentLength = Number(req.headers?.["content-length"] || 0);
+  if (contentLength > 20000) return res.status(413).json({ error: "Yêu cầu quá lớn." });
+
+  // Best-effort per-instance protection. For multi-instance production deployments,
+  // add a shared rate-limit service at the hosting edge.
+  const now = Date.now();
+  const ip = String(req.headers?.["x-forwarded-for"] || req.socket?.remoteAddress || "unknown").split(",")[0].trim();
+  let bucket = requestBuckets.get(ip);
+  if (!bucket || now - bucket.startedAt >= RATE_WINDOW_MS) {
+    bucket = { startedAt: now, count: 0 };
+    requestBuckets.set(ip, bucket);
+  }
+  bucket.count += 1;
+  if (bucket.count > RATE_MAX_REQUESTS) {
+    res.setHeader("Retry-After", String(Math.ceil((RATE_WINDOW_MS - (now - bucket.startedAt)) / 1000)));
+    return res.status(429).json({ error: "Bạn gửi quá nhiều tin nhắn trong thời gian ngắn. Hãy thử lại sau." });
+  }
+  if (requestBuckets.size > 2000) {
+    for (const [key, value] of requestBuckets) {
+      if (now - value.startedAt >= RATE_WINDOW_MS) requestBuckets.delete(key);
+    }
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(503).json({ error: "Máy chủ chưa cấu hình OPENAI_API_KEY." });
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
+    if (!body || typeof body !== "object" || Array.isArray(body)) return res.status(400).json({ error: "Dữ liệu yêu cầu không hợp lệ." });
     const message = typeof body.message === "string" ? body.message.trim() : "";
     const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
     if (!message) return res.status(400).json({ error: "Vui lòng nhập tin nhắn." });
