@@ -75,15 +75,51 @@ module.exports = async function handler(req, res) {
       ...safeHistory,
       { role: "user", content: message }
     ];
-    const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
+    const model = (process.env.OPENAI_MODEL || "gpt-4o-mini").trim();
+    // Prefer the Responses API with web search so answers can use current sources.
+    // If web search is unavailable for the configured model/project, fall back to chat completions.
+    const responseInput = [
+      ...safeHistory.map(m => ({ role: m.role, content: [{ type: "input_text", text: m.content }] })),
+      { role: "user", content: [{ type: "input_text", text: message }] }
+    ];
+    let answer = "";
+    const webUpstream = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-      body: JSON.stringify({ model: (process.env.OPENAI_MODEL || "gpt-4o-mini").trim(), messages, temperature: 0.5, max_tokens: 3000 }),
-      signal: AbortSignal.timeout(25000)
+      body: JSON.stringify({
+        model,
+        instructions: systemPrompt + "\\n\\nKHI CẦN THÔNG TIN MỚI: chủ động dùng công cụ tìm kiếm web nếu câu hỏi liên quan tin tức, phiên bản phần mềm, giá cả, sự kiện, luật hoặc dữ kiện có thể thay đổi. Ưu tiên nguồn chính thức, phân biệt dữ kiện đã xác minh với suy luận, và đưa đường dẫn nguồn dễ mở khi có kết quả tìm kiếm. Với kiến thức ổn định, trả lời trực tiếp không cần tìm web.",
+        input: responseInput,
+        tools: [{ type: "web_search" }],
+        tool_choice: "auto",
+        max_output_tokens: 3000
+      }),
+      signal: AbortSignal.timeout(40000)
     });
-    const data = await upstream.json();
-    if (!upstream.ok) return res.status(upstream.status === 429 ? 429 : 502).json({ error: upstream.status === 429 ? "AI đang bận hoặc đã chạm hạn mức. Thử lại sau nhé." : "OpenAI chưa trả lời được. Kiểm tra API key và quyền sử dụng model ở máy chủ." });
-    const answer = data.choices?.[0]?.message?.content?.trim();
+    let responseData = {};
+    try { responseData = await webUpstream.json(); } catch (_) {}
+    if (webUpstream.ok) {
+      answer = typeof responseData.output_text === "string" ? responseData.output_text.trim() : "";
+      if (!answer && Array.isArray(responseData.output)) {
+        answer = responseData.output.flatMap(item => Array.isArray(item.content) ? item.content : [])
+          .filter(item => item.type === "output_text" && typeof item.text === "string")
+          .map(item => item.text).join("\\n").trim();
+      }
+    } else if (![400, 404, 422].includes(webUpstream.status)) {
+      return res.status(webUpstream.status === 429 ? 429 : 502).json({ error: webUpstream.status === 429 ? "AI đang bận hoặc đã chạm hạn mức. Thử lại sau nhé." : "OpenAI chưa trả lời được. Kiểm tra API key và quyền sử dụng model ở máy chủ." });
+    }
+
+    if (!answer) {
+      const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+        body: JSON.stringify({ model, messages, temperature: 0.5, max_tokens: 3000 }),
+        signal: AbortSignal.timeout(25000)
+      });
+      const data = await upstream.json();
+      if (!upstream.ok) return res.status(upstream.status === 429 ? 429 : 502).json({ error: upstream.status === 429 ? "AI đang bận hoặc đã chạm hạn mức. Thử lại sau nhé." : "OpenAI chưa trả lời được. Kiểm tra API key và quyền sử dụng model ở máy chủ." });
+      answer = data.choices?.[0]?.message?.content?.trim() || "";
+    }
     if (!answer) return res.status(502).json({ error: "AI không trả về nội dung." });
     return res.status(200).json({ answer });
   } catch (_) {
