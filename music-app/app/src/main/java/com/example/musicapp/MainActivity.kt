@@ -56,6 +56,8 @@ class MainActivity:AppCompatActivity(){
  private var isOwner=false
  private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
  private var tts:TextToSpeech?=null
+ @Volatile private var aiVoicePlayer:MediaPlayer?=null
+ private val aiVoiceGeneration=AtomicInteger(0)
  private var activeAiInput:EditText?=null
  private var pendingVoiceSubmit:(()->Unit)?=null
  @Volatile private var ttsReady=false
@@ -685,11 +687,63 @@ class MainActivity:AppCompatActivity(){
  }
  private fun sha256(value:String):String=MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it)}
  private fun speakAi(text:String){
+  val spoken=text.trim().take(4000)
+  if(spoken.isBlank())return
+  val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
+  if(configured.startsWith("https://",ignoreCase=true)){
+   val generation=aiVoiceGeneration.incrementAndGet()
+   tts?.stop()
+   Thread({
+    var connection:HttpURLConnection?=null
+    var audioFile:java.io.File?=null
+    try{
+     val endpoint=if(configured.endsWith("/api/openai-chat"))configured.removeSuffix("/api/openai-chat")+"/api/openai-speech" else configured.trimEnd('/')+"/api/openai-speech"
+     connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{
+      requestMethod="POST";connectTimeout=12000;readTimeout=35000;doOutput=true
+      setRequestProperty("Content-Type","application/json; charset=utf-8")
+      setRequestProperty("Accept","audio/mpeg")
+     }
+     val payload=JSONObject().put("input",spoken).toString()
+     connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
+     if(connection.responseCode !in 200..299)throw java.io.IOException("AI speech endpoint unavailable")
+     val bytes=connection.inputStream.use{stream->
+      val output=java.io.ByteArrayOutputStream()
+      val buffer=ByteArray(8192)
+      var total=0
+      while(true){val count=stream.read(buffer);if(count<0)break;total+=count;if(total>12*1024*1024)throw java.io.IOException("Audio too large");output.write(buffer,0,count)}
+      output.toByteArray()
+     }
+     if(bytes.isEmpty())throw java.io.IOException("Empty AI speech")
+     audioFile=java.io.File.createTempFile("bao-nam-ai-", ".mp3", cacheDir)
+     audioFile.writeBytes(bytes)
+     runOnUiThread{
+      if(destroyed||generation!=aiVoiceGeneration.get()){audioFile.delete();return@runOnUiThread}
+      try{
+       aiVoicePlayer?.release()
+       aiVoicePlayer=MediaPlayer().apply{
+        setDataSource(audioFile.absolutePath)
+        setOnPreparedListener{mp->if(!destroyed&&generation==aiVoiceGeneration.get())mp.start()else mp.release()}
+        setOnCompletionListener{mp->if(aiVoicePlayer===mp)aiVoicePlayer=null;mp.release();audioFile.delete()}
+        setOnErrorListener{mp,_,_->if(aiVoicePlayer===mp)aiVoicePlayer=null;mp.release();audioFile.delete();true}
+        prepareAsync()
+       }
+      }catch(_:Exception){audioFile.delete();speakAiOnDevice(spoken)}
+     }
+    }catch(_:Exception){
+     audioFile?.delete()
+     runOnUiThread{if(!destroyed&&generation==aiVoiceGeneration.get())speakAiOnDevice(spoken)}
+    }finally{connection?.disconnect()}
+   },"BaoNam-AI-Voice").start()
+   return
+  }
+  speakAiOnDevice(spoken)
+ }
+ private fun speakAiOnDevice(text:String){
   val engine=tts
-  if(engine==null||!ttsReady){Toast.makeText(this,"🔊 Giọng nói đang khởi động hoặc chưa được cài. Hãy bật/cài Google Speech Services trong Cài đặt Android rồi thử lại.",Toast.LENGTH_LONG).show();return}
+  if(engine==null||!ttsReady){Toast.makeText(this,"🔊 Giọng đọc AI trực tuyến chưa được cấu hình; giọng đọc trên thiết bị chưa sẵn sàng. Hãy kiểm tra kết nối và dịch vụ Text-to-Speech.",Toast.LENGTH_LONG).show();return}
   val result=engine.setLanguage(Locale("vi","VN"))
   if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){ttsReady=false;Toast.makeText(this,"⚠️ Thiết bị chưa có dữ liệu giọng tiếng Việt. Cài dữ liệu tiếng Việt cho Text-to-Speech rồi thử lại.",Toast.LENGTH_LONG).show();return}
-  val speakResult=engine.speak(text.take(4000),TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")
+  val speakResult=engine.speak(text,TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")
   if(speakResult==TextToSpeech.ERROR)Toast.makeText(this,"Không phát được giọng nói. Kiểm tra âm lượng media và dịch vụ Text-to-Speech.",Toast.LENGTH_LONG).show()
  }
  private fun showAiAssistantGate(){
@@ -1511,5 +1565,5 @@ class MainActivity:AppCompatActivity(){
  }
  private fun previous(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){playlistPosition=if(playlistPosition<=0)queue.lastIndex else playlistPosition-1;playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty())playTrack(tracks[if(currentIndex<=0)tracks.lastIndex else currentIndex-1])}
  private fun next(){val queue=activePlaylist;if(queue!=null&&queue.isNotEmpty()){if(shuffle){val choices=queue.indices.filter{it!=playlistPosition};playlistPosition=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{playlistPosition=if(repeatOne)playlistPosition else (playlistPosition+1)%queue.size};playTrack(queue[playlistPosition]);return};if(tracks.isNotEmpty()){val idx:Int;if(shuffle){val choices=tracks.indices.filter{it!=currentIndex};idx=if(choices.isNotEmpty())choices[java.util.Random().nextInt(choices.size)] else 0}else{idx=if(currentIndex<0||currentIndex>=tracks.lastIndex)0 else currentIndex+1};playTrack(tracks[idx])}}
- override fun onDestroy(){destroyed=true;progressHandler.removeCallbacks(progressUpdate);sleepTimer?.cancel();sleepTimer=null;stopCurrentPlayback();tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
+ override fun onDestroy(){destroyed=true;aiVoiceGeneration.incrementAndGet();progressHandler.removeCallbacks(progressUpdate);sleepTimer?.cancel();sleepTimer=null;stopCurrentPlayback();try{aiVoicePlayer?.release()}catch(_:Exception){};aiVoicePlayer=null;tts?.stop();tts?.shutdown();tts=null;super.onDestroy()}
 }
