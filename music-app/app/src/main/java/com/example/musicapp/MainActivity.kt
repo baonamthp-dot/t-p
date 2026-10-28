@@ -217,7 +217,7 @@ class MainActivity:AppCompatActivity(){
     input.setText("")
    }
   }
-  pendingVoiceSubmit={sendMessage}
+  pendingVoiceSubmit={sendMessage()}
   send.setOnClickListener{sendMessage()}
   input.setOnEditorActionListener{_,actionId,_->
    if(actionId==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){sendMessage();true}else false
@@ -893,7 +893,7 @@ class MainActivity:AppCompatActivity(){
     }.show()
   }
   send.setOnClickListener{ask()}
-  pendingVoiceSubmit={ask}
+  pendingVoiceSubmit={ask()}
   input.setOnEditorActionListener{_,action,_->
    if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){ask();true}else false
   }
