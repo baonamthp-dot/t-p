@@ -120,7 +120,7 @@ class MainActivity:AppCompatActivity(){
   actions.addView(action("Yêu thích","♥"){favoritesOnly=!favoritesOnly;renderList(search.text.toString())},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hẹn giờ","☾"){showSleepTimerDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Tiện ích","⚙"){showToolsPanel()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("AI Music","🤖"){showAppAssistant()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Bảo Nam AI","🤖"){showAiAssistantGate()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   root.addView(HorizontalScrollView(this).apply{isHorizontalScrollBarEnabled=false;addView(actions)},LinearLayout.LayoutParams(-1,dp(70)))
   root.addView(TextView(this).apply{text="DANH SÁCH NỔI BẬT";textSize=13f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE);setPadding(dp(4),dp(12),0,dp(6))})
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(10),dp(8),dp(10),dp(8));background=rounded(Color.rgb(10,18,38),20)}
@@ -833,6 +833,17 @@ class MainActivity:AppCompatActivity(){
    for(i in 0 until conversation.length())historySnapshot.put(conversation.getJSONObject(i))
    input.setText("")
    addMessage("user",q)
+   // Handle known Music App controls locally; use the AI backend for general questions.
+   val localCommandReply=appAiHandleCommand(q)
+   if(localCommandReply!=null){
+    addMessage("assistant",localCommandReply)
+    conversation.put(JSONObject().put("role","user").put("content",q))
+    conversation.put(JSONObject().put("role","assistant").put("content",localCommandReply))
+    while(conversation.length()>20)conversation.remove(0)
+    lastAiAnswer=localCommandReply
+    if(autoReadAnswer)speakAi(localCommandReply)
+    return
+   }
    send.isEnabled=false
    send.text="…"
    addMessage("assistant","🤖 Đang suy nghĩ…")
