@@ -789,19 +789,6 @@ class MainActivity:AppCompatActivity(){
   val callButton=button("📞").apply{
    textSize=18f
    background=rounded(Color.rgb(17,119,95),24)
-   setOnClickListener{
-    pendingVoiceSubmit={ask()}
-    try{
-     startActivityForResult(Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{
-      putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-      putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,"vi-VN")
-      putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,"Gọi thoại với Bảo Nam AI — hãy nói điều bạn muốn hỏi")
-     },104)
-    }catch(_:Exception){
-     pendingVoiceSubmit=null
-     Toast.makeText(this@MainActivity,"Thiết bị chưa hỗ trợ gọi thoại. Hãy kiểm tra Google app và quyền micro.",Toast.LENGTH_LONG).show()
-    }
-   }
   }
   header.addView(callButton,LinearLayout.LayoutParams(dp(46),dp(46)).apply{rightMargin=dp(4)})
   val menu=button("⋮").apply{textSize=25f;background=rounded(Color.TRANSPARENT,24)}
@@ -933,6 +920,19 @@ class MainActivity:AppCompatActivity(){
      }
     }
    }.start()
+  }
+  callButton.setOnClickListener{
+   pendingVoiceSubmit={ask()}
+   try{
+    startActivityForResult(Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{
+     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,"vi-VN")
+     putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,"Gọi thoại với Bảo Nam AI — hãy nói điều bạn muốn hỏi")
+    },104)
+   }catch(_:Exception){
+    pendingVoiceSubmit=null
+    Toast.makeText(this@MainActivity,"Thiết bị chưa hỗ trợ gọi thoại. Hãy kiểm tra Google app và quyền micro.",Toast.LENGTH_LONG).show()
+   }
   }
   back.setOnClickListener{dialog.dismiss()}
   menu.setOnClickListener{
