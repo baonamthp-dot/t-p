@@ -27,3 +27,11 @@ If `OPENAI_BACKEND_URL` is empty, the APK will still build but the in-app ChatGP
 - Known playback/settings commands are handled locally by the app; general questions use the configured HTTPS `/api/openai-chat` backend.
 - The backend API key remains server-side in the `OPENAI_API_KEY` environment variable.
 - Build version bumped to 1.6 (versionCode 7). Configure `OPENAI_BACKEND_URL` in GitHub Actions Variables and `OPENAI_API_KEY` on the server before expecting real AI replies.
+
+
+## Reliability and safety checks (v1.6.1)
+
+- Removed the unused in-app API-key entry screen and stale API-key/model fields; the Android app must not ask for or store an OpenAI key.
+- Updated the app information screen to version 1.6 and documented the secure backend path.
+- The serverless chat endpoint now rejects oversized requests and applies a best-effort per-instance limit of 20 requests per IP per 10 minutes. For larger production deployments, configure a shared edge rate limiter too.
+- The Android GitHub Actions workflow now runs `gradle lintDebug` before building the APK.
