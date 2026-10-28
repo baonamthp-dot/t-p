@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#10152d"><title>Supreme Duelist Viet — Stickman Arena</title>
+<style>
+:root{color-scheme:dark;--cyan:#50f6ff;--pink:#ff568d;--gold:#ffe17a}*{box-sizing:border-box}body{margin:0;background:#0b1022;color:#fff;font-family:system-ui,Arial;min-height:100dvh;display:flex;justify-content:center;align-items:center;overflow:hidden;touch-action:manipulation}.app{width:min(100%,980px);padding:12px}.top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}.brand{font-weight:1000;font-size:clamp(18px,4vw,29px);letter-spacing:1px}.brand span{color:var(--cyan)}.pill{border:1px solid #39456d;border-radius:999px;padding:7px 12px;background:#171e39;color:#dce8ff;font-size:12px}.panel{background:linear-gradient(135deg,#192345,#10172d);border:1px solid #354269;border-radius:18px;padding:12px;box-shadow:0 12px 45px #0005}.menu{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.field label{display:block;color:#aab8df;font-size:12px;margin:0 0 5px 4px}.field select,.field button{width:100%;background:#0e1630;color:white;border:1px solid #40517e;border-radius:11px;padding:10px;font-weight:700}.field button{background:#10a8bd;color:#05131d;border:0}.arena{position:relative;border-radius:15px;overflow:hidden;border:1px solid #34466d;background:#111a33}.arena canvas{display:block;width:100%;height:auto;aspect-ratio:16/9;touch-action:none}.hud{position:absolute;top:10px;left:12px;right:12px;display:flex;gap:12px;align-items:center;justify-content:space-between;pointer-events:none}.fighter{width:42%;font-size:12px;font-weight:800;text-shadow:0 2px 5px #000}.fighter.right{text-align:right}.bar{height:9px;background:#222b45;border-radius:99px;overflow:hidden;margin-top:4px;border:1px solid #64708d}.fill{height:100%;width:100%;transition:width .12s}.leftfill{background:linear-gradient(90deg,#00e0ff,#65ffce)}.rightfill{background:linear-gradient(90deg,#ffb14d,#ff477d)}.centerhud{font-weight:1000;font-size:14px;color:var(--gold);white-space:nowrap}.controls{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:12px}.pad{display:flex;gap:8px}.ctrl{min-width:56px;min-height:50px;border-radius:14px;border:1px solid #445783;background:#1a2547;color:#fff;font-size:20px;font-weight:900;box-shadow:inset 0 -3px #080d1b;touch-action:none}.ctrl:active,.ctrl.active{background:#1a9cb0;transform:translateY(1px)}.ctrl.attack{background:#c42e66;border-color:#ff77a4;min-width:84px}.ctrl.jump{background:#3153a0}.hint{font-size:12px;color:#9eafd8;line-height:1.5;margin:10px 2px 0}.message{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#080d1dcc;text-align:center;padding:20px}.message.show{display:flex}.message h2{font-size:clamp(24px,6vw,42px);margin:0 0 8px;color:var(--gold)}.message p{color:#d4ddf8}.message button{background:var(--cyan);border:0;border-radius:12px;padding:12px 20px;font-weight:900;color:#06121b}.small{font-size:11px;color:#8495c2;text-align:center;margin-top:9px}@media(min-width:650px){.controls{padding:14px 5px}.ctrl{min-width:66px;min-height:54px}.ctrl.attack{min-width:100px}} 
+</style>
+</head>
+<body><main class="app">
+<header class="top"><div class="brand">SUPREME DUELIST <span>VIET</span></div><div class="pill">⚔ STICKMAN ARENA · BẢN DEMO</div></header>
+<section class="panel">
+<div class="menu"><div class="field"><label for="difficulty">ĐỘ KHÓ ĐỐI THỦ</label><select id="difficulty"><option value="easy">Dễ</option><option value="normal" selected>Trung bình</option><option value="hard">Khó</option></select></div><div class="field"><label for="weapon">VŨ KHÍ</label><select id="weapon"><option value="sword">⚔ Kiếm năng lượng</option><option value="spear">🔱 Thương dài</option><option value="hammer">🔨 Búa chiến</option></select></div></div>
+<div class="arena"><canvas id="game" width="960" height="540" aria-label="Đấu trường stickman"></canvas><div class="hud"><div class="fighter">BẠN<div class="bar"><div id="hp1" class="fill leftfill"></div></div></div><div class="centerhud" id="round">ROUND 1</div><div class="fighter right">BOT VIỆT<div class="bar"><div id="hp2" class="fill rightfill"></div></div></div></div><div class="message" id="message"><div><h2 id="result">CHIẾN THẮNG!</h2><p id="subresult">Bạn đã thắng trận đấu.</p><button id="again">ĐẤU LẠI</button></div></div></div>
+<div class="controls"><div class="pad"><button class="ctrl" data-key="left" aria-label="Sang trái">◀</button><button class="ctrl" data-key="right" aria-label="Sang phải">▶</button></div><div class="pad"><button class="ctrl jump" data-key="jump">⬆ Nhảy</button><button class="ctrl attack" data-key="attack">⚔ ĐÁNH</button></div></div>
+<p class="hint">📱 Chạm giữ ◀ ▶ để di chuyển · Nhấn NHẢY để né đòn · Nhấn ĐÁNH khi đứng gần đối thủ. Đổi độ khó và vũ khí ở phía trên.</p><div class="small">Trò chơi fan-made lấy cảm hứng từ thể loại stickman đấu vật lý; không phải sản phẩm chính thức.</div>
+</section></main>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),W=960,H=540,ground=444;
+const hp1=document.getElementById('hp1'),hp2=document.getElementById('hp2'),roundEl=document.getElementById('round'),message=document.getElementById('message');
+let keys={left:false,right:false},player,bot,frame=0,ended=false,round=1,last=0,weapon='sword',difficulty='normal',particles=[];
+const cfg={easy:{speed:2.0,delay:65,damage:7},normal:{speed:2.8,delay:43,damage:10},hard:{speed:3.6,delay:28,damage:13}};
+function fighter(x,color,face){return{x,y:ground,hp:100,color,face,vx:0,vy:0,attack:0,cool:0,stun:0,grounded:true,walk:0}}
+function reset(){player=fighter(280,'#50f6ff',1);bot=fighter(680,'#ff568d',-1);frame=0;ended=false;particles=[];keys.left=keys.right=false;message.classList.remove('show');hp1.style.width=hp2.style.width='100%';roundEl.textContent='ROUND '+round;last=0}
+function line(x1,y1,x2,y2,color,width=9){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function drawFighter(f){const x=f.x,y=f.y,dir=f.face,move=Math.sin(f.walk)*10;ctx.save();ctx.translate(x,y);ctx.strokeStyle=f.color;ctx.fillStyle=f.color;ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=10;
+ctx.beginPath();ctx.arc(0,-88,17,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#0b1022';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-88,17,0,Math.PI*2);ctx.stroke();
+line(0,-66,0,-29,f.color,12);
+line(0,-57,-19+move*.3,-40,f.color,8);line(0,-57,dir*(f.attack>0?47:22),-48-(f.attack>0?15:0),f.color,8);
+line(0,-29,-13+move,-2,f.color,10);line(0,-29,15-move,-2,f.color,10);
+if(f.attack>0){let reach=weapon==='spear'?84:weapon==='hammer'?60:68;let ax=dir*reach,ay=-51;ctx.save();ctx.translate(dir*40,-49);ctx.rotate(f.attack>7?-0.65:0.25);if(weapon==='sword'){line(0,0,dir*49,-12,'#eafcff',7);line(dir*18,-5,dir*18,7,'#ffe17a',5)}else if(weapon==='spear'){line(0,0,dir*66,-5,'#d4e2f8',6);ctx.fillStyle='#ffe17a';ctx.beginPath();ctx.moveTo(dir*78,-5);ctx.lineTo(dir*62,-14);ctx.lineTo(dir*62,4);ctx.fill()}else{line(0,0,dir*38,-7,'#c9d2e8',8);ctx.fillStyle='#ffc15b';ctx.fillRect(dir*34-10,-22,22,24)}ctx.restore()}
+ctx.restore()}
+function draw(){let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#18254a');g.addColorStop(1,'#10152b');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+for(let i=0;i<30;i++){let x=(i*131+frame*.15)%W;ctx.fillStyle='#a9cfff';ctx.globalAlpha=.12+(i%3)*.05;ctx.fillRect(x,60+(i*47)%300,2,2)}ctx.globalAlpha=1;
+ctx.fillStyle='#202e50';ctx.beginPath();ctx.moveTo(0,ground);ctx.lineTo(W,ground);ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();ctx.strokeStyle='#4d729b';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,ground);ctx.lineTo(W,ground);ctx.stroke();
+for(let i=0;i<12;i++){ctx.strokeStyle='#30446a';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(i*90,ground);ctx.lineTo(i*90-100,H);ctx.stroke()}
+drawFighter(player);drawFighter(bot);
+particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/24);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();ctx.globalAlpha=1});
+}
+function hit(a,b,damage){if(a.cool>0||a.attack>0)return;a.attack=14;a.cool=weapon==='hammer'?48:weapon==='spear'?35:28;const reach=weapon==='spear'?116:weapon==='hammer'?82:96;if(Math.abs(a.x-b.x)<reach&&Math.abs(a.y-b.y)<65){b.hp=Math.max(0,b.hp-damage);b.stun=9;b.vx=a.face*5;for(let i=0;i<10;i++)particles.push({x:b.x,y:b.y-48,vx:(Math.random()-.5)*7,vy:(Math.random()-.5)*7,life:24,r:2+Math.random()*4,color:a.color})}}
+function update(){if(ended)return;frame++;const c=cfg[difficulty];
+player.face=player.x<bot.x?1:-1;bot.face=bot.x<player.x?1:-1;
+if(keys.left)player.vx-=.65;if(keys.right)player.vx+=.65;player.vx*=.82;player.vx=Math.max(-5,Math.min(5,player.vx));player.x+=player.vx;
+if(player.grounded&&(keys.jump)){player.vy=-12;player.grounded=false}
+player.vy+=.55;player.y+=player.vy;if(player.y>=ground){player.y=ground;player.vy=0;player.grounded=true}
+if(Math.abs(player.vx)>.4)player.walk+=.25;if(player.attack>0)player.attack--;if(player.cool>0)player.cool--;if(player.stun>0)player.stun--;
+if(bot.stun>0){bot.stun--;bot.x+=bot.vx;bot.vx*=.7}else{const dx=player.x-bot.x;if(Math.abs(dx)>78)bot.vx+=Math.sign(dx)*.25*c.speed/2;else{bot.vx*=.75;if(frame%(c.delay+(Math.random()*18|0))===0)hit(bot,player,c.damage)}bot.vx=Math.max(-c.speed,Math.min(c.speed,bot.vx));bot.x+=bot.vx}
+if(bot.attack>0)bot.attack--;if(bot.cool>0)bot.cool--;if(Math.abs(bot.vx)>.4)bot.walk+=.22;
+if(player.stun>0){player.x+=player.vx;player.vx*=.75}
+player.x=Math.max(45,Math.min(W-45,player.x));bot.x=Math.max(45,Math.min(W-45,bot.x));
+if(player.hp<=0||bot.hp<=0){ended=true;document.getElementById('result').textContent=bot.hp<=0?'CHIẾN THẮNG!':'THỬ LẠI NHÉ!';document.getElementById('subresult').textContent=bot.hp<=0?'Bạn đã hạ BOT VIỆT. Quá đỉnh!':'BOT VIỆT thắng trận này. Đổi chiến thuật nhé!';message.classList.add('show')}
+hp1.style.width=player.hp+'%';hp2.style.width=bot.hp+'%';particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life--});particles=particles.filter(p=>p.life>0)}
+function loop(t){if(t-last>16){update();draw();last=t}requestAnimationFrame(loop)}
+document.querySelectorAll('[data-key]').forEach(btn=>{const k=btn.dataset.key;const down=e=>{e.preventDefault();btn.classList.add('active');if(k==='attack'){if(!ended)hit(player,bot,10)}else if(k==='jump'){if(player.grounded&&!ended){player.vy=-12;player.grounded=false}}else keys[k]=true};const up=e=>{e.preventDefault();btn.classList.remove('active');if(k==='left'||k==='right')keys[k]=false};btn.addEventListener('pointerdown',down);btn.addEventListener('pointerup',up);btn.addEventListener('pointercancel',up);btn.addEventListener('lostpointercapture',up)});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')keys.left=true;if(e.key==='ArrowRight'||e.key==='d')keys.right=true;if(e.key==='ArrowUp'||e.key==='w'){if(player.grounded){player.vy=-12;player.grounded=false}}if(e.key===' '||e.key==='Enter')hit(player,bot,10)});
+document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='a')keys.left=false;if(e.key==='ArrowRight'||e.key==='d')keys.right=false});
+document.getElementById('difficulty').addEventListener('change',e=>{difficulty=e.target.value;reset()});document.getElementById('weapon').addEventListener('change',e=>{weapon=e.target.value;reset()});document.getElementById('again').addEventListener('click',()=>{round++;reset()});
+reset();requestAnimationFrame(loop);
+})();
+</script></body></html>
