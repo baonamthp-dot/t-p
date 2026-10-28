@@ -57,6 +57,8 @@ class MainActivity:AppCompatActivity(){
  private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
  private var tts:TextToSpeech?=null
  private var activeAiInput:EditText?=null
+ private var pendingVoiceSubmit:(()->Unit)?=null
+ @Volatile private var ttsReady=false
  private val ownerCodeHash="0bc685edb692c7d408cd670c5b73c29a577188b66dd3a7b8f75e357a5b9b00e8"
  private val builtIn=listOf(
   Track(null,"🌙 Ru ngủ - Đêm yên bình",melody=melody(261.63,293.66,329.63,392.0,329.63,293.66,261.63)),
@@ -77,7 +79,7 @@ class MainActivity:AppCompatActivity(){
  private fun rounded(c:Int,r:Int=18)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat()}
  private fun ripple(c:Int,pressed:Int,r:Int=18)=RippleDrawable(ColorStateList.valueOf(pressed),rounded(c,r),null)
  private fun button(t:String)=Button(this).apply{text=t;isAllCaps=false;textSize=14f;setTextColor(Color.WHITE);background=ripple(Color.rgb(38,44,58),Color.rgb(70,105,150),16)}
- override fun onCreate(b:Bundle?){super.onCreate(b);progressHandler.post(progressUpdate);tracks.addAll(builtIn.map{it.copy()});loadSavedYoutubeTracks();tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài Google Text-to-Speech.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.95f)}else{runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);progressHandler.post(progressUpdate);tracks.addAll(builtIn.map{it.copy()});loadSavedYoutubeTracks();tracks.filter{it.youtubeUrl!=null}.forEach{t->prefs.getString(audioPreferenceKey(t),null)?.let{saved->t.uri=Uri.parse(saved)}};loadFavorites();tts=TextToSpeech(this){status->if(status==TextToSpeech.SUCCESS){val vi=Locale("vi","VN");val result=tts?.setLanguage(vi)?:TextToSpeech.LANG_NOT_SUPPORTED;ttsReady=result!=TextToSpeech.LANG_NOT_SUPPORTED&&result!=TextToSpeech.LANG_MISSING_DATA;if(!ttsReady){runOnUiThread{Toast.makeText(this,"⚠️ Máy chưa có dữ liệu giọng nói tiếng Việt. Hãy cài/cập nhật Google Speech Services hoặc chọn giọng tiếng Việt trong Cài đặt Android.",Toast.LENGTH_LONG).show()}};tts?.setSpeechRate(0.92f);tts?.setPitch(1.0f)}else{ttsReady=false;runOnUiThread{Toast.makeText(this,"⚠️ Không khởi tạo được giọng nói. Kiểm tra dịch vụ Text-to-Speech trong Cài đặt Android.",Toast.LENGTH_LONG).show()}}};buildUi();renderList("");showWelcomeIfNeeded()}
  private fun buildUi(){
   val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(16),dp(14),dp(16),dp(10));setBackgroundResource(com.example.musicapp.R.drawable.moon_background);clipChildren=true;clipToPadding=true}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
@@ -208,20 +210,25 @@ class MainActivity:AppCompatActivity(){
    val question=input.text.toString().trim()
    if(question.isNotBlank()){
     addBubble("Bạn",question)
-    addBubble("AI",appAiHandleCommand(question) ?: appHelpReply(question))
+    val answer=appAiHandleCommand(question)?:appHelpReply(question)
+    addBubble("AI",answer)
+    lastAiAnswer=answer
+    speakAi(answer)
     input.setText("")
    }
   }
+  pendingVoiceSubmit={sendMessage}
   send.setOnClickListener{sendMessage()}
   input.setOnEditorActionListener{_,actionId,_->
    if(actionId==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){sendMessage();true}else false
   }
-  dialog.setOnDismissListener{activeAiInput=null}
+  dialog.setOnDismissListener{activeAiInput=null;pendingVoiceSubmit=null}
   dialog.show()
  }
  private fun appAiHandleCommand(question:String):String?{
-  val q=question.lowercase(Locale.ROOT).trim()
-  fun has(vararg words:String)=words.any{q.contains(it)}
+  fun normalize(value:String)=java.text.Normalizer.normalize(value.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d').replace("\\s+".toRegex()," ").trim()
+  val q=normalize(question)
+  fun has(vararg words:String)=words.any{q.contains(normalize(it))}
   if(has("phát bài tiếp theo","bài tiếp theo","bài kế tiếp","chuyển bài tiếp","next")){next();return "Đã yêu cầu phát bài tiếp theo. 🎵"}
   if(has("bài trước","phát bài trước","quay lại bài","previous")){previous();return "Đã yêu cầu phát bài trước. 🎵"}
   if(has("tạm dừng","dừng nhạc","pause")){
@@ -676,7 +683,14 @@ class MainActivity:AppCompatActivity(){
    .setPositiveButton("OK",null).show()
  }
  private fun sha256(value:String):String=MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it)}
- private fun speakAi(text:String){val engine=tts;if(engine==null){Toast.makeText(this,"⚠️ Giọng nói AI chưa sẵn sàng.",Toast.LENGTH_SHORT).show();return};val vi=Locale("vi","VN");val result=engine.setLanguage(vi);if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){Toast.makeText(this,"⚠️ Chưa có giọng tiếng Việt trên máy.",Toast.LENGTH_LONG).show();return};engine.speak(text,TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")}
+ private fun speakAi(text:String){
+  val engine=tts
+  if(engine==null||!ttsReady){Toast.makeText(this,"🔊 Giọng nói đang khởi động hoặc chưa được cài. Hãy bật/cài Google Speech Services trong Cài đặt Android rồi thử lại.",Toast.LENGTH_LONG).show();return}
+  val result=engine.setLanguage(Locale("vi","VN"))
+  if(result==TextToSpeech.LANG_NOT_SUPPORTED||result==TextToSpeech.LANG_MISSING_DATA){ttsReady=false;Toast.makeText(this,"⚠️ Thiết bị chưa có dữ liệu giọng tiếng Việt. Cài dữ liệu tiếng Việt cho Text-to-Speech rồi thử lại.",Toast.LENGTH_LONG).show();return}
+  val speakResult=engine.speak(text.take(4000),TextToSpeech.QUEUE_FLUSH,null,"music_ai_answer")
+  if(speakResult==TextToSpeech.ERROR)Toast.makeText(this,"Không phát được giọng nói. Kiểm tra âm lượng media và dịch vụ Text-to-Speech.",Toast.LENGTH_LONG).show()
+ }
  private fun showAiAssistantGate(){
   showAiTutor()
  }
@@ -879,10 +893,11 @@ class MainActivity:AppCompatActivity(){
     }.show()
   }
   send.setOnClickListener{ask()}
+  pendingVoiceSubmit={ask}
   input.setOnEditorActionListener{_,action,_->
    if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEND){ask();true}else false
   }
-  dialog.setOnDismissListener{tts?.stop();activeAiInput=null}
+  dialog.setOnDismissListener{tts?.stop();activeAiInput=null;pendingVoiceSubmit=null}
   dialog.show()
   dialog.window?.setLayout(-1,-1)
   dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
@@ -1167,7 +1182,7 @@ class MainActivity:AppCompatActivity(){
   }.show()
  }
  private fun audioPreferenceKey(t:Track):String="youtube_audio_"+(Uri.parse(t.youtubeUrl).getQueryParameter("v")?:t.title.hashCode().toString())
- @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==104){if(c==Activity.RESULT_OK){val said=d?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty();if(said.isNotBlank()){activeAiInput?.let{it.setText(said);it.setSelection(it.text.length)};Toast.makeText(this,if(activeAiInput!=null)"Đã nhận giọng nói. Nhấn gửi để hỏi AI." else "Đã nhận: $said. Mở AI để gửi câu hỏi.",Toast.LENGTH_SHORT).show()}};return};if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r==103){val target=pendingYoutubeAudio;pendingYoutubeAudio=null;if(c==Activity.RESULT_OK&&d?.data!=null&&target!=null){val u=d.data!!;try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};target.uri=u;prefs.edit().putString(audioPreferenceKey(target),u.toString()).apply();renderList(search.text.toString());Toast.makeText(this,"Đã gắn âm thanh vào “"+target.title+"”. Bài sẽ phát trong app, không mở YouTube Music.",Toast.LENGTH_LONG).show();playTrack(target)};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
+ @Deprecated("Compatibility callback") override fun onActivityResult(r:Int,c:Int,d:Intent?){super.onActivityResult(r,c,d);if(r==104){if(c==Activity.RESULT_OK){val said=d?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull().orEmpty();if(said.isNotBlank()){activeAiInput?.let{it.setText(said);it.setSelection(it.text.length)};val submit=pendingVoiceSubmit;if(submit!=null){Toast.makeText(this,"Đã nghe: $said",Toast.LENGTH_SHORT).show();submit.invoke()}else Toast.makeText(this,"Đã nhận: $said. Mở AI để gửi câu hỏi.",Toast.LENGTH_SHORT).show()}}else if(c==Activity.RESULT_CANCELED){Toast.makeText(this,"Chưa nhận được câu nói. Hãy thử nói rõ hơn.",Toast.LENGTH_SHORT).show()};return};if(r==102&&c==Activity.RESULT_OK&&d?.data!=null){try{contentResolver.openOutputStream(d.data!!)?.use{it.write(pendingExportText.toByteArray(Charsets.UTF_8))};Toast.makeText(this,"Đã xuất danh sách nhạc.",Toast.LENGTH_SHORT).show()}catch(e:Exception){Toast.makeText(this,"Không thể xuất danh sách: "+(e.message?:"lỗi"),Toast.LENGTH_LONG).show()};return};if(r==103){val target=pendingYoutubeAudio;pendingYoutubeAudio=null;if(c==Activity.RESULT_OK&&d?.data!=null&&target!=null){val u=d.data!!;try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};target.uri=u;prefs.edit().putString(audioPreferenceKey(target),u.toString()).apply();renderList(search.text.toString());Toast.makeText(this,"Đã gắn âm thanh vào “"+target.title+"”. Bài sẽ phát trong app, không mở YouTube Music.",Toast.LENGTH_LONG).show();playTrack(target)};return};if(r!=100||c!=Activity.RESULT_OK||d==null)return;val us=mutableListOf<Uri>();d.data?.let{us.add(it)};d.clipData?.let{x->for(i in 0 until x.itemCount)us.add(x.getItemAt(i).uri)};us.distinct().forEach{u->if(tracks.none{it.uri==u}){try{contentResolver.takePersistableUriPermission(u,Intent.FLAG_GRANT_READ_URI_PERMISSION)}catch(_:Exception){};tracks.add(Track(u,getFileName(u)))}};renderList(search.text.toString())}
  private fun getFileName(u:Uri):String{var n:String?=null;contentResolver.query(u,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())n=it.getString(0)};return n?:"Bài hát"}
  private fun playRandomTrack(){
    val q=search.text.toString().trim()
