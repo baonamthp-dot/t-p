@@ -54,9 +54,6 @@ class MainActivity:AppCompatActivity(){
  private var sleepTimer: android.os.CountDownTimer?=null
  private val prefs by lazy{getSharedPreferences("music_app",MODE_PRIVATE)}
  private var isOwner=false
- private var aiUnlocked=false
- private var openAiApiKey=""
- private val openAiModel="gpt-4.1-mini"
  private val aiCodeHash="9418c2e92ded7aa45a0d568d4c773be7bb71f233c9c7707f8a0c09dae9f8ceaf"
  private var tts:TextToSpeech?=null
  private var activeAiInput:EditText?=null
@@ -631,32 +628,11 @@ class MainActivity:AppCompatActivity(){
    when(which){
     0->showCountryPicker()
     1->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Music App không cần API key để phát nhạc. Không chia sẻ dữ liệu cá nhân hoặc tệp riêng tư khi không cần thiết.").setPositiveButton("Đã hiểu",null).show()
-    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.4").setMessage("🎵 Trình phát nhạc cá nhân\\n🌍 Tùy chọn quốc gia\\n🛠️ Chẩn đoán ứng dụng\\n🕘 Lịch sử nghe\\n\\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
+    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.6").setMessage("🎵 Trình phát nhạc cá nhân\\n🤖 Bảo Nam AI qua máy chủ HTTPS\\n🌍 Tùy chọn quốc gia\\n🛠️ Chẩn đoán ứng dụng\\n🕘 Lịch sử nghe\\n\\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
     3->showDiagnostics()
     4->showHistory()
    }
   }.setNegativeButton("Đóng",null).show()
- }
- private fun showApiKeySettings(){
-  val input=EditText(this).apply{
-   hint="sk-..."
-   setSingleLine(true)
-   inputType=android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-   setTextColor(Color.WHITE);setHintTextColor(Color.GRAY)
-   setText(prefs.getString("openai_api_key","") ?: "")
-  }
-  val wrap=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(20),dp(8),dp(20),dp(4));addView(input,LinearLayout.LayoutParams(-1,dp(52)))}
-  AlertDialog.Builder(this).setTitle("🔑 OpenAI API Key")
-   .setMessage("Nhập key OpenAI của bạn. API có thể tính phí riêng. Key được lưu trong dữ liệu riêng của ứng dụng trên thiết bị; lưu trên máy chủ riêng sẽ an toàn hơn.")
-   .setView(wrap)
-   .setNeutralButton("Xóa key"){_,_->prefs.edit().remove("openai_api_key").apply();Toast.makeText(this,"Đã xóa API Key khỏi ứng dụng.",Toast.LENGTH_SHORT).show()}
-   .setNegativeButton("Hủy",null)
-   .setPositiveButton("Lưu"){_,_->
-    val key=input.text.toString().trim()
-    if(key.isBlank()){Toast.makeText(this,"Key trống. Hãy nhập key hoặc chọn Xóa key.",Toast.LENGTH_LONG).show()}
-    else if(!key.startsWith("sk-")){Toast.makeText(this,"Key có vẻ không đúng định dạng. Hãy kiểm tra lại trên OpenAI Platform.",Toast.LENGTH_LONG).show()}
-    else {prefs.edit().putString("openai_api_key",key).apply();Toast.makeText(this,"Đã lưu key trên thiết bị.",Toast.LENGTH_LONG).show()}
-   }.show()
  }
  private fun showCountryPicker(){
   val countries=arrayOf("🇻🇳 Việt Nam","🇺🇸 Hoa Kỳ","🇬🇧 Vương quốc Anh","🇯🇵 Nhật Bản","🇰🇷 Hàn Quốc","🇨🇳 Trung Quốc","🇹🇭 Thái Lan","🇫🇷 Pháp","🇩🇪 Đức","🇪🇸 Tây Ban Nha","🇮🇹 Ý","🇷🇺 Nga","🇮🇩 Indonesia","🇲🇾 Malaysia","🇵🇭 Philippines","🇮🇳 Ấn Độ","🇧🇷 Brazil","🇵🇹 Bồ Đào Nha","🇹🇷 Thổ Nhĩ Kỳ","🇸🇦 Ả Rập Xê Út")
