@@ -19,3 +19,11 @@ The Android app calls the server endpoint `/api/openai-chat`. It does not contai
 5. Run **Actions → Build Music App APK → Run workflow** again, then download `MusicApp-debug-apk`.
 
 If `OPENAI_BACKEND_URL` is empty, the APK will still build but the in-app ChatGPT service will not connect. The server must have `OPENAI_API_KEY` configured for real AI replies. The backend now uses `OPENAI_MODEL` if you set it in Vercel; otherwise it defaults to `gpt-4o-mini`. Choose only a model available to your API project, then redeploy. The upgraded AI prompt improves structured explanations and uncertainty handling, but no AI can guarantee it knows everything. The latest AI Master X update adds stricter step-by-step verification guidance for math, science, and code, clearer uncertainty handling, and a larger response budget. It also improves interpretation of informal Vietnamese, typos, short follow-ups such as “tiếp” or “làm đi”, and context-aware clarification when intent is ambiguous. The prompt now explicitly covers core school subjects across languages, mathematics, sciences, social studies, computing, technology, and arts, with subject-appropriate explanations and checks against the question. The latest update adds cross-disciplinary expert-style response frameworks, adaptive depth (quick answer, step-by-step tutoring, or deeper analysis), and extra caution for high-stakes topics. Conversation understanding is limited to the history sent by the app. To use a stronger model, set `OPENAI_MODEL` in Vercel to a model available to your API project; the default remains `gpt-4o-mini`.
+
+
+## Music app integration update (v1.6)
+
+- The home-screen **Bảo Nam AI** shortcut opens the full AI chat screen, rather than the local-only command demo.
+- Known playback/settings commands are handled locally by the app; general questions use the configured HTTPS `/api/openai-chat` backend.
+- The backend API key remains server-side in the `OPENAI_API_KEY` environment variable.
+- Build version bumped to 1.6 (versionCode 7). Configure `OPENAI_BACKEND_URL` in GitHub Actions Variables and `OPENAI_API_KEY` on the server before expecting real AI replies.
