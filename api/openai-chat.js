@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
       ...safeHistory,
       { role: "user", content: message }
     ];
-    const model = (process.env.OPENAI_MODEL || "gpt-4o-mini").trim();
+    const model = (process.env.OPENAI_MODEL || "gpt-4.1").trim();
     // Prefer the Responses API with web search so answers can use current sources.
     // If web search is unavailable for the configured model/project, fall back to chat completions.
     const responseInput = [
