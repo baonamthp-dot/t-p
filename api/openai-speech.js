@@ -9,6 +9,9 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Use POST /api/openai-speech." });
 
+  const contentLength = Number(req.headers?.["content-length"] || 0);
+  if (contentLength > 12000) return res.status(413).json({ error: "Yêu cầu giọng nói quá lớn." });
+
   const now = Date.now();
   const ip = String(req.headers?.["x-forwarded-for"] || req.socket?.remoteAddress || "unknown").split(",")[0].trim();
   let bucket = requestBuckets.get(ip);
