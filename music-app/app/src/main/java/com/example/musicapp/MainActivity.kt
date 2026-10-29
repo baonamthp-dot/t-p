@@ -87,7 +87,7 @@ class MainActivity:AppCompatActivity(){
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
   top.addView(TextView(this@MainActivity).apply{text="♫";textSize=28f;setTextColor(Color.rgb(90,190,255));gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(48),dp(48)))
   val titleBox=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutParams=LinearLayout.LayoutParams(0,dp(52),1f)}
-  titleBox.addView(TextView(this).apply{text="Music";textSize=28f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE)})
+  titleBox.addView(TextView(this).apply{text="Bảo Nam Music";textSize=26f;setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);setTextColor(Color.WHITE)})
   titleBox.addView(TextView(this).apply{text="Âm nhạc cho tâm hồn";textSize=12f;setTextColor(Color.rgb(145,170,205))})
   top.addView(titleBox)
   top.addView(TextView(this).apply{text="⌕";textSize=30f;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setOnClickListener{search.requestFocus();(getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager).showSoftInput(search,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)}},LinearLayout.LayoutParams(dp(42),dp(48)))
@@ -638,7 +638,7 @@ class MainActivity:AppCompatActivity(){
    when(which){
     0->showCountryPicker()
     1->AlertDialog.Builder(this).setTitle("🔐 Bảo mật và riêng tư").setMessage("Music App không cần API key để phát nhạc. Không chia sẻ dữ liệu cá nhân hoặc tệp riêng tư khi không cần thiết.").setPositiveButton("Đã hiểu",null).show()
-    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.6").setMessage("🎵 Trình phát nhạc cá nhân\\n🤖 Bảo Nam AI qua máy chủ HTTPS\\n🌍 Tùy chọn quốc gia\\n🛠️ Chẩn đoán ứng dụng\\n🕘 Lịch sử nghe\\n\\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
+    2->AlertDialog.Builder(this).setTitle("ℹ️ Music App 1.7").setMessage("🎵 Trình phát nhạc cá nhân\\n🤖 Bảo Nam AI qua máy chủ HTTPS\\n🌍 Tùy chọn quốc gia\\n🛠️ Chẩn đoán ứng dụng\\n🕘 Lịch sử nghe\\n\\nNgười phát triển: Bảo Nam").setPositiveButton("Đóng",null).show()
     3->showDiagnostics()
     4->showHistory()
    }
@@ -947,7 +947,7 @@ class MainActivity:AppCompatActivity(){
        val suggestions=arrayOf("Giải thích điệp ngữ là gì?","125 + 37","Hướng dẫn sửa lỗi Kotlin Android","Hướng dẫn sử dụng Music App")
        input.setText(suggestions[pick]);input.setSelection(input.text.length)
       }.show()
-      3->{messages.removeAllViews();addMessage("assistant","Cuộc trò chuyện đã được xóa. 👋 Bạn muốn hỏi gì?")}
+      3->{messages.removeAllViews();while(conversation.length()>0)conversation.remove(0);lastAiAnswer="Xin chào! Mình là Bảo Nam Bot.";addMessage("assistant","Cuộc trò chuyện đã được xóa. 👋 Bạn muốn hỏi gì?")}
       4->{val enabled=!prefs.getBoolean("ai_internet_search",true);prefs.edit().putBoolean("ai_internet_search",enabled).apply();Toast.makeText(this,if(enabled)"🌐 Đã bật tìm Internet" else "📴 Đã tắt tìm Internet, dùng chế độ ngoại tuyến",Toast.LENGTH_LONG).show()}
       5->{autoReadAnswer=!autoReadAnswer;prefs.edit().putBoolean("ai_auto_speak",autoReadAnswer).apply();Toast.makeText(this,if(autoReadAnswer)"🔊 AI sẽ tự đọc câu trả lời mới." else "Đã tắt tự đọc câu trả lời.",Toast.LENGTH_LONG).show()}
      }
