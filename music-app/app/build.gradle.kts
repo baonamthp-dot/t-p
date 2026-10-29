@@ -16,8 +16,8 @@ android {
         buildConfigField("String", "OPENAI_BACKEND_URL", "\"$openAiBackendUrl\"")
         minSdk = 23
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 8
+        versionName = "1.7"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
