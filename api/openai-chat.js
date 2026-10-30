@@ -184,7 +184,7 @@ module.exports = async function handler(req, res) {
     if (agentMode) {
       try {
         const plan = JSON.parse(answer);
-        const allowed = new Set(["play_track","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search"]);
+        const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search"]);
         const actions = Array.isArray(plan.actions) ? plan.actions.filter(a => a && allowed.has(a.type)).slice(0, 5).map(a => ({ type: a.type, value: typeof a.value === "string" ? a.value.slice(0, 120) : "" })) : [];
         return res.status(200).json({ answer: typeof plan.answer === "string" ? plan.answer : "Đã hiểu yêu cầu.", actions });
       } catch (_) { return res.status(502).json({ error: "AI không tạo được kế hoạch điều khiển hợp lệ." }); }
