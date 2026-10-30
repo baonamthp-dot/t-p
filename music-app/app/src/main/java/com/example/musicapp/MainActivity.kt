@@ -1426,69 +1426,150 @@ class MainActivity:AppCompatActivity(){
  }
  private fun openYoutube(url:String){
   val parsed=try{Uri.parse(url)}catch(_:Exception){null}
-  val host=parsed?.host?.lowercase(Locale.ROOT)
-  val allowed=host in setOf("music.youtube.com","youtube.com","www.youtube.com","m.youtube.com","youtu.be")
-  if(parsed==null||parsed.scheme!="https"||!allowed){
+  fun isYoutubeUrl(uri:Uri?):Boolean{
+   val host=uri?.host?.lowercase(Locale.ROOT)?:return false
+   return uri.scheme=="https"&&host in setOf("youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","youtube-nocookie.com","www.youtube-nocookie.com")
+  }
+  if(!isYoutubeUrl(parsed)){
    nowPlaying.text="Liên kết YouTube không an toàn"
    Toast.makeText(this,"Chỉ hỗ trợ liên kết HTTPS chính thức của YouTube.",Toast.LENGTH_LONG).show()
    return
   }
-  // Keep YouTube browsing inside Music instead of handing the link to another app.
   youtubeDialog?.dismiss()
   val web=WebView(this)
   youtubeWebView=web
-  web.settings.javaScriptEnabled=true
-  web.settings.domStorageEnabled=true
-  web.settings.mediaPlaybackRequiresUserGesture=false
-  web.settings.loadsImagesAutomatically=true
-  web.settings.javaScriptCanOpenWindowsAutomatically=false
-  web.settings.setSupportMultipleWindows(false)
-  web.settings.allowFileAccess=false
-  web.settings.allowContentAccess=false
-  web.webChromeClient=WebChromeClient()
+  web.settings.apply{
+   javaScriptEnabled=true
+   domStorageEnabled=true
+   mediaPlaybackRequiresUserGesture=false
+   loadsImagesAutomatically=true
+   javaScriptCanOpenWindowsAutomatically=false
+   setSupportMultipleWindows(false)
+   allowFileAccess=false
+   allowContentAccess=false
+   builtInZoomControls=true
+   displayZoomControls=false
+   setSupportZoom(true)
+   databaseEnabled=false
+   mixedContentMode=android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+   if(android.os.Build.VERSION.SDK_INT>=26)safeBrowsingEnabled=true
+  }
+  val progress=android.widget.ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal).apply{
+   max=100
+   progress=0
+   progressTintList=android.content.res.ColorStateList.valueOf(Color.rgb(37,145,255))
+   progressBackgroundTintList=android.content.res.ColorStateList.valueOf(Color.rgb(28,43,65))
+  }
+  val status=TextView(this).apply{
+   text="Đang chuẩn bị YouTube…"
+   textSize=10f
+   setTextColor(Color.rgb(150,177,211))
+   setPadding(dp(10),dp(3),dp(10),dp(4))
+   maxLines=1
+   ellipsize=android.text.TextUtils.TruncateAt.END
+  }
+  web.webChromeClient=object:WebChromeClient(){
+   override fun onProgressChanged(view:WebView,newProgress:Int){
+    if(youtubeWebView!==view)return
+    progress.progress=newProgress
+    progress.visibility=if(newProgress>=100)View.GONE else View.VISIBLE
+    status.text=if(newProgress>=100)"Đã tải xong • "+(view.title?:view.url?:"YouTube") else "Đang tải $newProgress% • "+(view.title?: "YouTube")
+   }
+   override fun onReceivedTitle(view:WebView,title:String?){
+    if(youtubeWebView===view&&title!=null)status.text=title.take(120)
+   }
+  }
   web.webViewClient=object:WebViewClient(){
    override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest):Boolean{
     val next=request.url
-    val nextHost=next.host?.lowercase(Locale.ROOT)
-    val youtubeHost=nextHost in setOf("music.youtube.com","youtube.com","www.youtube.com","m.youtube.com","youtu.be","youtube-nocookie.com","www.youtube-nocookie.com")
-    if(next.scheme=="https"&&youtubeHost)return false
-    Toast.makeText(this@MainActivity,"Đã chặn chuyển sang trang ngoài YouTube.",Toast.LENGTH_SHORT).show()
+    if(isYoutubeUrl(next))return false
+    Toast.makeText(this@MainActivity,"Đã chặn trang không thuộc YouTube.",Toast.LENGTH_SHORT).show()
     return true
+   }
+   @Suppress("DEPRECATION")
+   override fun shouldOverrideUrlLoading(view:WebView,url:String):Boolean{
+    val next=try{Uri.parse(url)}catch(_:Exception){null}
+    if(isYoutubeUrl(next))return false
+    Toast.makeText(this@MainActivity,"Đã chặn trang không thuộc YouTube.",Toast.LENGTH_SHORT).show()
+    return true
+   }
+   override fun onPageStarted(view:WebView,url:String,favicon:android.graphics.Bitmap?){
+    if(youtubeWebView===view){progress.visibility=View.VISIBLE;progress.progress=0;status.text="Đang mở trang YouTube…"}
    }
    override fun onPageFinished(view:WebView,url:String){
     if(youtubeWebView===view&&!destroyed){
-     nowPlaying.text="🎧 YouTube trong Music App"
+     status.text=view.title?.take(120)?: "YouTube đã sẵn sàng"
      playButton.text="▶"
     }
    }
+   override fun onReceivedError(view:WebView,request:WebResourceRequest,error:WebResourceError){
+    if(youtubeWebView===view&&request.isForMainFrame){
+     status.text="Không tải được trang. Kiểm tra kết nối Internet."
+     Toast.makeText(this@MainActivity,"YouTube chưa tải được. Hãy kiểm tra Internet rồi thử tải lại.",Toast.LENGTH_LONG).show()
+    }
+   }
+   override fun onReceivedHttpError(view:WebView,request:WebResourceRequest,errorResponse:android.webkit.WebResourceResponse){
+    if(youtubeWebView===view&&request.isForMainFrame)status.text="Máy chủ trả về lỗi HTTP "+errorResponse.statusCode
+   }
   }
-  val bar=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(4),dp(8),dp(4))}
-  val back=button("‹").apply{setOnClickListener{if(web.canGoBack())web.goBack()else web.loadUrl("https://www.youtube.com")}}
-  val home=button("⌂ YouTube").apply{textSize=11f;setOnClickListener{web.loadUrl("https://www.youtube.com")}}
-  val music=button("♫ Music").apply{textSize=11f;setOnClickListener{web.loadUrl("https://music.youtube.com")}}
-  val reload=button("↻").apply{setOnClickListener{web.reload()}}
-  bar.addView(back,LinearLayout.LayoutParams(dp(44),dp(42)).apply{rightMargin=dp(5)})
-  bar.addView(home,LinearLayout.LayoutParams(0,dp(42),1f).apply{rightMargin=dp(5)})
-  bar.addView(music,LinearLayout.LayoutParams(0,dp(42),1f).apply{rightMargin=dp(5)})
-  bar.addView(reload,LinearLayout.LayoutParams(dp(48),dp(42)))
-  val searchRow=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(4),dp(8),dp(6))}
-  val query=EditText(this).apply{hint="Tìm video hoặc bài hát trên YouTube";singleLine=true;textSize=13f;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);setPadding(dp(10),0,dp(10),0);background=rounded(Color.rgb(20,30,50),12)}
-  val find=button("Tìm").apply{textSize=12f;setOnClickListener{val q=query.text.toString().trim();if(q.isNotEmpty())web.loadUrl("https://www.youtube.com/results?search_query="+Uri.encode(q))}}
-  query.setOnEditorActionListener{_,_,_->find.performClick();true}
-  searchRow.addView(query,LinearLayout.LayoutParams(0,dp(44),1f).apply{rightMargin=dp(6)})
-  searchRow.addView(find,LinearLayout.LayoutParams(dp(64),dp(44)))
-  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(8,14,28));addView(bar,LinearLayout.LayoutParams(-1,dp(50)));addView(searchRow);addView(web,LinearLayout.LayoutParams(-1,0,1f))}
-  val dialog=AlertDialog.Builder(this).setTitle(if(host=="music.youtube.com")"♫ YouTube Music Pad" else "▶ YouTube Pad").setView(panel).setPositiveButton("Đóng",null).create()
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(8,14,28))}
+  val bar=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(6),dp(4),dp(6),dp(4))}
+  fun navButton(label:String,description:String,action:()->Unit)=button(label).apply{
+   textSize=11f
+   contentDescription=description
+   setOnClickListener{action()}
+  }
+  val back=navButton("‹","Quay lại"){if(web.canGoBack())web.goBack()else web.loadUrl("https://www.youtube.com")}
+  val forward=navButton("›","Tiến tới"){if(web.canGoForward())web.goForward()}
+  val home=navButton("⌂","Trang chủ YouTube"){web.loadUrl("https://www.youtube.com")}
+  val music=navButton("♫","YouTube Music"){web.loadUrl("https://music.youtube.com")}
+  val stop=navButton("■","Dừng tải"){web.stopLoading();status.text="Đã dừng tải trang.";progress.visibility=View.GONE}
+  val reload=navButton("↻","Tải lại"){web.reload()}
+  for((index,view) in listOf(back,forward,home,music,stop,reload).withIndex()){
+   bar.addView(view,LinearLayout.LayoutParams(if(index==2||index==3)0 else dp(40),dp(42),if(index==2||index==3)1f else 0f).apply{if(index<5)rightMargin=dp(4)})
+  }
+  val searchRow=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(3),dp(8),dp(5))}
+  val query=EditText(this).apply{
+   hint="Tìm video hoặc bài hát trên YouTube"
+   singleLine=true
+   textSize=13f
+   setTextColor(Color.WHITE)
+   setHintTextColor(Color.LTGRAY)
+   setPadding(dp(10),0,dp(10),0)
+   background=rounded(Color.rgb(20,30,50),12)
+   imeOptions=android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+  }
+  val clear=button("×").apply{textSize=18f;setOnClickListener{query.text.clear();query.requestFocus()}}
+  val find=button("Tìm").apply{textSize=12f;setOnClickListener{
+   val q=query.text.toString().trim()
+   if(q.isNotEmpty()){web.loadUrl("https://www.youtube.com/results?search_query="+Uri.encode(q));status.text="Đang tìm: "+q}
+   else Toast.makeText(this@MainActivity,"Nhập từ khóa trước khi tìm.",Toast.LENGTH_SHORT).show()
+  }}
+  query.setOnEditorActionListener{_,action,_->
+   if(action==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH||action==android.view.inputmethod.EditorInfo.IME_ACTION_GO){find.performClick();true}else false
+  }
+  searchRow.addView(query,LinearLayout.LayoutParams(0,dp(44),1f).apply{rightMargin=dp(4)})
+  searchRow.addView(clear,LinearLayout.LayoutParams(dp(40),dp(44)).apply{rightMargin=dp(4)})
+  searchRow.addView(find,LinearLayout.LayoutParams(dp(58),dp(44)))
+  panel.addView(bar,LinearLayout.LayoutParams(-1,dp(50)))
+  panel.addView(searchRow)
+  panel.addView(progress,LinearLayout.LayoutParams(-1,dp(3)))
+  panel.addView(status,LinearLayout.LayoutParams(-1,dp(28)))
+  panel.addView(web,LinearLayout.LayoutParams(-1,0,1f))
+  val dialog=AlertDialog.Builder(this).setTitle(if(parsed?.host=="music.youtube.com")"♫ YouTube Music Pad" else "▶ YouTube Pad").setView(panel).setPositiveButton("Đóng",null).create()
   youtubeDialog=dialog
+  dialog.setOnKeyListener{_,keyCode,event->
+   if(keyCode==android.view.KeyEvent.KEYCODE_BACK&&event.action==android.view.KeyEvent.ACTION_UP&&web.canGoBack()){web.goBack();true}else false
+  }
   dialog.setOnDismissListener{
    if(youtubeWebView===web)youtubeWebView=null
    try{web.stopLoading();web.loadUrl("about:blank");web.clearHistory();web.removeAllViews();web.destroy()}catch(_:Exception){}
    if(youtubeDialog===dialog)youtubeDialog=null
   }
   dialog.show()
-  dialog.window?.setLayout((resources.displayMetrics.widthPixels*0.96).toInt(),(resources.displayMetrics.heightPixels*0.88).toInt())
-  web.loadUrl(url)
-  nowPlaying.text="🎧 Đang mở YouTube trong Music App: "+(parsed.getQueryParameter("v")?:"Mix")
+  dialog.window?.setLayout((resources.displayMetrics.widthPixels*0.98).toInt(),(resources.displayMetrics.heightPixels*0.90).toInt())
+  web.loadUrl(parsed.toString())
+  nowPlaying.text="🎧 Đang mở YouTube trong Music App: "+(parsed.getQueryParameter("v")?:"Trang chủ")
  }
  private fun formatTime(ms:Int):String{
   val total=(ms.coerceAtLeast(0)/1000)
