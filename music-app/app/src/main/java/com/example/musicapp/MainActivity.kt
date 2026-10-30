@@ -1062,6 +1062,9 @@ class MainActivity:AppCompatActivity(){
     "open_history"->showHistory()
     "open_diagnostics"->showDiagnostics()
     "clear_search"->{search.setText("");favoritesOnly=false;renderList("")}
+     "open_youtube"->openYoutube("https://www.youtube.com")
+     "open_youtube_music"->openYoutube("https://music.youtube.com")
+     "search_youtube"->{if(value.isNotBlank())openYoutube("https://www.youtube.com/results?search_query="+Uri.encode(value))}
    }
   }
  }
