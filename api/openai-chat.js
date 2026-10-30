@@ -38,7 +38,7 @@ module.exports = async function handler(req, res) {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     if (!body || typeof body !== "object" || Array.isArray(body)) return res.status(400).json({ error: "Dữ liệu yêu cầu không hợp lệ." });
     const message = typeof body.message === "string" ? body.message.trim() : "";
-    const history = Array.isArray(body.history) ? body.history.slice(-10) : [];
+    const history = Array.isArray(body.history) ? body.history.slice(-12) : [];
     if (!message) return res.status(400).json({ error: "Vui lòng nhập tin nhắn." });
     if (message.length > 4000) return res.status(413).json({ error: "Tin nhắn tối đa 4.000 ký tự." });
     const systemPrompt = [
@@ -68,8 +68,8 @@ module.exports = async function handler(req, res) {
     ].join("\n");
     const safeHistory = history
       .filter(m => m && ["user", "assistant"].includes(m.role) && typeof m.content === "string")
-      .slice(-10)
-      .map(m => ({ role: m.role, content: m.content.slice(0, 3000) }));
+      .slice(-12)
+      .map(m => ({ role: m.role, content: m.content.slice(0, 1200) }));
     const messages = [
       { role: "system", content: systemPrompt },
       ...safeHistory,
