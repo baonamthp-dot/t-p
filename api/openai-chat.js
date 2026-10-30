@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
       ...safeHistory,
       { role: "user", content: message }
     ];
-    const model = (process.env.OPENAI_MODEL || "gpt-6.1-sol").trim();
+    const model = (process.env.OPENAI_MODEL || "gpt-6-astra").trim();
     const allowedEfforts = new Set(["low", "medium", "high", "xhigh", "max"]);
     const requestedEffort = String(process.env.OPENAI_REASONING_EFFORT || "high").trim().toLowerCase();
     const reasoningEffort = allowedEfforts.has(requestedEffort) ? requestedEffort : "high";
