@@ -259,7 +259,7 @@ class MainActivity:AppCompatActivity(){
   if(has("điều chỉnh âm lượng","mở âm lượng","chỉnh âm lượng","tăng giảm âm lượng","volume","âm lượng") || all("am","luong") || all("to","nho","tieng")){showVolume();return "Đã mở bảng điều chỉnh âm lượng. 🔊"}
   if(has("xem lịch sử","mở lịch sử","lịch sử nghe","bài đã nghe","nghe gần đây","recent history") || all("lich","su") || all("da","nghe","roi")){showHistory();return "Đã mở lịch sử nghe."}
   if(has("chẩn đoán","kiểm tra ứng dụng","kiểm tra lỗi","tìm lỗi ứng dụng","diagnostics")){showDiagnostics();return "Đã mở phần chẩn đoán ứng dụng."}
-  if(has("phát bài ","mở bài ","nghe bài ","phát nhạc ","bật bài ","bật nhạc ","mở bài hát ","nghe nhạc ","nghe ","mở ")){
+  if(has("phát bài ","mở bài ","nghe bài ","bật bài ","mở bài hát ")){
    val cleaned=question.trim().replace(Regex("(?i)^(hãy\\s+)?(phát|mở|nghe)(\\s+nhạc)?(\\s+bài)?\\s*"),"").trim().trim('"','“','”','\'')
    val target=tracks.firstOrNull{it.title.equals(cleaned,true)}?:tracks.firstOrNull{it.title.contains(cleaned,true)&&cleaned.length>=2}?:tracks.firstOrNull{cleaned.length>=2&&cleaned.contains(it.title,true)}
    if(target!=null){playTrack(target);return "Đã tìm thấy “${target.title}” và gửi lệnh phát trong Music App. 🎵"}
