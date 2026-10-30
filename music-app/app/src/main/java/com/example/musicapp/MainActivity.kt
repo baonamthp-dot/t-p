@@ -113,8 +113,8 @@ class MainActivity:AppCompatActivity(){
   val actions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
   fun action(label:String,icon:String,click:()->Unit)=TextView(this).apply{text="$icon\n$label";textSize=12f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=rounded(Color.rgb(13,27,57),20);setPadding(0,dp(6),0,dp(4));setOnClickListener{click()}}
   actions.addView(action("Thêm nhạc","♫"){chooseAudio()},LinearLayout.LayoutParams(0,dp(62),1f))
-  actions.addView(action("YouTube","▶"){addYoutubeMusic()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
-  actions.addView(action("YouTube Mix","♫"){showYoutubeMix()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("YouTube Pad","▶"){openYoutube("https://www.youtube.com")},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
+  actions.addView(action("Music Pad","♫"){openYoutube("https://music.youtube.com")},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Ngẫu nhiên","🎲"){playRandomTrack()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action("Hàng đợi","☷"){showQueueDialog()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
   actions.addView(action(if(sortAlphabetically)"Tên A–Z" else "Mới thêm","↕"){sortAlphabetically=!sortAlphabetically;renderList(search.text.toString());Toast.makeText(this,if(sortAlphabetically)"Sắp xếp theo tên A–Z" else "Trở về thứ tự thư viện",Toast.LENGTH_SHORT).show()},LinearLayout.LayoutParams(0,dp(62),1f).apply{leftMargin=dp(7)})
@@ -1455,12 +1455,22 @@ class MainActivity:AppCompatActivity(){
    }
   }
   val bar=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(4),dp(8),dp(4))}
-  val back=button("‹ Quay lại").apply{setOnClickListener{if(web.canGoBack())web.goBack()else Toast.makeText(this@MainActivity,"Đang ở trang đầu của YouTube.",Toast.LENGTH_SHORT).show()}}
-  val reload=button("↻ Tải lại").apply{setOnClickListener{web.reload()}}
-  bar.addView(back,LinearLayout.LayoutParams(0,dp(42),1f).apply{rightMargin=dp(6)})
-  bar.addView(reload,LinearLayout.LayoutParams(0,dp(42),1f))
-  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(8,14,28));addView(bar,LinearLayout.LayoutParams(-1,dp(50)));addView(web,LinearLayout.LayoutParams(-1,dp(520)))}
-  val dialog=AlertDialog.Builder(this).setTitle("♫ YouTube Mix • Music").setView(panel).setPositiveButton("Đóng",null).create()
+  val back=button("‹").apply{setOnClickListener{if(web.canGoBack())web.goBack()else web.loadUrl("https://www.youtube.com")}}
+  val home=button("⌂ YouTube").apply{textSize=11f;setOnClickListener{web.loadUrl("https://www.youtube.com")}}
+  val music=button("♫ Music").apply{textSize=11f;setOnClickListener{web.loadUrl("https://music.youtube.com")}}
+  val reload=button("↻").apply{setOnClickListener{web.reload()}}
+  bar.addView(back,LinearLayout.LayoutParams(dp(44),dp(42)).apply{rightMargin=dp(5)})
+  bar.addView(home,LinearLayout.LayoutParams(0,dp(42),1f).apply{rightMargin=dp(5)})
+  bar.addView(music,LinearLayout.LayoutParams(0,dp(42),1f).apply{rightMargin=dp(5)})
+  bar.addView(reload,LinearLayout.LayoutParams(dp(48),dp(42)))
+  val searchRow=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(8),dp(4),dp(8),dp(6))}
+  val query=EditText(this).apply{hint="Tìm video hoặc bài hát trên YouTube";singleLine=true;textSize=13f;setTextColor(Color.WHITE);setHintTextColor(Color.LTGRAY);setPadding(dp(10),0,dp(10),0);background=rounded(Color.rgb(20,30,50),12)}
+  val find=button("Tìm").apply{textSize=12f;setOnClickListener{val q=query.text.toString().trim();if(q.isNotEmpty())web.loadUrl("https://www.youtube.com/results?search_query="+Uri.encode(q))}}
+  query.setOnEditorActionListener{_,_,_->find.performClick();true}
+  searchRow.addView(query,LinearLayout.LayoutParams(0,dp(44),1f).apply{rightMargin=dp(6)})
+  searchRow.addView(find,LinearLayout.LayoutParams(dp(64),dp(44)))
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.rgb(8,14,28));addView(bar,LinearLayout.LayoutParams(-1,dp(50)));addView(searchRow);addView(web,LinearLayout.LayoutParams(-1,0,1f))}
+  val dialog=AlertDialog.Builder(this).setTitle(if(host=="music.youtube.com")"♫ YouTube Music Pad" else "▶ YouTube Pad").setView(panel).setPositiveButton("Đóng",null).create()
   youtubeDialog=dialog
   dialog.setOnDismissListener{
    if(youtubeWebView===web)youtubeWebView=null
