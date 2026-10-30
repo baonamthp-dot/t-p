@@ -33,7 +33,8 @@ module.exports = async function handler(req, res) {
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return res.status(503).json({ error: "Máy chủ chưa cấu hình OPENAI_API_KEY." });
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey && !geminiApiKey) return res.status(503).json({ error: "Máy chủ chưa cấu hình OPENAI_API_KEY hoặc GEMINI_API_KEY." });
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     if (!body || typeof body !== "object" || Array.isArray(body)) return res.status(400).json({ error: "Dữ liệu yêu cầu không hợp lệ." });
@@ -75,6 +76,42 @@ module.exports = async function handler(req, res) {
       ...safeHistory,
       { role: "user", content: message }
     ];
+    if (!apiKey && geminiApiKey) {
+      const geminiModel = (process.env.GEMINI_MODEL || "gemini-3.8-flash").trim();
+      const geminiContents = [
+        ...safeHistory.map(m => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }]
+        })),
+        { role: "user", parts: [{ text: message }] }
+      ];
+      const geminiResponse = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(geminiModel) + ":generateContent",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: geminiContents,
+            generationConfig: { maxOutputTokens: 3000 }
+          }),
+          signal: AbortSignal.timeout(40000)
+        }
+      );
+      const geminiData = await geminiResponse.json();
+      if (!geminiResponse.ok) {
+        return res.status(geminiResponse.status === 429 ? 429 : 502).json({
+          error: geminiResponse.status === 429
+            ? "Gemini đang bận hoặc đã chạm hạn mức. Thử lại sau nhé."
+            : "Gemini chưa trả lời được. Kiểm tra GEMINI_API_KEY và quyền sử dụng model ở máy chủ."
+        });
+      }
+      const geminiAnswer = geminiData.candidates?.[0]?.content?.parts
+        ?.map(part => typeof part.text === "string" ? part.text : "")
+        .join("\\n").trim();
+      if (!geminiAnswer) return res.status(502).json({ error: "Gemini không trả về nội dung." });
+      return res.status(200).json({ answer: geminiAnswer, provider: "gemini" });
+    }
     const model = (process.env.OPENAI_MODEL || "gpt-6-astra").trim();
     const allowedEfforts = new Set(["low", "medium", "high", "xhigh", "max"]);
     const requestedEffort = String(process.env.OPENAI_REASONING_EFFORT || "high").trim().toLowerCase();
