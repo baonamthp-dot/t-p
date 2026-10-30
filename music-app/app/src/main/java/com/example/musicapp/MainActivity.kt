@@ -898,10 +898,11 @@ class MainActivity:AppCompatActivity(){
    send.text="…"
    addMessage("assistant","🤖 Đang suy nghĩ…")
    Thread{
-    val ai=openAiProxyReply(q,historySnapshot)
+    val agentPlan=openAiAgentPlan(q,historySnapshot)
+    val ai=if(agentPlan==null)openAiProxyReply(q,historySnapshot) else null
     val wantsWeb=prefs.getBoolean("ai_internet_search",true)&&shouldSearchInternet(q)
     val web=if(ai==null&&wantsWeb)searchInternet(q)else null
-    val answer=ai ?: web ?: if(wantsWeb){
+    val answer=agentPlan?.optString("answer")?.takeIf{it.isNotBlank()} ?: ai ?: web ?: if(wantsWeb){
      "Mình chưa kết nối được AI hoặc lấy kết quả web lần này. Mình sẽ thử trả lời ngoại tuyến.\n\n"+offlineBotReply(q)
     }else{
      offlineBotReply(q)
@@ -909,6 +910,7 @@ class MainActivity:AppCompatActivity(){
     runOnUiThread{
      if(!destroyed&&!isFinishing&&dialog.isShowing){
       if(messages.childCount>0)messages.removeViewAt(messages.childCount-1)
+      if(agentPlan!=null)executeAiActions(agentPlan)
       addMessage("assistant",answer)
       conversation.put(JSONObject().put("role","user").put("content",q))
       conversation.put(JSONObject().put("role","assistant").put("content",answer))
@@ -983,6 +985,71 @@ class MainActivity:AppCompatActivity(){
   if(Regex("^\\s*-?\\d+(?:[.,]\\d+)?\\s*[+*/x×-]\\s*-?\\d+(?:[.,]\\d+)?=?\\s*$").matches(q))return false
   if(listOf("xin chao","chao ban","hello","hi","hey","cam on","thank you","thanks","ban la ai","ten ban","quyen rieng tu","bao mat","api key","offline","ngoai tuyen").any{q.contains(it)})return false
   return true
+ }
+ private fun openAiAgentPlan(message:String,history:JSONArray=JSONArray()):JSONObject?{
+  val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
+  if(configured.isBlank())return null
+  val endpoint=if(configured.endsWith("/api/openai-chat"))configured else configured.trimEnd('/')+"/api/openai-chat"
+  if(!endpoint.startsWith("https://",ignoreCase=true))return null
+  var connection:HttpURLConnection?=null
+  return try{
+   val state=tracks.joinToString("\\n"){(if(it.favorite)"♥ " else "")+it.title}.take(5000)
+   val contextualMessage="Yêu cầu của người dùng: "+message.take(3000)+"\\n\\nDanh sách bài hát hiện có trong ứng dụng (chỉ chọn trong danh sách này):\\n"+state
+   connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{
+    requestMethod="POST";connectTimeout=12000;readTimeout=45000;doOutput=true
+    setRequestProperty("Content-Type","application/json; charset=utf-8")
+    setRequestProperty("Accept","application/json")
+   }
+   val safeHistory=JSONArray()
+   for(i in (history.length()-12).coerceAtLeast(0) until history.length()){
+    val item=history.optJSONObject(i)?:continue
+    val role=item.optString("role")
+    if((role=="user"||role=="assistant")&&item.optString("content").isNotBlank()){
+     safeHistory.put(JSONObject().put("role",role).put("content",item.optString("content").take(1200)))
+    }
+   }
+   val payload=JSONObject().put("message",contextualMessage).put("history",safeHistory).put("agent",true).toString()
+   connection.outputStream.use{it.write(payload.toByteArray(Charsets.UTF_8))}
+   val status=connection.responseCode
+   val stream=if(status in 200..299)connection.inputStream else connection.errorStream
+   val body=stream?.bufferedReader(Charsets.UTF_8)?.use{it.readText().take(250000)} ?: return null
+   if(status !in 200..299)return null
+   JSONObject(body).takeIf{it.optString("answer").isNotBlank()&&it.optJSONArray("actions")!=null}
+  }catch(_:Exception){null}
+  finally{connection?.disconnect()}
+ }
+ private fun executeAiActions(plan:JSONObject){
+  val actions=plan.optJSONArray("actions")?:return
+  for(i in 0 until actions.length().coerceAtMost(5)){
+   val action=actions.optJSONObject(i)?:continue
+   val value=action.optString("value").trim()
+   when(action.optString("type")){
+    "play_track"->{
+     val target=tracks.firstOrNull{it.title.equals(value,true)}?:tracks.firstOrNull{value.isNotBlank()&&it.title.contains(value,true)}
+     if(target!=null)playTrack(target) else Toast.makeText(this,"Không tìm thấy bài hát: "+value,Toast.LENGTH_SHORT).show()
+    }
+    "next_track"->next()
+    "previous_track"->previous()
+    "pause_music"->{val playing=try{player?.isPlaying==true}catch(_:Exception){false}||try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false};if(playing)togglePlay()}
+    "resume_music"->{val paused=(player!=null&&!playerPreparing)||(audioTrack!=null);val playing=try{player?.isPlaying==true}catch(_:Exception){false}||try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false};if(paused&&!playing)togglePlay()}
+    "shuffle_on"->shuffle=true
+    "shuffle_off"->shuffle=false
+    "repeat_on"->repeatOne=true
+    "repeat_off"->repeatOne=false
+    "open_settings"->showSettings()
+    "open_tools"->showToolsPanel()
+    "open_map"->openMap()
+    "show_favorites"->{favoritesOnly=true;renderList(search.text.toString())}
+    "show_all_tracks"->{favoritesOnly=false;renderList(search.text.toString())}
+    "search_tracks"->{if(value.isNotBlank())search.setText(value)}
+    "play_favorites"->{val target=tracks.firstOrNull{it.favorite};if(target!=null)playTrack(target)else Toast.makeText(this,"Bạn chưa có bài hát yêu thích.",Toast.LENGTH_SHORT).show()}
+    "open_sleep_timer"->showSleepTimerDialog()
+    "open_volume"->showVolume()
+    "open_history"->showHistory()
+    "open_diagnostics"->showDiagnostics()
+    "clear_search"->{search.setText("");favoritesOnly=false;renderList("")}
+   }
+  }
  }
  private fun openAiProxyReply(message:String,history:JSONArray=JSONArray()):String?{
   val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
