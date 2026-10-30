@@ -998,11 +998,11 @@ class MainActivity:AppCompatActivity(){
     setRequestProperty("Accept","application/json")
    }
    val safeHistory=JSONArray()
-   for(i in (history.length()-10).coerceAtLeast(0) until history.length()){
+   for(i in (history.length()-12).coerceAtLeast(0) until history.length()){
     val item=history.optJSONObject(i)?:continue
     val role=item.optString("role")
     if((role=="user"||role=="assistant")&&item.optString("content").isNotBlank()){
-     safeHistory.put(JSONObject().put("role",role).put("content",item.optString("content").take(3000)))
+     safeHistory.put(JSONObject().put("role",role).put("content",item.optString("content").take(1200)))
     }
    }
    val payload=JSONObject().put("message",message.take(4000)).put("history",safeHistory).toString()
