@@ -147,7 +147,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         model,
         reasoning: { effort: reasoningEffort },
-        instructions: systemPrompt + "\n\nKHI CẦN THÔNG TIN MỚI: chủ động dùng công cụ tìm kiếm web nếu câu hỏi liên quan tin tức, phiên bản phần mềm, giá cả, sự kiện, luật hoặc dữ kiện có thể thay đổi. Ưu tiên nguồn chính thức, phân biệt dữ kiện đã xác minh với suy luận, và đưa đường dẫn nguồn dễ mở khi có kết quả tìm kiếm. Với kiến thức ổn định, trả lời trực tiếp không cần tìm web.",
+        instructions: effectiveSystemPrompt + (agentMode ? "" : "\n\nKHI CẦN THÔNG TIN MỚI: chủ động dùng công cụ tìm kiếm web nếu câu hỏi liên quan tin tức, phiên bản phần mềm, giá cả, sự kiện, luật hoặc dữ kiện có thể thay đổi. Ưu tiên nguồn chính thức, phân biệt dữ kiện đã xác minh với suy luận, và đưa đường dẫn nguồn dễ mở khi có kết quả tìm kiếm. Với kiến thức ổn định, trả lời trực tiếp không cần tìm web."),
         input: responseInput,
         tools: agentMode ? [] : [{ type: "web_search" }],
         ...(agentMode ? { text: { format: { type: "json_object" } } } : {}),
