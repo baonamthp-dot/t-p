@@ -77,7 +77,7 @@ module.exports = async function handler(req, res) {
       { role: "user", content: message }
     ];
     if (!apiKey && geminiApiKey) {
-      const geminiModel = (process.env.GEMINI_MODEL || "gemini-3.8-flash").trim();
+      const geminiModel = (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").trim();
       const geminiContents = [
         ...safeHistory.map(m => ({
           role: m.role === "assistant" ? "model" : "user",
