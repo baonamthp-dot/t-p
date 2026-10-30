@@ -993,8 +993,13 @@ class MainActivity:AppCompatActivity(){
   if(!endpoint.startsWith("https://",ignoreCase=true))return null
   var connection:HttpURLConnection?=null
   return try{
-   val state=tracks.joinToString("\\n"){(if(it.favorite)"♥ " else "")+it.title}.take(5000)
-   val contextualMessage="Yêu cầu của người dùng: "+message.take(3000)+"\\n\\nDanh sách bài hát hiện có trong ứng dụng (chỉ chọn trong danh sách này):\\n"+state
+   val state=tracks.joinToString("\n"){(if(it.favorite)"♥ " else "")+it.title}.take(5000)
+   val currentTrack=tracks.getOrNull(currentIndex)?.title ?: "Chưa chọn bài"
+   val isPlaying=try{player?.isPlaying==true}catch(_:Exception){false} || try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false}
+   val audioManager=getSystemService(AUDIO_SERVICE) as AudioManager
+   val maxVolume=audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+   val volumePercent=(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)*100/maxVolume)
+   val contextualMessage="Yêu cầu của người dùng: "+message.take(3000)+"\n\nTrạng thái ứng dụng hiện tại: bài đang chọn="+currentTrack+"; đang phát="+isPlaying+"; âm lượng="+volumePercent+"%; phát ngẫu nhiên="+shuffle+"; lặp bài="+repeatOne+"; chỉ hiện yêu thích="+favoritesOnly+"; từ khóa tìm kiếm="+search.text.toString()+"\n\nDanh sách bài hát hiện có trong ứng dụng (chỉ chọn trong danh sách này):\n"+state
    connection=(URL(endpoint).openConnection() as HttpURLConnection).apply{
     requestMethod="POST";connectTimeout=12000;readTimeout=45000;doOutput=true
     setRequestProperty("Content-Type","application/json; charset=utf-8")
@@ -1024,8 +1029,17 @@ class MainActivity:AppCompatActivity(){
    val action=actions.optJSONObject(i)?:continue
    val value=action.optString("value").trim()
    when(action.optString("type")){
+    "set_volume"->{
+     val percent=value.toIntOrNull()?.coerceIn(0,100)
+     if(percent!=null){
+      val audioManager=getSystemService(AUDIO_SERVICE) as AudioManager
+      val maxVolume=audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+      audioManager.setStreamVolume(AudioManager.STREAM_MUSIC,(maxVolume*percent/100.0).toInt().coerceIn(0,maxVolume),0)
+     }
+    }
     "play_track"->{
-     val target=tracks.firstOrNull{it.title.equals(value,true)}?:tracks.firstOrNull{value.isNotBlank()&&it.title.contains(value,true)}
+     val normalizedValue=java.text.Normalizer.normalize(value.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d')
+     val target=tracks.firstOrNull{it.title.equals(value,true)}?:tracks.firstOrNull{java.text.Normalizer.normalize(it.title.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d').contains(normalizedValue)&&normalizedValue.isNotBlank()}
      if(target!=null)playTrack(target) else Toast.makeText(this,"Không tìm thấy bài hát: "+value,Toast.LENGTH_SHORT).show()
     }
     "next_track"->next()
