@@ -71,7 +71,7 @@ module.exports = async function handler(req, res) {
     const effectiveSystemPrompt = systemPrompt + (agentMode ? [
       "CHẾ ĐỘ ĐIỀU KHIỂN MUSIC APP: người dùng đang yêu cầu bạn điều khiển chính ứng dụng này. Hãy suy luận ý định từ câu nói tự nhiên và lịch sử, không yêu cầu cú pháp lệnh cố định.",
       "Chỉ được trả về JSON hợp lệ, không markdown, theo dạng {\\"answer\\":\\"câu trả lời ngắn bằng tiếng Việt\\",\\"actions\\":[{\\"type\\":\\"...\\",\\"value\\":\\"...\\"}]}. Nếu chỉ trò chuyện/hỏi kiến thức, actions là [].",
-      "Các action hợp lệ: play_track (value là tên bài có trong danh sách được cung cấp), set_volume (value là phần trăm từ 0 đến 100), next_track, previous_track, pause_music, resume_music, shuffle_on, shuffle_off, repeat_on, repeat_off, open_settings, open_tools, open_map, show_favorites, show_all_tracks, search_tracks (value là từ khóa), play_favorites, open_sleep_timer, open_volume, open_history, open_diagnostics, clear_search.",
+      "Các action hợp lệ: play_track (value là tên bài có trong danh sách được cung cấp), set_volume (value là phần trăm từ 0 đến 100), next_track, previous_track, pause_music, resume_music, shuffle_on, shuffle_off, repeat_on, repeat_off, open_settings, open_tools, open_map, show_favorites, show_all_tracks, search_tracks (value là từ khóa), play_favorites, open_sleep_timer, open_volume, open_history, open_diagnostics, clear_search, open_youtube, open_youtube_music, search_youtube.",
       "Có thể tạo nhiều action theo đúng thứ tự khi người dùng yêu cầu nhiều việc. Không tạo action ngoài danh sách. Không tự tuyên bố đã làm xong; answer mô tả dự định hoặc kết quả sau khi công cụ thực hiện.",
       "Không thực hiện xóa dữ liệu, thay đổi tài khoản, thanh toán hoặc thao tác ngoài ứng dụng. Nếu người dùng yêu cầu việc nguy hiểm/không hỗ trợ, giải thích và trả actions [].",
       "Nếu người dùng nói 'mở nhạc mình thích', dùng play_favorites. Nếu yêu cầu phát bài có tên cụ thể, dùng play_track. Nếu không biết bài nào phù hợp, dùng search_tracks hoặc hỏi lại và actions [].",
@@ -123,7 +123,7 @@ module.exports = async function handler(req, res) {
       if (agentMode) {
         try {
           const plan = JSON.parse(geminiAnswer);
-          const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search"]);
+          const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search","open_youtube","open_youtube_music","search_youtube"]);
           const actions = Array.isArray(plan.actions) ? plan.actions.filter(a => a && allowed.has(a.type)).slice(0, 5).map(a => ({ type: a.type, value: typeof a.value === "string" ? a.value.slice(0, 120) : "" })) : [];
           return res.status(200).json({ answer: typeof plan.answer === "string" ? plan.answer : "Đã hiểu yêu cầu.", actions, provider: "gemini" });
         } catch (_) { return res.status(502).json({ error: "AI không tạo được kế hoạch điều khiển hợp lệ." }); }
@@ -184,7 +184,7 @@ module.exports = async function handler(req, res) {
     if (agentMode) {
       try {
         const plan = JSON.parse(answer);
-        const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search"]);
+        const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search","open_youtube","open_youtube_music","search_youtube"]);
         const actions = Array.isArray(plan.actions) ? plan.actions.filter(a => a && allowed.has(a.type)).slice(0, 5).map(a => ({ type: a.type, value: typeof a.value === "string" ? a.value.slice(0, 120) : "" })) : [];
         return res.status(200).json({ answer: typeof plan.answer === "string" ? plan.answer : "Đã hiểu yêu cầu.", actions });
       } catch (_) { return res.status(502).json({ error: "AI không tạo được kế hoạch điều khiển hợp lệ." }); }
