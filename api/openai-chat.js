@@ -75,7 +75,10 @@ module.exports = async function handler(req, res) {
       ...safeHistory,
       { role: "user", content: message }
     ];
-    const model = (process.env.OPENAI_MODEL || "gpt-4.1").trim();
+    const model = (process.env.OPENAI_MODEL || "gpt-6.1-sol").trim();
+    const allowedEfforts = new Set(["low", "medium", "high", "xhigh", "max"]);
+    const requestedEffort = String(process.env.OPENAI_REASONING_EFFORT || "high").trim().toLowerCase();
+    const reasoningEffort = allowedEfforts.has(requestedEffort) ? requestedEffort : "high";
     // Prefer the Responses API with web search so answers can use current sources.
     // If web search is unavailable for the configured model/project, fall back to chat completions.
     const responseInput = [
@@ -88,6 +91,7 @@ module.exports = async function handler(req, res) {
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
       body: JSON.stringify({
         model,
+        reasoning: { effort: reasoningEffort },
         instructions: systemPrompt + "\n\nKHI CẦN THÔNG TIN MỚI: chủ động dùng công cụ tìm kiếm web nếu câu hỏi liên quan tin tức, phiên bản phần mềm, giá cả, sự kiện, luật hoặc dữ kiện có thể thay đổi. Ưu tiên nguồn chính thức, phân biệt dữ kiện đã xác minh với suy luận, và đưa đường dẫn nguồn dễ mở khi có kết quả tìm kiếm. Với kiến thức ổn định, trả lời trực tiếp không cần tìm web.",
         input: responseInput,
         tools: [{ type: "web_search" }],
@@ -113,7 +117,7 @@ module.exports = async function handler(req, res) {
       const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
-        body: JSON.stringify({ model, messages, temperature: 0.5, max_tokens: 3000 }),
+        body: JSON.stringify({ model, messages, reasoning_effort: reasoningEffort, max_completion_tokens: 3000 }),
         signal: AbortSignal.timeout(25000)
       });
       const data = await upstream.json();
