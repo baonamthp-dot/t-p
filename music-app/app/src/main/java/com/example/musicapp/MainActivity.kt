@@ -1041,7 +1041,7 @@ class MainActivity:AppCompatActivity(){
      "play_track"->{
       val normalizedValue=java.text.Normalizer.normalize(value.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d')
       val target=if(normalizedValue.isBlank())null else tracks.firstOrNull{it.title.equals(value,true)}?:tracks.firstOrNull{java.text.Normalizer.normalize(it.title.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d').contains(normalizedValue)}
-      if(target!=null){playTrack(target);"Đang yêu cầu phát: \${target.title}."}else "Không tìm thấy bài hát “$value”."
+      if(target!=null){playTrack(target);"Đang yêu cầu phát: ${target.title}."}else "Không tìm thấy bài hát “$value”."
      }
      "next_track"->{if(tracks.isEmpty())"Thư viện chưa có bài hát." else{next();"Đã chuyển bài tiếp theo."}}
      "previous_track"->{if(tracks.isEmpty())"Thư viện chưa có bài hát." else{previous();"Đã chuyển về bài trước."}}
@@ -1057,7 +1057,7 @@ class MainActivity:AppCompatActivity(){
      "show_favorites"->{favoritesOnly=true;renderList(search.text.toString());"Đang hiển thị bài yêu thích."}
      "show_all_tracks"->{favoritesOnly=false;renderList(search.text.toString());"Đang hiển thị toàn bộ thư viện."}
      "search_tracks"->{if(value.isBlank())"Từ khóa tìm kiếm đang trống." else{search.setText(value);"Đã tìm trong thư viện: $value."}}
-     "play_favorites"->{val target=tracks.firstOrNull{it.favorite};if(target!=null){playTrack(target);"Đang yêu cầu phát bài yêu thích: \${target.title}."}else "Bạn chưa có bài hát yêu thích."}
+     "play_favorites"->{val target=tracks.firstOrNull{it.favorite};if(target!=null){playTrack(target);"Đang yêu cầu phát bài yêu thích: ${target.title}."}else "Bạn chưa có bài hát yêu thích."}
      "open_sleep_timer"->{showSleepTimerDialog();"Đã mở hẹn giờ ngủ."}
      "open_volume"->{showVolume();"Đã mở điều chỉnh âm lượng."}
      "open_history"->{showHistory();"Đã mở lịch sử nghe."}
