@@ -910,13 +910,14 @@ class MainActivity:AppCompatActivity(){
     runOnUiThread{
      if(!destroyed&&!isFinishing&&dialog.isShowing){
       if(messages.childCount>0)messages.removeViewAt(messages.childCount-1)
-      if(agentPlan!=null)executeAiActions(agentPlan)
-      addMessage("assistant",answer)
+      val actionReport=agentPlan?.let{executeAiActions(it)}.orEmpty()
+      val finalAnswer=if(actionReport.isNotBlank()) answer+"\n\n🎛️ Kết quả thao tác:\n"+actionReport else answer
+      addMessage("assistant",finalAnswer)
       conversation.put(JSONObject().put("role","user").put("content",q))
-      conversation.put(JSONObject().put("role","assistant").put("content",answer))
+      conversation.put(JSONObject().put("role","assistant").put("content",finalAnswer))
       while(conversation.length()>20)conversation.remove(0)
-      lastAiAnswer=answer
-      if(autoReadAnswer)speakAi(answer)
+      lastAiAnswer=finalAnswer
+      if(autoReadAnswer)speakAi(finalAnswer)
       send.isEnabled=true
       send.text="➤"
      }
@@ -1023,50 +1024,54 @@ class MainActivity:AppCompatActivity(){
   }catch(_:Exception){null}
   finally{connection?.disconnect()}
  }
- private fun executeAiActions(plan:JSONObject){
-  val actions=plan.optJSONArray("actions")?:return
+ private fun executeAiActions(plan:JSONObject):String{
+  val actions=plan.optJSONArray("actions")?:return ""
+  val results=mutableListOf<String>()
   for(i in 0 until actions.length().coerceAtMost(5)){
    val action=actions.optJSONObject(i)?:continue
    val value=action.optString("value").trim()
-   when(action.optString("type")){
-    "set_volume"->{
-     val percent=value.toIntOrNull()?.coerceIn(0,100)
-     if(percent!=null){
-      val audioManager=getSystemService(AUDIO_SERVICE) as AudioManager
-      val maxVolume=audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-      audioManager.setStreamVolume(AudioManager.STREAM_MUSIC,(maxVolume*percent/100.0).toInt().coerceIn(0,maxVolume),0)
+   val type=action.optString("type")
+   val result=try{
+    when(type){
+     "set_volume"->{
+      val percent=value.toIntOrNull()
+      if(percent==null||percent !in 0..100) "Bỏ qua: mức âm lượng không hợp lệ."
+      else{val audioManager=getSystemService(AUDIO_SERVICE) as AudioManager;val maxVolume=audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);audioManager.setStreamVolume(AudioManager.STREAM_MUSIC,(maxVolume*percent/100.0).toInt().coerceIn(0,maxVolume),0);"Đã đặt âm lượng khoảng $percent%."}
      }
+     "play_track"->{
+      val normalizedValue=java.text.Normalizer.normalize(value.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d')
+      val target=if(normalizedValue.isBlank())null else tracks.firstOrNull{it.title.equals(value,true)}?:tracks.firstOrNull{java.text.Normalizer.normalize(it.title.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d').contains(normalizedValue)}
+      if(target!=null){playTrack(target);"Đang yêu cầu phát: \${target.title}."}else "Không tìm thấy bài hát “$value”."
+     }
+     "next_track"->{if(tracks.isEmpty())"Thư viện chưa có bài hát." else{next();"Đã chuyển bài tiếp theo."}}
+     "previous_track"->{if(tracks.isEmpty())"Thư viện chưa có bài hát." else{previous();"Đã chuyển về bài trước."}}
+     "pause_music"->{val playing=try{player?.isPlaying==true}catch(_:Exception){false}||try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false};if(playing){togglePlay();"Đã gửi lệnh tạm dừng."}else "Hiện không có nhạc đang phát."}
+     "resume_music"->{val paused=(player!=null&&!playerPreparing)||(audioTrack!=null);val playing=try{player?.isPlaying==true}catch(_:Exception){false}||try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false};if(paused&&!playing){togglePlay();"Đã gửi lệnh tiếp tục phát."}else "Không có bài đang tạm dừng để tiếp tục."}
+     "shuffle_on"->{shuffle=true;"Đã bật phát ngẫu nhiên."}
+     "shuffle_off"->{shuffle=false;"Đã tắt phát ngẫu nhiên."}
+     "repeat_on"->{repeatOne=true;"Đã bật lặp bài."}
+     "repeat_off"->{repeatOne=false;"Đã tắt lặp bài."}
+     "open_settings"->{showSettings();"Đã mở cài đặt."}
+     "open_tools"->{showToolsPanel();"Đã mở công cụ."}
+     "open_map"->{openMap();"Đã mở bản đồ."}
+     "show_favorites"->{favoritesOnly=true;renderList(search.text.toString());"Đang hiển thị bài yêu thích."}
+     "show_all_tracks"->{favoritesOnly=false;renderList(search.text.toString());"Đang hiển thị toàn bộ thư viện."}
+     "search_tracks"->{if(value.isBlank())"Từ khóa tìm kiếm đang trống." else{search.setText(value);"Đã tìm trong thư viện: $value."}}
+     "play_favorites"->{val target=tracks.firstOrNull{it.favorite};if(target!=null){playTrack(target);"Đang yêu cầu phát bài yêu thích: \${target.title}."}else "Bạn chưa có bài hát yêu thích."}
+     "open_sleep_timer"->{showSleepTimerDialog();"Đã mở hẹn giờ ngủ."}
+     "open_volume"->{showVolume();"Đã mở điều chỉnh âm lượng."}
+     "open_history"->{showHistory();"Đã mở lịch sử nghe."}
+     "open_diagnostics"->{showDiagnostics();"Đã mở chẩn đoán."}
+     "clear_search"->{search.setText("");favoritesOnly=false;renderList("");"Đã xóa bộ lọc tìm kiếm."}
+     "open_youtube"->{openYoutube("https://www.youtube.com");"Đã mở YouTube trong ứng dụng."}
+     "open_youtube_music"->{openYoutube("https://music.youtube.com");"Đã mở YouTube Music trong ứng dụng."}
+     "search_youtube"->{if(value.isBlank())"Từ khóa YouTube đang trống." else{openYoutube("https://www.youtube.com/results?search_query="+Uri.encode(value));"Đã tìm trên YouTube: $value."}}
+     else->"Bỏ qua thao tác không được hỗ trợ."
     }
-    "play_track"->{
-     val normalizedValue=java.text.Normalizer.normalize(value.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d')
-     val target=tracks.firstOrNull{it.title.equals(value,true)}?:tracks.firstOrNull{java.text.Normalizer.normalize(it.title.lowercase(Locale.ROOT),java.text.Normalizer.Form.NFD).replace("\\p{Mn}+".toRegex(),"").replace('đ','d').contains(normalizedValue)&&normalizedValue.isNotBlank()}
-     if(target!=null)playTrack(target) else Toast.makeText(this,"Không tìm thấy bài hát: "+value,Toast.LENGTH_SHORT).show()
-    }
-    "next_track"->next()
-    "previous_track"->previous()
-    "pause_music"->{val playing=try{player?.isPlaying==true}catch(_:Exception){false}||try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false};if(playing)togglePlay()}
-    "resume_music"->{val paused=(player!=null&&!playerPreparing)||(audioTrack!=null);val playing=try{player?.isPlaying==true}catch(_:Exception){false}||try{audioTrack?.playState==AudioTrack.PLAYSTATE_PLAYING}catch(_:Exception){false};if(paused&&!playing)togglePlay()}
-    "shuffle_on"->shuffle=true
-    "shuffle_off"->shuffle=false
-    "repeat_on"->repeatOne=true
-    "repeat_off"->repeatOne=false
-    "open_settings"->showSettings()
-    "open_tools"->showToolsPanel()
-    "open_map"->openMap()
-    "show_favorites"->{favoritesOnly=true;renderList(search.text.toString())}
-    "show_all_tracks"->{favoritesOnly=false;renderList(search.text.toString())}
-    "search_tracks"->{if(value.isNotBlank())search.setText(value)}
-    "play_favorites"->{val target=tracks.firstOrNull{it.favorite};if(target!=null)playTrack(target)else Toast.makeText(this,"Bạn chưa có bài hát yêu thích.",Toast.LENGTH_SHORT).show()}
-    "open_sleep_timer"->showSleepTimerDialog()
-    "open_volume"->showVolume()
-    "open_history"->showHistory()
-    "open_diagnostics"->showDiagnostics()
-    "clear_search"->{search.setText("");favoritesOnly=false;renderList("")}
-     "open_youtube"->openYoutube("https://www.youtube.com")
-     "open_youtube_music"->openYoutube("https://music.youtube.com")
-     "search_youtube"->{if(value.isNotBlank())openYoutube("https://www.youtube.com/results?search_query="+Uri.encode(value))}
-   }
+   }catch(_:Exception){"Không thực hiện được thao tác: $type."}
+   results.add(result)
   }
+  return results.joinToString("\n")
  }
  private fun openAiProxyReply(message:String,history:JSONArray=JSONArray()):String?{
   val configured=BuildConfig.OPENAI_BACKEND_URL.trim()
