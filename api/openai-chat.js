@@ -87,7 +87,51 @@ module.exports = async function handler(req, res) {
       ...safeHistory,
       { role: "user", content: message }
     ];
-    // Claude Opus 5.5 is the preferred provider when an Anthropic key is configured.
+    if (geminiApiKey) {
+      const geminiModel = (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").trim();
+      const geminiContents = [
+        ...safeHistory.map(m => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }]
+        })),
+        { role: "user", parts: [{ text: message }] }
+      ];
+      const geminiResponse = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(geminiModel) + ":generateContent",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: effectiveSystemPrompt }] },
+            contents: geminiContents,
+            generationConfig: { maxOutputTokens: 3000, ...(agentMode ? { responseMimeType: "application/json" } : {}) }
+          }),
+          signal: AbortSignal.timeout(40000)
+        }
+      );
+      const geminiData = await geminiResponse.json();
+      if (!geminiResponse.ok) {
+        return res.status(geminiResponse.status === 429 ? 429 : 502).json({
+          error: geminiResponse.status === 429
+            ? "Gemini đang bận hoặc đã chạm hạn mức. Thử lại sau nhé."
+            : "Gemini chưa trả lời được. Kiểm tra GEMINI_API_KEY và quyền sử dụng model ở máy chủ."
+        });
+      }
+      const geminiAnswer = geminiData.candidates?.[0]?.content?.parts
+        ?.map(part => typeof part.text === "string" ? part.text : "")
+        .join("\\n").trim();
+      if (!geminiAnswer) return res.status(502).json({ error: "Gemini không trả về nội dung." });
+      if (agentMode) {
+        try {
+          const plan = JSON.parse(geminiAnswer);
+          const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search","open_youtube","open_youtube_music","search_youtube"]);
+          const actions = Array.isArray(plan.actions) ? plan.actions.filter(a => a && allowed.has(a.type)).slice(0, 5).map(a => ({ type: a.type, value: typeof a.value === "string" ? a.value.slice(0, 120) : "" })) : [];
+          return res.status(200).json({ answer: typeof plan.answer === "string" ? plan.answer : "Đã hiểu yêu cầu.", actions, provider: "gemini" });
+        } catch (_) { return res.status(502).json({ error: "AI không tạo được kế hoạch điều khiển hợp lệ." }); }
+      }
+      return res.status(200).json({ answer: geminiAnswer, provider: "gemini" });
+    }
+    // Claude là nhà cung cấp tùy chọn, chỉ dùng khi Gemini chưa được cấu hình.
     if (anthropicApiKey) {
       const anthropicModel = (process.env.ANTHROPIC_MODEL || "claude-opus-5-5").trim();
       const anthropicMessages = [
@@ -131,50 +175,6 @@ module.exports = async function handler(req, res) {
         } catch (_) { return res.status(502).json({ error: "Claude không tạo được kế hoạch điều khiển hợp lệ." }); }
       }
       return res.status(200).json({ answer: claudeAnswer, provider: "anthropic" });
-    }
-    if (!apiKey && geminiApiKey) {
-      const geminiModel = (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").trim();
-      const geminiContents = [
-        ...safeHistory.map(m => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }]
-        })),
-        { role: "user", parts: [{ text: message }] }
-      ];
-      const geminiResponse = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(geminiModel) + ":generateContent",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: effectiveSystemPrompt }] },
-            contents: geminiContents,
-            generationConfig: { maxOutputTokens: 3000, ...(agentMode ? { responseMimeType: "application/json" } : {}) }
-          }),
-          signal: AbortSignal.timeout(40000)
-        }
-      );
-      const geminiData = await geminiResponse.json();
-      if (!geminiResponse.ok) {
-        return res.status(geminiResponse.status === 429 ? 429 : 502).json({
-          error: geminiResponse.status === 429
-            ? "Gemini đang bận hoặc đã chạm hạn mức. Thử lại sau nhé."
-            : "Gemini chưa trả lời được. Kiểm tra GEMINI_API_KEY và quyền sử dụng model ở máy chủ."
-        });
-      }
-      const geminiAnswer = geminiData.candidates?.[0]?.content?.parts
-        ?.map(part => typeof part.text === "string" ? part.text : "")
-        .join("\\n").trim();
-      if (!geminiAnswer) return res.status(502).json({ error: "Gemini không trả về nội dung." });
-      if (agentMode) {
-        try {
-          const plan = JSON.parse(geminiAnswer);
-          const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search","open_youtube","open_youtube_music","search_youtube"]);
-          const actions = Array.isArray(plan.actions) ? plan.actions.filter(a => a && allowed.has(a.type)).slice(0, 5).map(a => ({ type: a.type, value: typeof a.value === "string" ? a.value.slice(0, 120) : "" })) : [];
-          return res.status(200).json({ answer: typeof plan.answer === "string" ? plan.answer : "Đã hiểu yêu cầu.", actions, provider: "gemini" });
-        } catch (_) { return res.status(502).json({ error: "AI không tạo được kế hoạch điều khiển hợp lệ." }); }
-      }
-      return res.status(200).json({ answer: geminiAnswer, provider: "gemini" });
     }
     const model = (process.env.OPENAI_MODEL || "gpt-6.1-sol").trim();
     const allowedEfforts = new Set(["low", "medium", "high", "xhigh", "max"]);
