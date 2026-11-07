@@ -119,7 +119,7 @@ module.exports = async function handler(req, res) {
         });
       }
       const claudeAnswer = Array.isArray(anthropicData.content)
-        ? anthropicData.content.filter(part => part.type === "text" && typeof part.text === "string").map(part => part.text).join("\\n").trim()
+        ? anthropicData.content.filter(part => part.type === "text" && typeof part.text === "string").map(part => part.text).join("\n").trim()
         : "";
       if (!claudeAnswer) return res.status(502).json({ error: "Claude không trả về nội dung." });
       if (agentMode) {
