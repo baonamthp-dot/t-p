@@ -130,9 +130,9 @@ module.exports = async function handler(req, res) {
       }
       return res.status(200).json({ answer: geminiAnswer, provider: "gemini" });
     }
-    const model = (process.env.OPENAI_MODEL || "gpt-6-astra").trim();
+    const model = (process.env.OPENAI_MODEL || "gpt-6.1-sol").trim();
     const allowedEfforts = new Set(["low", "medium", "high", "xhigh", "max"]);
-    const requestedEffort = String(process.env.OPENAI_REASONING_EFFORT || "high").trim().toLowerCase();
+    const requestedEffort = String(process.env.OPENAI_REASONING_EFFORT || "medium").trim().toLowerCase();
     const reasoningEffort = allowedEfforts.has(requestedEffort) ? requestedEffort : "high";
     // Prefer the Responses API with web search so answers can use current sources.
     // If web search is unavailable for the configured model/project, fall back to chat completions.
