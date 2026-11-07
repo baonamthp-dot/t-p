@@ -32,9 +32,10 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   const apiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey && !geminiApiKey) return res.status(503).json({ error: "Máy chủ chưa cấu hình OPENAI_API_KEY hoặc GEMINI_API_KEY." });
+  if (!anthropicApiKey && !apiKey && !geminiApiKey) return res.status(503).json({ error: "Máy chủ chưa cấu hình ANTHROPIC_API_KEY, OPENAI_API_KEY hoặc GEMINI_API_KEY." });
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
     if (!body || typeof body !== "object" || Array.isArray(body)) return res.status(400).json({ error: "Dữ liệu yêu cầu không hợp lệ." });
@@ -86,6 +87,51 @@ module.exports = async function handler(req, res) {
       ...safeHistory,
       { role: "user", content: message }
     ];
+    // Claude Opus 5.5 is the preferred provider when an Anthropic key is configured.
+    if (anthropicApiKey) {
+      const anthropicModel = (process.env.ANTHROPIC_MODEL || "claude-opus-5-5").trim();
+      const anthropicMessages = [
+        ...safeHistory.map(m => ({ role: m.role, content: m.content })),
+        { role: "user", content: message }
+      ];
+      const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": anthropicApiKey,
+          "anthropic-version": "2023-06-01"
+        },
+        body: JSON.stringify({
+          model: anthropicModel,
+          max_tokens: 3000,
+          system: effectiveSystemPrompt,
+          messages: anthropicMessages
+        }),
+        signal: AbortSignal.timeout(40000)
+      });
+      let anthropicData = {};
+      try { anthropicData = await anthropicResponse.json(); } catch (_) {}
+      if (!anthropicResponse.ok) {
+        return res.status(anthropicResponse.status === 429 ? 429 : 502).json({
+          error: anthropicResponse.status === 429
+            ? "Claude đang bận hoặc đã chạm hạn mức. Thử lại sau nhé."
+            : "Claude chưa trả lời được. Kiểm tra ANTHROPIC_API_KEY và quyền truy cập model ở máy chủ."
+        });
+      }
+      const claudeAnswer = Array.isArray(anthropicData.content)
+        ? anthropicData.content.filter(part => part.type === "text" && typeof part.text === "string").map(part => part.text).join("\\n").trim()
+        : "";
+      if (!claudeAnswer) return res.status(502).json({ error: "Claude không trả về nội dung." });
+      if (agentMode) {
+        try {
+          const plan = JSON.parse(claudeAnswer);
+          const allowed = new Set(["play_track","set_volume","next_track","previous_track","pause_music","resume_music","shuffle_on","shuffle_off","repeat_on","repeat_off","open_settings","open_tools","open_map","show_favorites","show_all_tracks","search_tracks","play_favorites","open_sleep_timer","open_volume","open_history","open_diagnostics","clear_search","open_youtube","open_youtube_music","search_youtube"]);
+          const actions = Array.isArray(plan.actions) ? plan.actions.filter(a => a && allowed.has(a.type)).slice(0, 5).map(a => ({ type: a.type, value: typeof a.value === "string" ? a.value.slice(0, 120) : "" })) : [];
+          return res.status(200).json({ answer: typeof plan.answer === "string" ? plan.answer : "Đã hiểu yêu cầu.", actions, provider: "anthropic" });
+        } catch (_) { return res.status(502).json({ error: "Claude không tạo được kế hoạch điều khiển hợp lệ." }); }
+      }
+      return res.status(200).json({ answer: claudeAnswer, provider: "anthropic" });
+    }
     if (!apiKey && geminiApiKey) {
       const geminiModel = (process.env.GEMINI_MODEL || "gemini-2.5-flash-lite").trim();
       const geminiContents = [
