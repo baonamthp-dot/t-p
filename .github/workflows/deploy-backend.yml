@@ -1,0 +1,29 @@
+name: Deploy AI Backend to Vercel
+
+on:
+  push:
+    branches:
+      - bao-nam-chatgpt-music-ai
+    paths:
+      - 'api/**'
+      - 'vercel.json'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel deployment
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::Missing VERCEL_DEPLOY_HOOK_URL secret. If this GitHub branch is already connected to Vercel, Vercel should deploy automatically; otherwise add a Vercel Deploy Hook URL as a GitHub Actions secret."
+            exit 0
+          fi
+          curl --fail --silent --show-error --request POST "$VERCEL_DEPLOY_HOOK_URL"
+          echo "Vercel deployment hook accepted the request."
